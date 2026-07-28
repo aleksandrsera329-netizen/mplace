@@ -79,13 +79,24 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var client_1 = require("@prisma/client");
 var bcrypt = __importStar(require("bcrypt"));
 var prisma = new client_1.PrismaClient();
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var passwordHash, bigShop, amz, lady, customer, electronics, fashion, sports, catalog, createdProducts, _i, catalog_1, p, _a, _b, p0, p1;
+        var passwordHash, drillTech, pipeValve, fieldSafe, customer, drilling, pipeline, ppe, pumps, instruments, chemicals, catalog, createdProducts, _i, catalog_1, p, description, rest, _a, _b, p0, p1;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0: return [4 /*yield*/, bcrypt.hash('123456', 12)];
@@ -146,37 +157,37 @@ function main() {
                     _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
-                                name: 'Big Shop',
-                                slug: 'big-shop',
-                                description: 'Top marketplace vendor',
+                                name: 'DrillTech Supply',
+                                slug: 'drilltech-supply',
+                                description: 'BHA, bits and downhole tools for drilling contractors',
                                 status: client_1.ShopStatus.ACTIVE,
                                 verified: true,
                             },
                         })];
                 case 19:
-                    bigShop = _c.sent();
+                    drillTech = _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
-                                name: 'Amz Mart',
-                                slug: 'amz-mart',
-                                description: 'Everyday essentials',
+                                name: 'Pipe & Valve Co',
+                                slug: 'pipe-valve-co',
+                                description: 'Pipeline valves, flanges and fittings API / ASME',
                                 status: client_1.ShopStatus.ACTIVE,
                                 verified: true,
                             },
                         })];
                 case 20:
-                    amz = _c.sent();
+                    pipeValve = _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
-                                name: 'Lady Charm',
-                                slug: 'lady-charm',
-                                description: 'Fashion & accessories',
+                                name: 'FieldSafe PPE',
+                                slug: 'fieldsafe-ppe',
+                                description: 'HSE PPE and field safety for oil & gas sites',
                                 status: client_1.ShopStatus.ACTIVE,
                                 verified: true,
                             },
                         })];
                 case 21:
-                    lady = _c.sent();
+                    fieldSafe = _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
                                 email: 'superadmin@demo.com',
@@ -192,10 +203,10 @@ function main() {
                             data: {
                                 email: 'merchant@demo.com',
                                 passwordHash: passwordHash,
-                                name: 'Merchant Demo',
+                                name: 'DrillTech Merchant',
                                 role: client_1.UserRole.MERCHANT,
                                 status: client_1.UserStatus.ACTIVE,
-                                shopId: bigShop.id,
+                                shopId: drillTech.id,
                             },
                         })];
                 case 23:
@@ -204,10 +215,10 @@ function main() {
                             data: {
                                 email: 'amz@demo.com',
                                 passwordHash: passwordHash,
-                                name: 'Amz Owner',
+                                name: 'PipeValve Owner',
                                 role: client_1.UserRole.MERCHANT,
                                 status: client_1.UserStatus.ACTIVE,
-                                shopId: amz.id,
+                                shopId: pipeValve.id,
                             },
                         })];
                 case 24:
@@ -216,7 +227,7 @@ function main() {
                             data: {
                                 email: 'customer@demo.com',
                                 passwordHash: passwordHash,
-                                name: 'Demo Customer',
+                                name: 'Procurement Buyer',
                                 role: client_1.UserRole.CUSTOMER,
                                 status: client_1.UserStatus.ACTIVE,
                             },
@@ -227,7 +238,7 @@ function main() {
                             data: {
                                 email: 'jhondoe@demo.com',
                                 passwordHash: passwordHash,
-                                name: 'Jhon Doe',
+                                name: 'Field Engineer',
                                 role: client_1.UserRole.CUSTOMER,
                                 status: client_1.UserStatus.ACTIVE,
                             },
@@ -235,133 +246,180 @@ function main() {
                 case 26:
                     _c.sent();
                     return [4 /*yield*/, prisma.category.create({
-                            data: { name: 'Electronics', slug: 'electronics' },
+                            data: { name: 'Drilling Equipment', slug: 'drilling-equipment' },
                         })];
                 case 27:
-                    electronics = _c.sent();
+                    drilling = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
-                            data: { name: 'Fashion', slug: 'fashion' },
+                            data: { name: 'Pipeline & Valves', slug: 'pipeline-valves' },
                         })];
                 case 28:
-                    fashion = _c.sent();
+                    pipeline = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
-                            data: { name: 'Sports', slug: 'sports' },
+                            data: { name: 'PPE & HSE', slug: 'ppe-hse' },
                         })];
                 case 29:
-                    sports = _c.sent();
+                    ppe = _c.sent();
+                    return [4 /*yield*/, prisma.category.create({
+                            data: { name: 'Pumps & Compressors', slug: 'pumps-compressors' },
+                        })];
+                case 30:
+                    pumps = _c.sent();
+                    return [4 /*yield*/, prisma.category.create({
+                            data: { name: 'Instrumentation', slug: 'instrumentation' },
+                        })];
+                case 31:
+                    instruments = _c.sent();
+                    return [4 /*yield*/, prisma.category.create({
+                            data: { name: 'Chemicals & Fluids', slug: 'chemicals-fluids' },
+                        })];
+                case 32:
+                    chemicals = _c.sent();
                     catalog = [
                         {
-                            shopId: bigShop.id,
-                            categoryId: electronics.id,
-                            name: 'Wireless Headphones Pro',
-                            slug: 'wireless-headphones-pro',
-                            priceCents: 8999,
-                            stock: 50,
-                            soldCount: 12,
-                            gtin: 'EAN 1234567890123',
+                            shopId: drillTech.id,
+                            categoryId: drilling.id,
+                            name: 'PDC Drill Bit 8-1/2"',
+                            slug: 'pdc-drill-bit-8-5',
+                            priceCents: 1250000,
+                            stock: 12,
+                            soldCount: 4,
+                            gtin: 'OG-BIT-085',
+                            description: 'Matrix PDC bit 8-1/2" for medium-hard formations. API pin connection. Oilfield drilling BHA.',
                         },
                         {
-                            shopId: bigShop.id,
-                            categoryId: sports.id,
-                            name: 'Yoga Mat Premium',
-                            slug: 'yoga-mat-premium',
-                            priceCents: 2900,
-                            stock: 200,
-                            soldCount: 15,
-                            gtin: 'EAN 333',
+                            shopId: drillTech.id,
+                            categoryId: drilling.id,
+                            name: 'Mud Motor 6-3/4" 5:6',
+                            slug: 'mud-motor-6-75',
+                            priceCents: 8900000,
+                            stock: 4,
+                            soldCount: 1,
+                            gtin: 'OG-MM-675',
+                            description: 'Positive displacement mud motor 6-3/4", lobe 5:6, for directional drilling applications.',
                         },
                         {
-                            shopId: bigShop.id,
-                            categoryId: sports.id,
-                            name: 'Running Shoes X200',
-                            slug: 'running-shoes-x200',
-                            priceCents: 7950,
-                            stock: 100,
-                            soldCount: 22,
-                            gtin: 'EAN 222',
+                            shopId: pipeValve.id,
+                            categoryId: pipeline.id,
+                            name: 'Gate Valve 6" Class 600',
+                            slug: 'gate-valve-6-cl600',
+                            priceCents: 245000,
+                            stock: 28,
+                            soldCount: 9,
+                            gtin: 'OG-GV-6006',
+                            description: 'API 600 cast steel gate valve, RF flanged, Class 600, carbon steel body for crude/product lines.',
                         },
                         {
-                            shopId: lady.id,
-                            categoryId: fashion.id,
-                            name: 'Classic Leather Watch',
-                            slug: 'classic-leather-watch',
-                            priceCents: 14900,
-                            stock: 30,
-                            soldCount: 8,
-                            gtin: 'EAN 111',
+                            shopId: pipeValve.id,
+                            categoryId: pipeline.id,
+                            name: 'Ball Valve 4" Full Bore',
+                            slug: 'ball-valve-4-fb',
+                            priceCents: 189000,
+                            stock: 40,
+                            soldCount: 14,
+                            gtin: 'OG-BV-4FB',
+                            description: 'Full-bore trunnion ball valve 4", fire-safe design, suitable for gas transmission manifolds.',
                         },
                         {
-                            shopId: lady.id,
-                            categoryId: fashion.id,
-                            name: 'Aviator Sunglasses',
-                            slug: 'aviator-sunglasses',
-                            priceCents: 5900,
-                            stock: 80,
-                            soldCount: 18,
-                            gtin: 'EAN 444',
-                        },
-                        {
-                            shopId: amz.id,
-                            categoryId: electronics.id,
-                            name: 'Car Phone Mount',
-                            slug: 'car-phone-mount',
-                            priceCents: 1999,
-                            stock: 300,
-                            soldCount: 40,
-                            gtin: 'EAN 555',
-                        },
-                        {
-                            shopId: amz.id,
-                            categoryId: electronics.id,
-                            name: 'USB-C Hub 7-in-1',
-                            slug: 'usb-c-hub',
-                            priceCents: 4599,
+                            shopId: pipeValve.id,
+                            categoryId: pipeline.id,
+                            name: 'Weld Neck Flange 8" Sch 40',
+                            slug: 'wn-flange-8-sch40',
+                            priceCents: 42000,
                             stock: 120,
-                            soldCount: 25,
-                            gtin: 'EAN 666',
+                            soldCount: 55,
+                            gtin: 'OG-WN-8',
+                            description: 'ASME B16.5 WN flange 8" Class 150, A105, raised face.',
                         },
                         {
-                            shopId: amz.id,
-                            categoryId: sports.id,
-                            name: 'Resistance Bands Set',
-                            slug: 'resistance-bands',
-                            priceCents: 2499,
-                            stock: 150,
-                            soldCount: 33,
-                            gtin: 'EAN 777',
+                            shopId: fieldSafe.id,
+                            categoryId: ppe.id,
+                            name: 'FR Coverall CAT2 (M–XXL)',
+                            slug: 'fr-coverall-cat2',
+                            priceCents: 18900,
+                            stock: 200,
+                            soldCount: 67,
+                            gtin: 'OG-PPE-FR',
+                            description: 'Flame-resistant coverall CAT2, antistatic, for oil & gas process units and wellsites.',
+                        },
+                        {
+                            shopId: fieldSafe.id,
+                            categoryId: ppe.id,
+                            name: 'H2S Escape Respirator Kit',
+                            slug: 'h2s-escape-kit',
+                            priceCents: 32000,
+                            stock: 80,
+                            soldCount: 22,
+                            gtin: 'OG-H2S-KIT',
+                            description: 'Emergency escape breathing apparatus for H2S-risk zones. Field HSE standard kit.',
+                        },
+                        {
+                            shopId: drillTech.id,
+                            categoryId: pumps.id,
+                            name: 'Centrifugal Process Pump 4x3-10',
+                            slug: 'centrifugal-pump-4x3',
+                            priceCents: 1560000,
+                            stock: 6,
+                            soldCount: 2,
+                            gtin: 'OG-PMP-4310',
+                            description: 'ANSI process centrifugal pump for water injection / produced water transfer skids.',
+                        },
+                        {
+                            shopId: pipeValve.id,
+                            categoryId: instruments.id,
+                            name: 'Pressure Transmitter 0–100 bar',
+                            slug: 'pt-0-100bar',
+                            priceCents: 87500,
+                            stock: 35,
+                            soldCount: 11,
+                            gtin: 'OG-PT-100',
+                            description: 'Industrial pressure transmitter 0–100 bar, 4–20 mA HART, ATEX zone options on request.',
+                        },
+                        {
+                            shopId: fieldSafe.id,
+                            categoryId: chemicals.id,
+                            name: 'Drilling Fluid Additive Pack (1 t)',
+                            slug: 'drilling-fluid-pack-1t',
+                            priceCents: 210000,
+                            stock: 18,
+                            soldCount: 5,
+                            gtin: 'OG-CHEM-1T',
+                            description: 'Bulk additive pack for water-based mud systems: viscosifier + fluid loss control (demo lot).',
                         },
                     ];
                     createdProducts = [];
                     _i = 0, catalog_1 = catalog;
-                    _c.label = 30;
-                case 30:
-                    if (!(_i < catalog_1.length)) return [3 /*break*/, 33];
+                    _c.label = 33;
+                case 33:
+                    if (!(_i < catalog_1.length)) return [3 /*break*/, 36];
                     p = catalog_1[_i];
+                    description = p.description, rest = __rest(p, ["description"]);
                     _b = (_a = createdProducts).push;
                     return [4 /*yield*/, prisma.product.create({
-                            data: __assign(__assign({}, p), { description: "".concat(p.name, " \u2014 demo product for Mplace."), currency: 'USD', status: client_1.ProductStatus.ACTIVE, sku: p.slug.toUpperCase().slice(0, 12) }),
+                            data: __assign(__assign({}, rest), { description: description ||
+                                    "".concat(p.name, " \u2014 oil & gas supply catalog item (Mplace Energy)."), currency: 'USD', status: client_1.ProductStatus.ACTIVE, sku: p.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16) }),
                         })];
-                case 31:
+                case 34:
                     _b.apply(_a, [_c.sent()]);
-                    _c.label = 32;
-                case 32:
+                    _c.label = 35;
+                case 35:
                     _i++;
-                    return [3 /*break*/, 30];
-                case 33:
+                    return [3 /*break*/, 33];
+                case 36:
                     p0 = createdProducts[0];
-                    p1 = createdProducts[1];
+                    p1 = createdProducts[2];
                     return [4 /*yield*/, prisma.order.create({
                             data: {
-                                orderNumber: 'MP-1001',
+                                orderNumber: 'OG-1001',
                                 customerId: customer.id,
-                                shopId: bigShop.id,
+                                shopId: drillTech.id,
                                 status: client_1.OrderStatus.PROCESSING,
-                                subtotalCents: p0.priceCents + p1.priceCents,
-                                commissionCents: Math.round((p0.priceCents + p1.priceCents) * 0.1),
-                                totalCents: p0.priceCents + p1.priceCents,
+                                subtotalCents: p0.priceCents,
+                                commissionCents: Math.round(p0.priceCents * 0.1),
+                                totalCents: p0.priceCents,
                                 customerEmail: customer.email,
                                 customerName: customer.name,
-                                paymentRef: 'mock_seed',
+                                paymentRef: 'mock_seed_og',
                                 items: {
                                     create: [
                                         {
@@ -371,71 +429,65 @@ function main() {
                                             quantity: 1,
                                             lineTotalCents: p0.priceCents,
                                         },
+                                    ],
+                                },
+                            },
+                        })];
+                case 37:
+                    _c.sent();
+                    return [4 /*yield*/, prisma.order.create({
+                            data: {
+                                orderNumber: 'OG-1002',
+                                customerId: customer.id,
+                                shopId: pipeValve.id,
+                                status: client_1.OrderStatus.SHIPPED,
+                                subtotalCents: p1.priceCents * 2,
+                                commissionCents: Math.round(p1.priceCents * 2 * 0.1),
+                                totalCents: p1.priceCents * 2,
+                                customerEmail: customer.email,
+                                customerName: customer.name,
+                                paymentRef: 'mock_seed_og_2',
+                                items: {
+                                    create: [
                                         {
                                             productId: p1.id,
                                             productName: p1.name,
                                             unitPriceCents: p1.priceCents,
-                                            quantity: 1,
-                                            lineTotalCents: p1.priceCents,
-                                        },
-                                    ],
-                                },
-                            },
-                        })];
-                case 34:
-                    _c.sent();
-                    return [4 /*yield*/, prisma.order.create({
-                            data: {
-                                orderNumber: 'MP-1002',
-                                customerId: customer.id,
-                                shopId: amz.id,
-                                status: client_1.OrderStatus.SHIPPED,
-                                subtotalCents: createdProducts[5].priceCents * 2,
-                                commissionCents: Math.round(createdProducts[5].priceCents * 2 * 0.1),
-                                totalCents: createdProducts[5].priceCents * 2,
-                                customerEmail: customer.email,
-                                customerName: customer.name,
-                                paymentRef: 'mock_seed_2',
-                                items: {
-                                    create: [
-                                        {
-                                            productId: createdProducts[5].id,
-                                            productName: createdProducts[5].name,
-                                            unitPriceCents: createdProducts[5].priceCents,
                                             quantity: 2,
-                                            lineTotalCents: createdProducts[5].priceCents * 2,
+                                            lineTotalCents: p1.priceCents * 2,
                                         },
                                     ],
                                 },
                             },
                         })];
-                case 35:
+                case 38:
                     _c.sent();
                     return [4 /*yield*/, prisma.ticket.createMany({
                             data: [
                                 {
-                                    subject: 'Payment Method',
-                                    body: 'How do I change payment method?',
-                                    type: 'General query',
+                                    subject: 'API certificate request',
+                                    body: 'Need material certificates for Gate Valve 6" Class 600.',
+                                    type: 'Procurement',
                                     priority: 'HIGH',
                                 },
                                 {
-                                    subject: 'How to payout',
-                                    body: 'When do merchants get paid?',
+                                    subject: 'Lead time for mud motor',
+                                    body: 'What is the delivery lead time to yard?',
                                     type: 'Merchant support',
                                     priority: 'HIGH',
                                 },
                             ],
                         })];
-                case 36:
+                case 39:
                     _c.sent();
                     // eslint-disable-next-line no-console
-                    console.log('Seed OK:', {
+                    console.log('Seed OK (Oil & Gas):', {
                         admin: 'superadmin@demo.com / 123456',
                         merchant: 'merchant@demo.com / 123456',
                         customer: 'customer@demo.com / 123456',
                         products: createdProducts.length,
                         shops: 3,
+                        categories: 6,
                         orders: 2,
                     });
                     return [2 /*return*/];

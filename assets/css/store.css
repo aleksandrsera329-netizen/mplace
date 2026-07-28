@@ -1,12 +1,15 @@
 :root {
-  --primary: #f0c14b;
-  --primary-dark: #e6a800;
-  --nav: #131921;
-  --nav2: #232f3e;
-  --accent: #e47911;
-  --link: #007185;
-  --bg: #eaeded;
-  --text: #0f1111;
+  /* Oil & Gas industrial palette */
+  --primary: #e8a317;
+  --primary-dark: #c4890f;
+  --nav: #0b1c2c;
+  --nav2: #132a3e;
+  --accent: #f0a500;
+  --link: #2a8fbd;
+  --bg: #e8eef2;
+  --text: #0f1a22;
+  --steel: #4a5d6a;
+  --oil: #1a1208;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -111,34 +114,57 @@ ul { list-style: none; }
 .header-nav a:hover { border-color: #fff; border-radius: 2px; }
 .header-nav a.highlight { color: var(--primary) !important; font-weight: 700; }
 
-/* Hero */
+/* Hero — oilfield / energy */
 .hero {
-  background: linear-gradient(135deg, #1e3c72, #2a5298 40%, #3c8dbc);
+  background:
+    linear-gradient(120deg, rgba(11,28,44,.92) 0%, rgba(19,42,62,.85) 45%, rgba(232,163,23,.35) 100%),
+    radial-gradient(ellipse at 20% 80%, #1a3a52 0%, transparent 50%),
+    linear-gradient(160deg, #0b1c2c, #1a3548 50%, #0d2436);
   color: #fff;
-  padding: 48px 24px;
+  padding: 52px 24px;
   text-align: center;
   position: relative;
   overflow: hidden;
+  border-bottom: 3px solid var(--primary);
 }
-.hero h1 { font-size: 36px; font-weight: 400; margin-bottom: 10px; }
-.hero p { font-size: 16px; opacity: .9; margin-bottom: 20px; }
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -12deg,
+    transparent,
+    transparent 40px,
+    rgba(232,163,23,.03) 40px,
+    rgba(232,163,23,.03) 41px
+  );
+  pointer-events: none;
+}
+.hero h1 { font-size: 34px; font-weight: 600; margin-bottom: 10px; position: relative; letter-spacing: .02em; }
+.hero p { font-size: 16px; opacity: .92; margin-bottom: 20px; position: relative; max-width: 640px; margin-left: auto; margin-right: auto; }
 .hero .btn-hero {
   display: inline-block;
   background: var(--primary);
-  color: #111 !important;
+  color: #0b1c2c !important;
   text-decoration: none !important;
-  padding: 10px 28px;
-  border-radius: 20px;
+  padding: 12px 32px;
+  border-radius: 4px;
   font-weight: 700;
   font-size: 14px;
+  position: relative;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  box-shadow: 0 4px 14px rgba(232,163,23,.35);
 }
+.hero .btn-hero:hover { background: #f5b832; text-decoration: none !important; }
 .flash-banner {
-  background: linear-gradient(90deg, #ff6b35, #f7931e);
-  color: #fff;
+  background: linear-gradient(90deg, #0b1c2c, #1a3548 40%, #8b6914 100%);
+  color: #f5e6c8;
   text-align: center;
   padding: 10px;
-  font-weight: 700;
-  font-size: 14px;
+  font-weight: 600;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(232,163,23,.4);
 }
 
 /* Sections */

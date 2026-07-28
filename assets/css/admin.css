@@ -1,17 +1,17 @@
 :root {
   --sidebar-w: 230px;
-  --sidebar-bg: #222d32;
-  --sidebar-dark: #1a2226;
+  --sidebar-bg: #0b1c2c;
+  --sidebar-dark: #07121c;
   --header-h: 50px;
-  --primary: #3c8dbc;
-  --success: #00a65a;
-  --info: #00c0ef;
-  --warning: #f39c12;
-  --danger: #dd4b39;
+  --primary: #c4890f;
+  --success: #2e7d4f;
+  --info: #2a8fbd;
+  --warning: #e8a317;
+  --danger: #c0392b;
   --text: #333;
   --muted: #777;
   --border: #e5e5e5;
-  --bg: #ecf0f5;
+  --bg: #e8eef2;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +27,7 @@ button, input, select, textarea { font: inherit; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #3c8dbc 100%);
+  background: linear-gradient(135deg, #0b1c2c 0%, #132a3e 45%, #1a3548 70%, #8b6914 140%);
   padding: 20px;
 }
 .login-box {
