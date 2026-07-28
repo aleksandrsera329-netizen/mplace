@@ -50,19 +50,10 @@ async function bootstrap() {
     join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src
 
   if (serveFrontend && existsSync(frontendDir)) {
+    // Serve storefront + admin/merchant static files (same origin as /api)
     app.useStaticAssets(frontendDir, {
-      index: false,
+      index: ['index.html'],
       fallthrough: true,
-    });
-    // SPA-ish fallback for admin/merchant deep links
-    const expressApp = app.getHttpAdapter().getInstance();
-    expressApp.get('*', (req: { path: string }, res: { sendFile: (p: string) => void }, next: () => void) => {
-      if (req.path.startsWith('/api')) return next();
-      const index = join(frontendDir, 'index.html');
-      if (existsSync(index) && (req.path === '/' || !req.path.includes('.'))) {
-        return res.sendFile(index);
-      }
-      return next();
     });
     // eslint-disable-next-line no-console
     console.log(`frontend static: ${frontendDir}`);

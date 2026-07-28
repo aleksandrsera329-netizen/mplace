@@ -19,16 +19,17 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=10000
 
-# Only production deps
+# Production deps + prisma CLI (needed for migrate/seed at container start)
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
 WORKDIR /app/apps/api
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev \
+  && npm install prisma@6.19.3 --no-save \
+  && npm cache clean --force
 
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY --from=build /app/apps/api/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/apps/api/node_modules/@prisma ./node_modules/@prisma
-# seed.js is compiled in build step if present in prisma/
 
 # Storefront (static)
 WORKDIR /app
