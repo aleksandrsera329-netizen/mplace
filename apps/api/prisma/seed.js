@@ -285,6 +285,7 @@ function main() {
                             stock: 12,
                             soldCount: 4,
                             gtin: 'OG-BIT-085',
+                            imageUrl: '/assets/img/products/drill-bit.svg',
                             description: 'Matrix PDC bit 8-1/2" for medium-hard formations. API pin connection. Oilfield drilling BHA.',
                         },
                         {
@@ -296,6 +297,7 @@ function main() {
                             stock: 4,
                             soldCount: 1,
                             gtin: 'OG-MM-675',
+                            imageUrl: '/assets/img/products/mud-motor.svg',
                             description: 'Positive displacement mud motor 6-3/4", lobe 5:6, for directional drilling applications.',
                         },
                         {
@@ -307,6 +309,7 @@ function main() {
                             stock: 28,
                             soldCount: 9,
                             gtin: 'OG-GV-6006',
+                            imageUrl: '/assets/img/products/gate-valve.svg',
                             description: 'API 600 cast steel gate valve, RF flanged, Class 600, carbon steel body for crude/product lines.',
                         },
                         {
@@ -318,6 +321,7 @@ function main() {
                             stock: 40,
                             soldCount: 14,
                             gtin: 'OG-BV-4FB',
+                            imageUrl: '/assets/img/products/ball-valve.svg',
                             description: 'Full-bore trunnion ball valve 4", fire-safe design, suitable for gas transmission manifolds.',
                         },
                         {
@@ -329,6 +333,7 @@ function main() {
                             stock: 120,
                             soldCount: 55,
                             gtin: 'OG-WN-8',
+                            imageUrl: '/assets/img/products/flange.svg',
                             description: 'ASME B16.5 WN flange 8" Class 150, A105, raised face.',
                         },
                         {
@@ -340,6 +345,7 @@ function main() {
                             stock: 200,
                             soldCount: 67,
                             gtin: 'OG-PPE-FR',
+                            imageUrl: '/assets/img/products/fr-coverall.svg',
                             description: 'Flame-resistant coverall CAT2, antistatic, for oil & gas process units and wellsites.',
                         },
                         {
@@ -351,6 +357,7 @@ function main() {
                             stock: 80,
                             soldCount: 22,
                             gtin: 'OG-H2S-KIT',
+                            imageUrl: '/assets/img/products/h2s-kit.svg',
                             description: 'Emergency escape breathing apparatus for H2S-risk zones. Field HSE standard kit.',
                         },
                         {
@@ -362,6 +369,7 @@ function main() {
                             stock: 6,
                             soldCount: 2,
                             gtin: 'OG-PMP-4310',
+                            imageUrl: '/assets/img/products/pump.svg',
                             description: 'ANSI process centrifugal pump for water injection / produced water transfer skids.',
                         },
                         {
@@ -373,6 +381,7 @@ function main() {
                             stock: 35,
                             soldCount: 11,
                             gtin: 'OG-PT-100',
+                            imageUrl: '/assets/img/products/transmitter.svg',
                             description: 'Industrial pressure transmitter 0–100 bar, 4–20 mA HART, ATEX zone options on request.',
                         },
                         {
@@ -384,6 +393,7 @@ function main() {
                             stock: 18,
                             soldCount: 5,
                             gtin: 'OG-CHEM-1T',
+                            imageUrl: '/assets/img/products/chemicals.svg',
                             description: 'Bulk additive pack for water-based mud systems: viscosifier + fluid loss control (demo lot).',
                         },
                     ];

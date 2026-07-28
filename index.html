@@ -139,11 +139,19 @@
       }
     }
 
+    function productImageHtml(p, i) {
+      const fallback = icons[i % icons.length];
+      if (p.imageUrl) {
+        return `<img src="${p.imageUrl}" alt="${String(p.name || '').replace(/"/g, '&quot;')}" loading="lazy" onerror="this.style.display='none';this.parentElement.classList.add('no-img');this.parentElement.innerHTML='${fallback}'" />`;
+      }
+      return fallback;
+    }
+
     function renderProducts(list) {
       document.getElementById('prodCount').textContent = `(${list.length})`;
       document.getElementById('productsGrid').innerHTML = list.map((p, i) => `
         <article class="product-card">
-          <div class="product-img">${icons[i % icons.length]}</div>
+          <div class="product-img">${productImageHtml(p, i)}</div>
           <div class="product-body">
             <h3>${p.name}</h3>
             <div class="product-shop">${I.t('product.soldBy', { shop: p.shop?.name || '—' })}</div>
