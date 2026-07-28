@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mplace — Checkout</title>
+  <link rel="stylesheet" href="assets/css/store.css" />
+  <link rel="stylesheet" href="assets/css/admin.css" />
+  <link rel="stylesheet" href="assets/css/locale.css" />
+  <style>
+    .checkout-wrap { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .checkout-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .checkout-grid { grid-template-columns: 1fr; } }
+    .line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 12px; }
+    .success-box { background: #e8f8ef; border: 1px solid #b7e4c7; padding: 16px; border-radius: 8px; margin-top: 16px; }
+    .warn-box { background: #fff8e6; border: 1px solid #f0d78c; padding: 16px; border-radius: 8px; margin-top: 16px; font-size: 13px; }
+    .checkout-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+    #payment-element { margin: 12px 0; min-height: 40px; }
+    #stripePanel { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+  </style>
+  <!-- Stripe.js loaded only when needed -->
+  <script src="https://js.stripe.com/v3/" defer></script>
+</head>
+<body>
+  <header class="store-header">
+    <div class="header-top">
+      <a class="logo" href="index.html">M<span>place</span></a>
+      <div id="localeMount"></div>
+      <div class="header-actions">
+        <a class="ha-item" href="index.html"><strong data-i18n="nav.continueShopping">← Continue shopping</strong></a>
+        <a class="ha-item" href="login.html"><strong data-i18n="nav.account">Account</strong></a>
+      </div>
+    </div>
+  </header>
+
+  <div class="checkout-wrap">
+    <div class="checkout-top">
+      <h1 data-i18n="cart.pageTitle" style="margin:0">Cart & Checkout</h1>
+    </div>
+    <div id="msg" class="login-error" style="display:none"></div>
+    <div class="checkout-grid">
+      <div class="box box-primary">
+        <div class="box-header"><span class="box-title" data-i18n="cart.items">Items</span></div>
+        <div class="box-body" id="items" data-i18n="common.loading">Loading…</div>
+      </div>
+      <div class="box box-success">
+        <div class="box-header"><span class="box-title" data-i18n="cart.checkoutBox">Checkout</span></div>
+        <div class="box-body">
+          <div class="form-group">
+            <label data-i18n="cart.name">Name</label>
+            <input class="form-control" id="name" data-i18n-placeholder="cart.namePh" />
+          </div>
+          <div class="form-group">
+            <label data-i18n="cart.email">Email</label>
+            <input class="form-control" type="email" id="email" data-i18n-placeholder="cart.emailPh" />
+          </div>
+          <p class="text-muted" style="font-size:12px;margin-bottom:12px" data-i18n="cart.payHint">
+            Payment via Stripe. Cards never touch our server. Status PAID only after Stripe webhook.
+          </p>
+          <div class="line"><span data-i18n="cart.subtotal">Subtotal</span><strong id="subtotal">—</strong></div>
+          <button class="btn btn-primary btn-block" id="payBtn" style="margin-top:14px" data-i18n="cart.payBtn">Checkout</button>
+
+          <div id="stripePanel">
+            <p class="text-muted" style="font-size:12px">Enter card details (Stripe test mode: 4242…):</p>
+            <div id="payment-element"></div>
+            <button class="btn btn-success btn-block" id="confirmStripeBtn" style="margin-top:10px">Pay with Stripe</button>
+          </div>
+
+          <div id="result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    const I = window.MplaceI18n;
+    I.mountSwitcher('#localeMount');
+
+    let stripe = null;
+    let elements = null;
+    let pendingOrders = []; // { id, paymentToken, orderNumber, totalCents, shop, clientSecret, publishableKey }
+
+    function showErr(t) {
+      const el = document.getElementById('msg');
+      el.style.display = 'block';
+      el.classList.add('show');
+      el.textContent = t;
+    }
+
+    async function load() {
+      try {
+        const cart = await MplaceApi.cart();
+        document.getElementById('subtotal').textContent = I.formatMoney(cart.subtotalCents || 0);
+        if (!cart.items?.length) {
+          document.getElementById('items').innerHTML =
+            `<p class="text-muted">${I.t('cart.empty')} <a href="index.html">${I.t('cart.shopNow')}</a></p>`;
+          document.getElementById('payBtn').disabled = true;
+          return;
+        }
+        document.getElementById('items').innerHTML = cart.items.map(i => `
+          <div class="line">
+            <div>
+              <strong>${i.product.name}</strong><br>
+              <span class="text-muted">${i.product.shop?.name || ''} × ${i.quantity}</span>
+            </div>
+            <div>${I.formatMoney(i.product.priceCents * i.quantity)}</div>
+          </div>`).join('');
+
+        const user = MplaceApi.getUser();
+        if (user) {
+          document.getElementById('name').value = user.name || '';
+          document.getElementById('email').value = user.email || '';
+        }
+        I.applyDocument();
+      } catch (e) {
+        showErr(e.message);
+        document.getElementById('items').innerHTML = `<p class="text-danger">${I.t('common.error')}</p>`;
+      }
+    }
+
+    document.getElementById('payBtn').onclick = async () => {
+      const btn = document.getElementById('payBtn');
+      btn.disabled = true;
+      btn.textContent = I.t('cart.processing');
+      document.getElementById('result').innerHTML = '';
+      document.getElementById('stripePanel').style.display = 'none';
+      pendingOrders = [];
+      try {
+        const checkout = await MplaceApi.checkout({
+          customerName: document.getElementById('name').value || 'Guest',
+          customerEmail: document.getElementById('email').value || undefined,
+        });
+
+        const stripeItems = [];
+        const devItems = [];
+
+        for (const order of checkout.orders || []) {
+          const intent = await MplaceApi.paymentIntent(
+            order.id,
+            order.paymentToken,
+            'checkout_' + order.id + '_' + Date.now(),
+          );
+          const row = {
+            id: order.id,
+            paymentToken: order.paymentToken,
+            orderNumber: order.orderNumber,
+            totalCents: order.totalCents,
+            shop: order.shop,
+            mode: intent.mode,
+            clientSecret: intent.clientSecret,
+            publishableKey: intent.publishableKey,
+            status: intent.status,
+          };
+          if (intent.mode === 'stripe' && intent.clientSecret) {
+            stripeItems.push(row);
+          } else {
+            devItems.push(row);
+          }
+        }
+
+        if (stripeItems.length) {
+          pendingOrders = stripeItems;
+          const first = stripeItems[0];
+          if (!first.publishableKey || typeof Stripe === 'undefined') {
+            showErr('Stripe publishable key missing or Stripe.js failed to load. Set STRIPE_PUBLISHABLE_KEY on API.');
+            btn.disabled = false;
+            btn.textContent = I.t('cart.payBtn');
+            return;
+          }
+          stripe = Stripe(first.publishableKey);
+          // One Payment Element for first order; multi-shop pays sequentially after confirm
+          elements = stripe.elements({ clientSecret: first.clientSecret });
+          const paymentElement = elements.create('payment');
+          paymentElement.mount('#payment-element');
+          document.getElementById('stripePanel').style.display = 'block';
+          document.getElementById('result').innerHTML =
+            `<div class="warn-box">Orders created (${stripeItems.length}). Complete card payment. Status becomes <strong>PAID</strong> only after Stripe webhook.</div>`;
+          btn.style.display = 'none';
+          return;
+        }
+
+        // Dev provider: no secret in browser — show CLI instructions
+        document.getElementById('result').innerHTML = `
+          <div class="warn-box">
+            <strong>Local dev payment (no card)</strong>
+            <p>Секрет <code>DEV_PAYMENT_SECRET</code> <em>не</em> передаётся в браузер.
+            Подтвердите оплату локальным скриптом на машине разработчика:</p>
+            <pre style="white-space:pre-wrap;font-size:11px;background:#f5f5f5;padding:8px;border-radius:4px">${
+              (devItems || []).map(o =>
+                `$env:DEV_PAYMENT_SECRET="…from apps/api/.env…"\n.\\scripts\\dev-confirm-payment.ps1 -OrderId "${o.id}" -PaymentToken "${o.paymentToken}"`
+              ).join('\n\n')
+            }</pre>
+            <p style="margin-top:8px">Для реальных карт: <code>PAYMENT_PROVIDER=stripe</code> + ключи Stripe.</p>
+            <ul style="margin:8px 0 0 18px">
+              ${devItems.map(o => `<li><code>${o.orderNumber}</code> · ${I.formatMoney(o.totalCents)} · PENDING_PAYMENT</li>`).join('')}
+            </ul>
+            <p style="margin-top:10px"><a href="index.html">${I.t('cart.backStore')}</a></p>
+          </div>`;
+        document.getElementById('items').innerHTML = `<p class="text-muted">${I.t('cart.empty')}</p>`;
+        document.getElementById('subtotal').textContent = I.formatMoney(0);
+      } catch (e) {
+        showErr(e.message);
+        btn.disabled = false;
+        btn.textContent = I.t('cart.payBtn');
+      }
+    };
+
+    document.getElementById('confirmStripeBtn').onclick = async () => {
+      if (!stripe || !elements || !pendingOrders.length) return;
+      const btn = document.getElementById('confirmStripeBtn');
+      btn.disabled = true;
+      try {
+        // Confirm first intent; for multi-shop, confirm remaining sequentially
+        for (let i = 0; i < pendingOrders.length; i++) {
+          const o = pendingOrders[i];
+          if (i > 0) {
+            elements = stripe.elements({ clientSecret: o.clientSecret });
+            const pe = elements.create('payment');
+            document.getElementById('payment-element').innerHTML = '';
+            pe.mount('#payment-element');
+          }
+          const { error, paymentIntent } = await stripe.confirmPayment({
+            elements,
+            redirect: 'if_required',
+            confirmParams: {
+              return_url: window.location.origin + '/cart.html?paid=1',
+            },
+          });
+          if (error) throw new Error(error.message);
+          o.stripeStatus = paymentIntent && paymentIntent.status;
+        }
+        document.getElementById('stripePanel').style.display = 'none';
+        document.getElementById('result').innerHTML = `
+          <div class="success-box">
+            <strong>Card submitted to Stripe</strong>
+            <p style="margin-top:8px">Orders: ${pendingOrders.map(o => o.orderNumber).join(', ')}.
+            Final <code>PAID</code> status is set only when Stripe webhook is received by the API.</p>
+            <p style="margin-top:10px"><a href="index.html">${I.t('cart.backStore')}</a></p>
+          </div>`;
+      } catch (e) {
+        showErr(e.message);
+        btn.disabled = false;
+      }
+    };
+
+    window.addEventListener('mplace:locale', () => {
+      I.applyDocument();
+      load();
+      const btn = document.getElementById('payBtn');
+      if (!btn.disabled && btn.style.display !== 'none') btn.textContent = I.t('cart.payBtn');
+    });
+
+    load();
+  </script>
+</body>
+</html>

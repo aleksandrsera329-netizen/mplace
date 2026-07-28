@@ -1,0 +1,403 @@
+// Mplace marketplace data model
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MERCHANT
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ShopStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PROCESSING
+  SHIPPED
+  COMPLETED
+  CANCELLED
+  DISPUTED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  REQUIRES_ACTION
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum DisputeStatus {
+  OPEN
+  APPEALED
+  RESOLVED
+  CLOSED
+}
+
+enum RefundStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum LedgerAccount {
+  PLATFORM
+  VENDOR
+  CUSTOMER_HOLD
+  EXTERNAL
+}
+
+enum LedgerEntryType {
+  ORDER_PAYMENT
+  COMMISSION
+  VENDOR_EARNING
+  PAYOUT
+  REFUND
+  ADJUSTMENT
+  DEPOSIT
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         UserRole
+  status       UserStatus @default(ACTIVE)
+  shopId       String?    @unique
+  shop         Shop?      @relation(fields: [shopId], references: [id])
+  orders       Order[]    @relation("CustomerOrders")
+  tickets      Ticket[]   @relation("TicketAuthor")
+  ticketMsgs   TicketMessage[]
+  auditLogs    AuditLog[]
+  statusChanges OrderStatusHistory[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([role])
+  @@index([status])
+}
+
+model Shop {
+  id              String     @id @default(cuid())
+  name            String
+  slug            String     @unique
+  description     String?
+  status          ShopStatus @default(PENDING)
+  verified        Boolean    @default(false)
+  legalName       String?
+  taxId           String?
+  country         String?
+  address         String?
+  payoutDetails   String?
+  kycNotes        String?
+  rejectionReason String?
+  owner           User?
+  products        Product[]
+  orders          Order[]
+  payouts         PayoutRequest[]
+  ledger          LedgerEntry[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([status])
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  products  Product[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  shopId      String
+  shop        Shop          @relation(fields: [shopId], references: [id])
+  categoryId  String?
+  category    Category?     @relation(fields: [categoryId], references: [id])
+  name        String
+  slug        String
+  description String?
+  imageUrl    String?
+  sku         String?
+  gtin        String?
+  priceCents  Int
+  currency    String        @default("USD")
+  stock       Int           @default(0)
+  soldCount   Int           @default(0)
+  status      ProductStatus @default(DRAFT)
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([shopId, slug])
+  @@index([status])
+  @@index([shopId])
+  @@index([categoryId])
+}
+
+model Cart {
+  id         String     @id @default(cuid())
+  userId     String?    @unique
+  sessionKey String?    @unique
+  items      CartItem[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id                    String               @id @default(cuid())
+  orderNumber           String               @unique
+  customerId            String?
+  customer              User?                @relation("CustomerOrders", fields: [customerId], references: [id])
+  shopId                String
+  shop                  Shop                 @relation(fields: [shopId], references: [id])
+  status                OrderStatus          @default(PENDING_PAYMENT)
+  currency              String               @default("USD")
+  subtotalCents         Int
+  commissionCents       Int                  @default(0)
+  totalCents            Int
+  customerEmail         String?
+  customerName          String?
+  /// bcrypt hash of one-time guest payment token
+  paymentTokenHash      String?
+  paymentTokenExpiresAt DateTime?
+  items                 OrderItem[]
+  payments              Payment[]
+  statusHistory         OrderStatusHistory[]
+  disputes              Dispute[]
+  refunds               Refund[]
+  ledger                LedgerEntry[]
+  paymentRef            String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+
+  @@index([status])
+  @@index([shopId])
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        Product? @relation(fields: [productId], references: [id])
+  productName    String
+  unitPriceCents Int
+  quantity       Int
+  lineTotalCents Int
+}
+
+model OrderStatusHistory {
+  id         String      @id @default(cuid())
+  orderId    String
+  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  actorId    String?
+  actor      User?       @relation(fields: [actorId], references: [id])
+  reason     String?
+  createdAt  DateTime    @default(now())
+
+  @@index([orderId])
+  @@index([createdAt])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider          String
+  providerPaymentId String?
+  status            PaymentStatus @default(PENDING)
+  amountCents       Int
+  currency          String        @default("USD")
+  idempotencyKey    String        @unique
+  paidAt            DateTime?
+  rawPayload        String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([orderId])
+  @@index([providerPaymentId])
+  @@index([status])
+}
+
+model LedgerEntry {
+  id          String          @id @default(cuid())
+  shopId      String?
+  shop        Shop?           @relation(fields: [shopId], references: [id])
+  orderId     String?
+  order       Order?          @relation(fields: [orderId], references: [id])
+  account     LedgerAccount
+  entryType   LedgerEntryType
+  amountCents Int
+  currency    String          @default("USD")
+  description String?
+  metadata    String?
+  createdAt   DateTime        @default(now())
+
+  @@index([shopId])
+  @@index([orderId])
+  @@index([account, entryType])
+  @@index([createdAt])
+}
+
+model PayoutRequest {
+  id          String       @id @default(cuid())
+  shopId      String
+  shop        Shop         @relation(fields: [shopId], references: [id])
+  amountCents Int
+  currency    String       @default("USD")
+  status      PayoutStatus @default(PENDING)
+  method      String       @default("bank")
+  note        String?
+  adminNote   String?
+  processedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([shopId, status])
+}
+
+model Ticket {
+  id        String          @id @default(cuid())
+  authorId  String?
+  author    User?           @relation("TicketAuthor", fields: [authorId], references: [id])
+  subject   String
+  body      String
+  type      String          @default("general")
+  priority  TicketPriority  @default(NORMAL)
+  status    TicketStatus    @default(OPEN)
+  messages  TicketMessage[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([status])
+  @@index([priority])
+}
+
+model TicketMessage {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Dispute {
+  id        String        @id @default(cuid())
+  orderId   String
+  order     Order         @relation(fields: [orderId], references: [id])
+  reason    String
+  status    DisputeStatus @default(OPEN)
+  resolution String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([status])
+  @@index([orderId])
+}
+
+model Refund {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id])
+  amountCents Int
+  reason      String?
+  status      RefundStatus @default(PENDING)
+  adminNote   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status])
+  @@index([orderId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  ip         String?
+  meta       String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

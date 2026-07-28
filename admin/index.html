@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mplace — Admin</title>
+  <link rel="stylesheet" href="../assets/css/admin.css" />
+  <link rel="stylesheet" href="../assets/css/locale.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">M<span>place</span></div>
+      <div class="user-panel">
+        <div class="user-avatar" id="userAvatar">S</div>
+        <div class="info">
+          <span data-i18n="admin.welcome">Welcome</span> <span id="userName">SuperAdmin</span>
+          <small data-i18n="admin.administrator">Administrator</small>
+        </div>
+      </div>
+      <ul class="sidebar-menu" id="sidebarMenu"></ul>
+    </aside>
+
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="toggle-btn" id="toggleSidebar" title="Toggle menu">☰</button>
+          <a href="../index.html" target="_blank" data-i18n="nav.storefront">Store front</a>
+          <div id="localeMount"></div>
+        </div>
+        <div class="topbar-right">
+          <a href="#messages"><span data-i18n="admin.messages">Messages</span> <span class="badge">3</span></a>
+          <a href="#tickets"><span data-i18n="admin.tickets">Tickets</span> <span class="badge badge-warning">5</span></a>
+          <a href="#dashboard" data-i18n="admin.account">Account</a>
+          <a href="#" id="logoutBtn" data-i18n="admin.logout">Logout</a>
+        </div>
+      </header>
+
+      <main class="content" id="content"></main>
+
+      <footer class="main-footer">
+        <span><strong>Mplace</strong> Admin</span>
+        <span data-i18n="admin.liveApi">Live API · NestJS engine</span>
+      </footer>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle" data-i18n="admin.form">Form</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-default" id="modalCancel" data-i18n="admin.cancel">Cancel</button>
+        <button class="btn btn-primary" id="modalSave" data-i18n="admin.save">Save</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script src="../assets/js/i18n.js"></script>
+  <script src="../assets/js/data.js"></script>
+  <script src="../assets/js/api.js"></script>
+  <script src="../assets/js/admin.js"></script>
+</body>
+</html>

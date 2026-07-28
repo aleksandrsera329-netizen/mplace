@@ -1,0 +1,34 @@
+# Render free-tier blueprint for Mplace
+# Deploy: https://dashboard.render.com/select-repo?type=blueprint
+# Or: New → Blueprint → connect this GitHub repo
+
+services:
+  - type: web
+    name: mplace
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "10000"
+      - key: DATABASE_URL
+        value: file:/data/mplace.db
+      - key: FRONTEND_DIR
+        value: /app/frontend
+      - key: PAYMENT_PROVIDER
+        value: dev
+      - key: ALLOW_DEV_PAYMENTS
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      # CORS set at runtime from public URL if empty — also set after first deploy:
+      - key: CORS_ORIGINS
+        sync: false
+      - key: SERVE_FRONTEND
+        value: "true"
