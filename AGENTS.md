@@ -3,17 +3,23 @@
 ## Сначала прочитать
 
 1. `README.md`
-2. `PROJECT_MAP.md`
-3. `ARCHITECTURE.md`
-4. `TESTING.md`
+2. `docs/spec/PRODUCT_TZ.md` — **product backlog (новое ТЗ)**
+3. `docs/spec/GAP_ANALYSIS.md` — что уже есть / чего нет
+4. `docs/spec/SPRINT_PLAN.md` — порядок спринтов
+5. `PROJECT_MAP.md`
+6. `ARCHITECTURE.md`
+7. `TESTING.md`
 
 ## Source of truth
 
 | Область | Источник |
 |---------|----------|
+| Product / US / Epics | `docs/spec/PRODUCT_TZ.md` |
 | UI | `assets/js/*`, html |
 | Домен / БД | `apps/api/prisma/schema.prisma` |
 | API | `apps/api/src/**` |
+
+Приоритет при конфликте: **код** → **PRODUCT_TZ** → ARCHITECTURE → demo UI.
 
 ## Бренд
 

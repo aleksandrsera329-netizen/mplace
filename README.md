@@ -1,5 +1,17 @@
 # Mplace — multi-vendor marketplace
 
+## Product TZ (новое)
+
+Полное ТЗ по epic/US/sprint:
+
+- [`docs/spec/PRODUCT_TZ.md`](docs/spec/PRODUCT_TZ.md) — Epic 1–11  
+- [`docs/spec/GAP_ANALYSIS.md`](docs/spec/GAP_ANALYSIS.md) — vs текущий код  
+- [`docs/spec/SPRINT_PLAN.md`](docs/spec/SPRINT_PLAN.md) — спринты 1–10+  
+
+**Сейчас в работе (рекомендация):** Sprint 1 — Auth + Roles + lockout + email verify foundation.
+
+---
+
 Рабочая папка: `C:\Users\sasha\mplace`
 
 ## Запуск

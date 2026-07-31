@@ -15,6 +15,9 @@
 | Mock data (legacy UI) | `assets/js/data.js` |
 | **API engine** | `apps/api/` |
 | Architecture | `ARCHITECTURE.md` |
+| **Product TZ (новое)** | `docs/spec/PRODUCT_TZ.md` |
+| Gap analysis | `docs/spec/GAP_ANALYSIS.md` |
+| Sprint plan | `docs/spec/SPRINT_PLAN.md` |
 | Stack comparison | `docs/ENGINE_COMPARISON.md` |
 | Doc bootstrap guide | `создание документации.md` |
 | Compose (Postgres/Redis) | `docker-compose.yml` |

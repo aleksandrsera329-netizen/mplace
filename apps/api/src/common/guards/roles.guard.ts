@@ -24,7 +24,16 @@ export class RolesGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
     const user = request.user;
-    if (!user || !required.includes(user.role)) {
+    if (!user) {
+      throw new ForbiddenException('Insufficient role');
+    }
+
+    // Super admin passes any ADMIN-protected route
+    if (user.role === UserRole.SUPER_ADMIN) {
+      return true;
+    }
+
+    if (!required.includes(user.role)) {
       throw new ForbiddenException('Insufficient role');
     }
     return true;

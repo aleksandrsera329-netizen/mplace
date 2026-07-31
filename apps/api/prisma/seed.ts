@@ -66,8 +66,9 @@ async function main() {
       email: 'superadmin@demo.com',
       passwordHash,
       name: 'SuperAdmin',
-      role: UserRole.ADMIN,
+      role: UserRole.SUPER_ADMIN,
       status: UserStatus.ACTIVE,
+      emailVerifiedAt: new Date(),
     },
   });
 

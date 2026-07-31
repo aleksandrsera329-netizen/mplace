@@ -1,4 +1,4 @@
-// Mplace marketplace data model
+// Mplace marketplace data model — TZ Epic 1–4 foundation
 
 generator client {
   provider = "prisma-client-js"
@@ -10,6 +10,7 @@ datasource db {
 }
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   MERCHANT
   CUSTOMER
@@ -19,6 +20,7 @@ enum UserStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+  PENDING_VERIFICATION
 }
 
 enum ShopStatus {
@@ -105,34 +107,120 @@ enum LedgerEntryType {
   DEPOSIT
 }
 
+enum KycDocType {
+  PASSPORT
+  INN
+  CHARTER
+  CERTIFICATE
+  OTHER
+}
+
+enum KycDocStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RfqStatus {
+  DRAFT
+  OPEN
+  MATCHED
+  QUOTED
+  AWARDED
+  CLOSED
+  CANCELLED
+}
+
+enum RfqOfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  name         String
-  role         UserRole
-  status       UserStatus @default(ACTIVE)
-  shopId       String?    @unique
-  shop         Shop?      @relation(fields: [shopId], references: [id])
-  orders       Order[]    @relation("CustomerOrders")
-  tickets      Ticket[]   @relation("TicketAuthor")
-  ticketMsgs   TicketMessage[]
-  auditLogs    AuditLog[]
-  statusChanges OrderStatusHistory[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id                   String     @id @default(cuid())
+  email                String     @unique
+  phone                String?    @unique
+  passwordHash         String
+  name                 String
+  role                 UserRole
+  status               UserStatus @default(ACTIVE)
+  emailVerifiedAt      DateTime?
+  phoneVerifiedAt      DateTime?
+  emailVerifyToken     String?
+  emailVerifyExpires   DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  failedLoginAttempts  Int        @default(0)
+  lockedUntil          DateTime?
+  twoFactorEnabled     Boolean    @default(false)
+  twoFactorSecret      String?
+  shopId               String?    @unique
+  shop                 Shop?      @relation(fields: [shopId], references: [id])
+  orders               Order[]    @relation("CustomerOrders")
+  tickets              Ticket[]   @relation("TicketAuthor")
+  ticketMsgs           TicketMessage[]
+  auditLogs            AuditLog[]
+  statusChanges        OrderStatusHistory[]
+  refreshTokens        RefreshToken[]
+  kycDocuments         KycDocument[] @relation("KycUploader")
+  kycReviews           KycDocument[] @relation("KycReviewer")
+  wishlists            WishlistItem[]
+  savedSearches        SavedSearch[]
+  rfqRequests          RfqRequest[]  @relation("RfqBuyer")
+  rfqOffers            RfqOffer[]    @relation("RfqOfferVendor")
+  rfqMessages          RfqMessage[]
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
   @@index([role])
   @@index([status])
+  @@index([phone])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model KycDocument {
+  id           String       @id @default(cuid())
+  shopId       String
+  shop         Shop         @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  uploadedById String?
+  uploadedBy   User?        @relation("KycUploader", fields: [uploadedById], references: [id])
+  reviewedById String?
+  reviewedBy   User?        @relation("KycReviewer", fields: [reviewedById], references: [id])
+  docType      KycDocType   @default(OTHER)
+  fileName     String
+  filePath     String
+  status       KycDocStatus @default(PENDING)
+  notes        String?
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([shopId, status])
 }
 
 model Shop {
-  id              String     @id @default(cuid())
+  id              String        @id @default(cuid())
   name            String
-  slug            String     @unique
+  slug            String        @unique
   description     String?
-  status          ShopStatus @default(PENDING)
-  verified        Boolean    @default(false)
+  status          ShopStatus    @default(PENDING)
+  verified        Boolean       @default(false)
   legalName       String?
   taxId           String?
   country         String?
@@ -145,8 +233,11 @@ model Shop {
   orders          Order[]
   payouts         PayoutRequest[]
   ledger          LedgerEntry[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  kycDocuments    KycDocument[]
+  rfqMatches      RfqMatch[]
+  rfqOffers       RfqOffer[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([status])
 }
@@ -159,16 +250,17 @@ model Category {
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")
   products  Product[]
+  rfqItems  RfqItem[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 }
 
 model Product {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   shopId      String
-  shop        Shop          @relation(fields: [shopId], references: [id])
+  shop        Shop           @relation(fields: [shopId], references: [id])
   categoryId  String?
-  category    Category?     @relation(fields: [categoryId], references: [id])
+  category    Category?      @relation(fields: [categoryId], references: [id])
   name        String
   slug        String
   description String?
@@ -176,19 +268,181 @@ model Product {
   sku         String?
   gtin        String?
   priceCents  Int
-  currency    String        @default("USD")
-  stock       Int           @default(0)
-  soldCount   Int           @default(0)
-  status      ProductStatus @default(DRAFT)
+  currency    String         @default("USD")
+  stock       Int            @default(0)
+  soldCount   Int            @default(0)
+  viewsCount  Int            @default(0)
+  status      ProductStatus  @default(DRAFT)
   cartItems   CartItem[]
   orderItems  OrderItem[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  images      ProductImage[]
+  documents   ProductDocument[]
+  wishlists   WishlistItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@unique([shopId, slug])
   @@index([status])
   @@index([shopId])
   @@index([categoryId])
+}
+
+model ProductImage {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url         String
+  sortOrder   Int      @default(0)
+  isMain      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([productId])
+}
+
+model ProductDocument {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name      String
+  filePath  String
+  docType   String   @default("certificate")
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model SavedSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  queryJson String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model RfqRequest {
+  id          String          @id @default(cuid())
+  number      String          @unique
+  buyerId     String
+  buyer       User            @relation("RfqBuyer", fields: [buyerId], references: [id])
+  title       String
+  description String?
+  status      RfqStatus       @default(DRAFT)
+  deadline    DateTime?
+  currency    String          @default("USD")
+  items       RfqItem[]
+  attachments RfqAttachment[]
+  matches     RfqMatch[]
+  offers      RfqOffer[]
+  messages    RfqMessage[]
+  awardedOfferId String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([buyerId, status])
+  @@index([status])
+  @@index([deadline])
+}
+
+model RfqItem {
+  id          String    @id @default(cuid())
+  rfqId       String
+  rfq         RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  name        String
+  quantity    Int       @default(1)
+  unit        String?   @default("pcs")
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  specs       String?
+  offerItems  RfqOfferItem[]
+
+  @@index([rfqId])
+}
+
+model RfqAttachment {
+  id        String     @id @default(cuid())
+  rfqId     String
+  rfq       RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  fileName  String
+  filePath  String
+  createdAt DateTime   @default(now())
+
+  @@index([rfqId])
+}
+
+model RfqMatch {
+  id        String     @id @default(cuid())
+  rfqId     String
+  rfq       RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  shopId    String
+  shop      Shop       @relation(fields: [shopId], references: [id])
+  score     Int        @default(0)
+  reason    String?
+  createdAt DateTime   @default(now())
+
+  @@unique([rfqId, shopId])
+  @@index([shopId])
+}
+
+model RfqOffer {
+  id          String         @id @default(cuid())
+  rfqId       String
+  rfq         RfqRequest     @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  shopId      String
+  shop        Shop           @relation(fields: [shopId], references: [id])
+  vendorId    String
+  vendor      User           @relation("RfqOfferVendor", fields: [vendorId], references: [id])
+  status      RfqOfferStatus @default(PENDING)
+  message     String?
+  totalCents  Int            @default(0)
+  currency    String         @default("USD")
+  validUntil  DateTime?
+  items       RfqOfferItem[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([rfqId, shopId])
+  @@index([shopId, status])
+}
+
+model RfqOfferItem {
+  id             String  @id @default(cuid())
+  offerId        String
+  offer          RfqOffer @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  rfqItemId      String
+  rfqItem        RfqItem  @relation(fields: [rfqItemId], references: [id], onDelete: Cascade)
+  unitPriceCents Int
+  quantity       Int      @default(1)
+  note           String?
+  alternative    String?
+
+  @@unique([offerId, rfqItemId])
+}
+
+model RfqMessage {
+  id        String     @id @default(cuid())
+  rfqId     String
+  rfq       RfqRequest @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?      @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime   @default(now())
+
+  @@index([rfqId, createdAt])
 }
 
 model Cart {
@@ -225,7 +479,6 @@ model Order {
   totalCents            Int
   customerEmail         String?
   customerName          String?
-  /// bcrypt hash of one-time guest payment token
   paymentTokenHash      String?
   paymentTokenExpiresAt DateTime?
   items                 OrderItem[]
@@ -257,15 +510,15 @@ model OrderItem {
 }
 
 model OrderStatusHistory {
-  id         String      @id @default(cuid())
+  id         String       @id @default(cuid())
   orderId    String
-  order      Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   fromStatus OrderStatus?
   toStatus   OrderStatus
   actorId    String?
-  actor      User?       @relation(fields: [actorId], references: [id])
+  actor      User?        @relation(fields: [actorId], references: [id])
   reason     String?
-  createdAt  DateTime    @default(now())
+  createdAt  DateTime     @default(now())
 
   @@index([orderId])
   @@index([createdAt])
@@ -358,14 +611,14 @@ model TicketMessage {
 }
 
 model Dispute {
-  id        String        @id @default(cuid())
-  orderId   String
-  order     Order         @relation(fields: [orderId], references: [id])
-  reason    String
-  status    DisputeStatus @default(OPEN)
+  id         String        @id @default(cuid())
+  orderId    String
+  order      Order         @relation(fields: [orderId], references: [id])
+  reason     String
+  status     DisputeStatus @default(OPEN)
   resolution String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   @@index([status])
   @@index([orderId])

@@ -10,7 +10,26 @@
   }
 
   function getBase() {
-    return localStorage.getItem('mplace_api_base') || defaultApiBase();
+    var stored = localStorage.getItem('mplace_api_base');
+    // Ignore stale local overrides that break production (e.g. 127.0.0.1:3000)
+    if (stored) {
+      try {
+        var u = new URL(stored, typeof location !== 'undefined' ? location.href : undefined);
+        var host = (typeof location !== 'undefined' && location.hostname) || '';
+        var isLocalPage = host === '127.0.0.1' || host === 'localhost';
+        var isLocalApi =
+          u.hostname === '127.0.0.1' ||
+          u.hostname === 'localhost';
+        if (!isLocalPage && isLocalApi) {
+          localStorage.removeItem('mplace_api_base');
+          stored = null;
+        }
+      } catch (e) {
+        localStorage.removeItem('mplace_api_base');
+        stored = null;
+      }
+    }
+    return stored || defaultApiBase();
   }
 
   function getToken() {

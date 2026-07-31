@@ -4,12 +4,15 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { BuyerModule } from './buyer/buyer.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { HealthModule } from './health/health.module';
 import { FinanceModule } from './finance/finance.module';
+import { KycModule } from './kyc/kyc.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RfqModule } from './rfq/rfq.module';
 import { ShopsModule } from './shops/shops.module';
 import { SupportModule } from './support/support.module';
 
@@ -35,6 +38,9 @@ import { SupportModule } from './support/support.module';
     PaymentsModule,
     FinanceModule,
     SupportModule,
+    RfqModule,
+    BuyerModule,
+    KycModule,
   ],
   providers: [
     {

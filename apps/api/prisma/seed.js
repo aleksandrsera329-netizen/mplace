@@ -193,7 +193,8 @@ function main() {
                                 email: 'superadmin@demo.com',
                                 passwordHash: passwordHash,
                                 name: 'SuperAdmin',
-                                role: client_1.UserRole.ADMIN,
+                                role: client_1.UserRole.SUPER_ADMIN,
+                                emailVerifiedAt: new Date(),
                                 status: client_1.UserStatus.ACTIVE,
                             },
                         })];

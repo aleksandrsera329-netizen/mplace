@@ -17,3 +17,17 @@ apps/api/prisma/test.e2e.db-journal
 *.e2e.db-journal
 *.db
 *.db-journal
+
+# Local runtime / tunnel (do not commit)
+tools/
+*.log
+PUBLIC_LINK.txt
+cf-err.txt
+cf-out.txt
+lt2.log
+tm.log
+tunnel-url.log
+bore.log
+bore-err.log
+server.log
+apps/api/start-tunnel-server.ps1
