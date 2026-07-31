@@ -1,258 +1,572 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mplace Energy — Procurement Checkout</title>
-  <link rel="stylesheet" href="assets/css/store.css" />
-  <link rel="stylesheet" href="assets/css/admin.css" />
-  <link rel="stylesheet" href="assets/css/locale.css" />
+  <title>Заявка — Mplace Energy</title>
+  <base href="/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/css/store.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
   <style>
-    .checkout-wrap { max-width: 900px; margin: 24px auto; padding: 0 16px; }
-    .checkout-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; }
-    @media (max-width: 800px) { .checkout-grid { grid-template-columns: 1fr; } }
-    .line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; gap: 12px; }
-    .success-box { background: #e8f8ef; border: 1px solid #b7e4c7; padding: 16px; border-radius: 8px; margin-top: 16px; }
-    .warn-box { background: #fff8e6; border: 1px solid #f0d78c; padding: 16px; border-radius: 8px; margin-top: 16px; font-size: 13px; }
-    .checkout-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
-    #payment-element { margin: 12px 0; min-height: 40px; }
-    #stripePanel { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .cart-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 28px 80px;
+      position: relative;
+      z-index: 1;
+    }
+    .cart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .cart-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .cart-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 40px;
+      align-items: start;
+    }
+    .cart-items {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .cart-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 100px 1fr auto;
+      gap: 20px;
+      align-items: center;
+      transition: all 0.25s;
+    }
+    .cart-item:hover {
+      border-color: rgba(245, 158, 11, 0.4);
+      background: var(--card-hover);
+    }
+    .cart-item-image {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(160deg, #1e293b, #0f172a);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      overflow: hidden;
+    }
+    [data-theme="light"] .cart-item-image {
+      background: linear-gradient(160deg, #e2e8f0, #f8fafc);
+    }
+    .cart-item-image img {
+      max-width: 80%;
+      max-height: 80%;
+      object-fit: contain;
+    }
+    .cart-item-info h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .cart-item-meta {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .qty-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .qty-control button {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .qty-control button:hover {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .qty-control span {
+      font-weight: 700;
+      min-width: 28px;
+      text-align: center;
+    }
+    .cart-item-right {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+    }
+    .item-price {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+    .btn-remove {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .btn-remove:hover { color: var(--danger); }
+    .cart-summary {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      position: sticky;
+      top: 100px;
+    }
+    .cart-summary h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 1rem;
+    }
+    .summary-row.total {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .summary-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 28px;
+    }
+    .btn-checkout {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);
+      width: 100%;
+    }
+    .btn-checkout:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(245, 158, 11, 0.45);
+    }
+    .btn-checkout:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-continue {
+      background: transparent;
+      color: var(--text);
+      border: 2px solid var(--border);
+      padding: 14px;
+      border-radius: 14px;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.25s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-continue:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .empty-cart {
+      text-align: center;
+      padding: 100px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+    }
+    .empty-cart .icon {
+      font-size: 5rem;
+      margin-bottom: 24px;
+      opacity: 0.4;
+    }
+    .empty-cart h2 {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+    }
+    .empty-cart p {
+      color: var(--text-muted);
+      margin-bottom: 32px;
+    }
+    .form-field {
+      margin-bottom: 14px;
+    }
+    .form-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .form-field input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+    .form-field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-soft);
+    }
+    .checkout-msg {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .checkout-msg.show { display: block; }
+    .checkout-msg.error {
+      background: rgba(248, 113, 113, 0.12);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+    .checkout-msg.ok {
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+    .checkout-msg.warn {
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid var(--primary);
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+    .pay-hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin: 8px 0 0;
+      line-height: 1.45;
+    }
+    @media (max-width: 900px) {
+      .cart-layout { grid-template-columns: 1fr; }
+      .cart-item {
+        grid-template-columns: 80px 1fr;
+        grid-template-rows: auto auto;
+      }
+      .cart-item-right {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 12px;
+      }
+      .cart-summary { position: static; }
+    }
   </style>
-  <!-- Stripe.js loaded only when needed -->
-  <script src="https://js.stripe.com/v3/" defer></script>
 </head>
 <body>
+
   <header class="store-header">
     <div class="header-top">
-      <a class="logo" href="index.html">M<span>place</span></a>
-      <div id="localeMount"></div>
+      <a class="logo" href="/">M<span>place</span> Energy</a>
       <div class="header-actions">
-        <a class="ha-item" href="index.html"><strong data-i18n="nav.continueShopping">← Continue shopping</strong></a>
-        <a class="ha-item" href="login.html"><strong data-i18n="nav.account">Account</strong></a>
+        <button type="button" class="theme-btn" id="themeToggle" title="Тема">🌙</button>
+        <div id="localeMount"></div>
+        <a class="icon-btn" href="/login.html" title="Аккаунт">👤</a>
+        <button type="button" class="cart-btn" id="cartBtn">
+          🛒 <span data-i18n="nav.cart">Корзина</span>
+          <span class="cart-count" id="cartCount">0</span>
+        </button>
       </div>
     </div>
   </header>
 
-  <div class="checkout-wrap">
-    <div class="checkout-top">
-      <h1 data-i18n="cart.pageTitle" style="margin:0">Cart & Checkout</h1>
+  <div class="cart-page">
+    <div class="cart-header">
+      <h1 data-i18n="cart.title">Ваша заявка</h1>
+      <button type="button" class="btn-remove" id="clearCartBtn" style="display:none;">Очистить заявку</button>
     </div>
-    <div id="msg" class="login-error" style="display:none"></div>
-    <div class="checkout-grid">
-      <div class="box box-primary">
-        <div class="box-header"><span class="box-title" data-i18n="cart.items">Items</span></div>
-        <div class="box-body" id="items" data-i18n="common.loading">Loading…</div>
-      </div>
-      <div class="box box-success">
-        <div class="box-header"><span class="box-title" data-i18n="cart.checkoutBox">Checkout</span></div>
-        <div class="box-body">
-          <div class="form-group">
-            <label data-i18n="cart.name">Name</label>
-            <input class="form-control" id="name" data-i18n-placeholder="cart.namePh" />
-          </div>
-          <div class="form-group">
-            <label data-i18n="cart.email">Email</label>
-            <input class="form-control" type="email" id="email" data-i18n-placeholder="cart.emailPh" />
-          </div>
-          <p class="text-muted" style="font-size:12px;margin-bottom:12px" data-i18n="cart.payHint">
-            Payment via Stripe. Cards never touch our server. Status PAID only after Stripe webhook.
-          </p>
-          <div class="line"><span data-i18n="cart.subtotal">Subtotal</span><strong id="subtotal">—</strong></div>
-          <button class="btn btn-primary btn-block" id="payBtn" style="margin-top:14px" data-i18n="cart.payBtn">Checkout</button>
 
-          <div id="stripePanel">
-            <p class="text-muted" style="font-size:12px">Enter card details (Stripe test mode: 4242…):</p>
-            <div id="payment-element"></div>
-            <button class="btn btn-success btn-block" id="confirmStripeBtn" style="margin-top:10px">Pay with Stripe</button>
-          </div>
-
-          <div id="result"></div>
-        </div>
-      </div>
+    <div id="cartContent">
+      <div style="text-align:center; padding:80px 0; opacity:0.6;" data-i18n="common.loading">Загрузка заявки...</div>
     </div>
   </div>
 
-  <script src="assets/js/i18n.js"></script>
-  <script src="assets/js/api.js"></script>
+  <script src="/assets/js/i18n.js"></script>
+  <script src="/assets/js/api.js"></script>
   <script>
     const I = window.MplaceI18n;
+
+    // Theme
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('mplace_theme', theme);
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+    themeToggle.onclick = () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    };
+    setTheme(localStorage.getItem('mplace_theme') || 'dark');
+
     I.mountSwitcher('#localeMount');
 
-    let stripe = null;
-    let elements = null;
-    let pendingOrders = []; // { id, paymentToken, orderNumber, totalCents, shop, clientSecret, publishableKey }
+    document.getElementById('cartBtn').onclick = () => location.reload();
+    document.getElementById('clearCartBtn').onclick = clearCart;
 
-    function showErr(t) {
-      const el = document.getElementById('msg');
-      el.style.display = 'block';
-      el.classList.add('show');
-      el.textContent = t;
+    function unitPrice(item) {
+      return item.product?.priceCents ?? item.priceCents ?? 0;
     }
 
-    async function load() {
+    async function loadCart() {
       try {
         const cart = await MplaceApi.cart();
-        document.getElementById('subtotal').textContent = I.formatMoney(cart.subtotalCents || 0);
-        if (!cart.items?.length) {
-          document.getElementById('items').innerHTML =
-            `<p class="text-muted">${I.t('cart.empty')} <a href="index.html">${I.t('cart.shopNow')}</a></p>`;
-          document.getElementById('payBtn').disabled = true;
-          return;
-        }
-        document.getElementById('items').innerHTML = cart.items.map(i => `
-          <div class="line">
-            <div>
-              <strong>${i.product.name}</strong><br>
-              <span class="text-muted">${i.product.shop?.name || ''} × ${i.quantity}</span>
-            </div>
-            <div>${I.formatMoney(i.product.priceCents * i.quantity)}</div>
-          </div>`).join('');
-
-        const user = MplaceApi.getUser();
-        if (user) {
-          document.getElementById('name').value = user.name || '';
-          document.getElementById('email').value = user.email || '';
-        }
+        renderCart(cart);
         I.applyDocument();
-      } catch (e) {
-        showErr(e.message);
-        document.getElementById('items').innerHTML = `<p class="text-danger">${I.t('common.error')}</p>`;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('cartContent').innerHTML = `
+          <div class="empty-cart">
+            <div class="icon">⚠️</div>
+            <h2>Ошибка загрузки</h2>
+            <p>${err.message || 'Не удалось загрузить заявку'}</p>
+            <a href="/" class="btn-checkout" style="display:inline-block; text-decoration:none; width:auto; padding:14px 28px;">Вернуться в каталог</a>
+          </div>
+        `;
       }
     }
 
-    document.getElementById('payBtn').onclick = async () => {
-      const btn = document.getElementById('payBtn');
+    function renderCart(cart) {
+      const content = document.getElementById('cartContent');
+      const clearBtn = document.getElementById('clearCartBtn');
+      document.getElementById('cartCount').textContent = cart.itemCount || 0;
+
+      if (!cart.items || cart.items.length === 0) {
+        clearBtn.style.display = 'none';
+        content.innerHTML = `
+          <div class="empty-cart">
+            <div class="icon">🛒</div>
+            <h2 data-i18n="cart.empty">Заявка пуста</h2>
+            <p>Добавьте оборудование из каталога, чтобы сформировать заявку</p>
+            <a href="/" class="btn-checkout" style="display:inline-block; text-decoration:none; width:auto; padding:14px 28px;" data-i18n="cart.shopNow">Перейти в каталог</a>
+          </div>
+        `;
+        return;
+      }
+
+      clearBtn.style.display = 'block';
+
+      const user = MplaceApi.getUser() || {};
+      const itemsHtml = cart.items.map((item) => {
+        const p = item.product || {};
+        const unit = unitPrice(item);
+        const line = unit * item.quantity;
+        return `
+          <div class="cart-item" data-id="${item.id}">
+            <div class="cart-item-image">
+              ${p.imageUrl ? `<img src="${p.imageUrl}" alt="">` : '🛢️'}
+            </div>
+            <div class="cart-item-info">
+              <h3><a href="/product.html?id=${encodeURIComponent(p.slug || p.id || '')}" style="color:inherit">${p.name || 'Товар'}</a></h3>
+              <div class="cart-item-meta">
+                ${p.shop?.name || ''} · SKU: ${p.sku || '—'}
+              </div>
+              <div class="qty-control">
+                <button type="button" data-qty="${item.id}" data-delta="-1">−</button>
+                <span>${item.quantity}</span>
+                <button type="button" data-qty="${item.id}" data-delta="1" data-cur="${item.quantity}">+</button>
+              </div>
+            </div>
+            <div class="cart-item-right">
+              <div class="item-price">${I.formatMoney(line)}</div>
+              <button type="button" class="btn-remove" data-remove="${item.id}">Удалить</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      content.innerHTML = `
+        <div class="cart-layout">
+          <div class="cart-items">
+            ${itemsHtml}
+          </div>
+
+          <div class="cart-summary">
+            <h2 data-i18n="cart.checkoutBox">Итого по заявке</h2>
+            <div class="summary-row">
+              <span>Товаров</span>
+              <span>${cart.itemCount}</span>
+            </div>
+            <div class="summary-row">
+              <span>Позиций</span>
+              <span>${cart.items.length}</span>
+            </div>
+            <div class="summary-row total">
+              <span data-i18n="cart.subtotal">Сумма</span>
+              <span>${I.formatMoney(cart.subtotalCents || 0)}</span>
+            </div>
+
+            <div class="form-field" style="margin-top:20px">
+              <label data-i18n="cart.name">Контакт</label>
+              <input type="text" id="customerName" value="${(user.name || '').replace(/"/g, '&quot;')}" data-i18n-placeholder="cart.namePh" placeholder="ФИО / отдел закупок" />
+            </div>
+            <div class="form-field">
+              <label data-i18n="cart.email">Email</label>
+              <input type="email" id="customerEmail" value="${(user.email || '').replace(/"/g, '&quot;')}" data-i18n-placeholder="cart.emailPh" placeholder="zakupki@company.ru" />
+            </div>
+            <p class="pay-hint" data-i18n="cart.payHint">Демо-оплата: карты не сохраняются. Комиссия площадки 10%.</p>
+
+            <div class="summary-actions">
+              <button type="button" class="btn-checkout" id="checkoutBtn" data-i18n="cart.payBtn">Оформить заявку</button>
+              <a href="/" class="btn-continue" data-i18n="nav.continueShopping">Продолжить покупки</a>
+            </div>
+            <div class="checkout-msg" id="checkoutMsg"></div>
+            <div id="checkoutResult"></div>
+          </div>
+        </div>
+      `;
+
+      content.querySelectorAll('[data-qty]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-qty');
+          const delta = parseInt(btn.getAttribute('data-delta'), 10);
+          const row = cart.items.find((i) => i.id === id);
+          if (!row) return;
+          await updateQty(id, row.quantity + delta);
+        });
+      });
+      content.querySelectorAll('[data-remove]').forEach((btn) => {
+        btn.addEventListener('click', () => removeItem(btn.getAttribute('data-remove')));
+      });
+      document.getElementById('checkoutBtn').onclick = submitRequest;
+    }
+
+    async function updateQty(itemId, newQty) {
+      if (newQty < 1) return removeItem(itemId);
+      try {
+        await MplaceApi.updateCartItem(itemId, newQty);
+        await loadCart();
+      } catch (e) {
+        alert(e.message || 'Не удалось изменить количество');
+      }
+    }
+
+    async function removeItem(itemId) {
+      try {
+        // API: quantity <= 0 deletes the line item
+        await MplaceApi.updateCartItem(itemId, 0);
+        await loadCart();
+      } catch (e) {
+        alert(e.message || 'Не удалось удалить товар');
+      }
+    }
+
+    async function clearCart() {
+      if (!confirm('Очистить всю заявку?')) return;
+      try {
+        await MplaceApi.clearCart();
+        await loadCart();
+      } catch (e) {
+        alert(e.message || 'Ошибка очистки');
+      }
+    }
+
+    function showMsg(text, type) {
+      const el = document.getElementById('checkoutMsg');
+      if (!el) return;
+      el.className = 'checkout-msg show ' + (type || 'error');
+      el.textContent = text;
+    }
+
+    async function submitRequest() {
+      const btn = document.getElementById('checkoutBtn');
+      const name = (document.getElementById('customerName')?.value || '').trim() || 'Guest';
+      const email = (document.getElementById('customerEmail')?.value || '').trim() || undefined;
       btn.disabled = true;
-      btn.textContent = I.t('cart.processing');
-      document.getElementById('result').innerHTML = '';
-      document.getElementById('stripePanel').style.display = 'none';
-      pendingOrders = [];
+      btn.textContent = I.t('cart.processing') || 'Оформление…';
+      document.getElementById('checkoutResult').innerHTML = '';
       try {
         const checkout = await MplaceApi.checkout({
-          customerName: document.getElementById('name').value || 'Guest',
-          customerEmail: document.getElementById('email').value || undefined,
+          customerName: name,
+          customerEmail: email,
         });
-
-        const stripeItems = [];
-        const devItems = [];
-
-        for (const order of checkout.orders || []) {
+        const orders = checkout.orders || [];
+        const lines = [];
+        for (const order of orders) {
           const intent = await MplaceApi.paymentIntent(
             order.id,
             order.paymentToken,
             'checkout_' + order.id + '_' + Date.now(),
           );
-          const row = {
-            id: order.id,
-            paymentToken: order.paymentToken,
+          lines.push({
             orderNumber: order.orderNumber,
             totalCents: order.totalCents,
-            shop: order.shop,
+            shop: order.shop?.name || order.shop || '',
+            status: intent.status || 'PENDING_PAYMENT',
             mode: intent.mode,
-            clientSecret: intent.clientSecret,
-            publishableKey: intent.publishableKey,
-            status: intent.status,
-          };
-          if (intent.mode === 'stripe' && intent.clientSecret) {
-            stripeItems.push(row);
-          } else {
-            devItems.push(row);
-          }
-        }
-
-        if (stripeItems.length) {
-          pendingOrders = stripeItems;
-          const first = stripeItems[0];
-          if (!first.publishableKey || typeof Stripe === 'undefined') {
-            showErr('Stripe publishable key missing or Stripe.js failed to load. Set STRIPE_PUBLISHABLE_KEY on API.');
-            btn.disabled = false;
-            btn.textContent = I.t('cart.payBtn');
-            return;
-          }
-          stripe = Stripe(first.publishableKey);
-          // One Payment Element for first order; multi-shop pays sequentially after confirm
-          elements = stripe.elements({ clientSecret: first.clientSecret });
-          const paymentElement = elements.create('payment');
-          paymentElement.mount('#payment-element');
-          document.getElementById('stripePanel').style.display = 'block';
-          document.getElementById('result').innerHTML =
-            `<div class="warn-box">Orders created (${stripeItems.length}). Complete card payment. Status becomes <strong>PAID</strong> only after Stripe webhook.</div>`;
-          btn.style.display = 'none';
-          return;
-        }
-
-        // Dev provider: no secret in browser — show CLI instructions
-        document.getElementById('result').innerHTML = `
-          <div class="warn-box">
-            <strong>Local dev payment (no card)</strong>
-            <p>Секрет <code>DEV_PAYMENT_SECRET</code> <em>не</em> передаётся в браузер.
-            Подтвердите оплату локальным скриптом на машине разработчика:</p>
-            <pre style="white-space:pre-wrap;font-size:11px;background:#f5f5f5;padding:8px;border-radius:4px">${
-              (devItems || []).map(o =>
-                `$env:DEV_PAYMENT_SECRET="…from apps/api/.env…"\n.\\scripts\\dev-confirm-payment.ps1 -OrderId "${o.id}" -PaymentToken "${o.paymentToken}"`
-              ).join('\n\n')
-            }</pre>
-            <p style="margin-top:8px">Для реальных карт: <code>PAYMENT_PROVIDER=stripe</code> + ключи Stripe.</p>
-            <ul style="margin:8px 0 0 18px">
-              ${devItems.map(o => `<li><code>${o.orderNumber}</code> · ${I.formatMoney(o.totalCents)} · PENDING_PAYMENT</li>`).join('')}
-            </ul>
-            <p style="margin-top:10px"><a href="index.html">${I.t('cart.backStore')}</a></p>
-          </div>`;
-        document.getElementById('items').innerHTML = `<p class="text-muted">${I.t('cart.empty')}</p>`;
-        document.getElementById('subtotal').textContent = I.formatMoney(0);
-      } catch (e) {
-        showErr(e.message);
-        btn.disabled = false;
-        btn.textContent = I.t('cart.payBtn');
-      }
-    };
-
-    document.getElementById('confirmStripeBtn').onclick = async () => {
-      if (!stripe || !elements || !pendingOrders.length) return;
-      const btn = document.getElementById('confirmStripeBtn');
-      btn.disabled = true;
-      try {
-        // Confirm first intent; for multi-shop, confirm remaining sequentially
-        for (let i = 0; i < pendingOrders.length; i++) {
-          const o = pendingOrders[i];
-          if (i > 0) {
-            elements = stripe.elements({ clientSecret: o.clientSecret });
-            const pe = elements.create('payment');
-            document.getElementById('payment-element').innerHTML = '';
-            pe.mount('#payment-element');
-          }
-          const { error, paymentIntent } = await stripe.confirmPayment({
-            elements,
-            redirect: 'if_required',
-            confirmParams: {
-              return_url: window.location.origin + '/cart.html?paid=1',
-            },
+            paymentToken: order.paymentToken,
+            id: order.id,
           });
-          if (error) throw new Error(error.message);
-          o.stripeStatus = paymentIntent && paymentIntent.status;
         }
-        document.getElementById('stripePanel').style.display = 'none';
-        document.getElementById('result').innerHTML = `
-          <div class="success-box">
-            <strong>Card submitted to Stripe</strong>
-            <p style="margin-top:8px">Orders: ${pendingOrders.map(o => o.orderNumber).join(', ')}.
-            Final <code>PAID</code> status is set only when Stripe webhook is received by the API.</p>
-            <p style="margin-top:10px"><a href="index.html">${I.t('cart.backStore')}</a></p>
-          </div>`;
+
+        document.getElementById('checkoutResult').innerHTML = `
+          <div class="checkout-msg show warn" style="margin-top:16px">
+            <strong>✓ Заявка создана</strong>
+            <ul style="margin:10px 0 0 18px;padding:0">
+              ${lines.map((o) =>
+                `<li><code>${o.orderNumber}</code> · ${I.formatMoney(o.totalCents)} · ${o.status}</li>`
+              ).join('')}
+            </ul>
+            <p style="margin-top:10px">Оплата в demo-режиме. Заказы в статусе PENDING_PAYMENT.</p>
+            <p style="margin-top:8px"><a href="/" style="color:var(--primary)">← В каталог</a></p>
+          </div>
+        `;
+        await loadCart();
       } catch (e) {
-        showErr(e.message);
+        showMsg(e.message || 'Ошибка оформления', 'error');
         btn.disabled = false;
+        btn.textContent = I.t('cart.payBtn') || 'Оформить заявку';
       }
-    };
+    }
 
     window.addEventListener('mplace:locale', () => {
       I.applyDocument();
-      load();
-      const btn = document.getElementById('payBtn');
-      if (!btn.disabled && btn.style.display !== 'none') btn.textContent = I.t('cart.payBtn');
+      loadCart();
     });
 
-    load();
+    loadCart();
   </script>
 </body>
 </html>
