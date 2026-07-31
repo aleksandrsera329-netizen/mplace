@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -110,10 +110,10 @@
           shopId: user.shopId || null,
         });
         const next = params.get('next');
-        if (role === 'ADMIN' || role === 'SUPER_ADMIN') location.href = 'admin/index.html';
-        else if (role === 'MERCHANT') location.href = 'merchant/index.html';
-        else if (next && next.startsWith('/') && !next.startsWith('//')) location.href = next;
-        else location.href = 'index.html';
+        const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') location.href = safeNext || '/admin/index.html';
+        else if (role === 'MERCHANT') location.href = safeNext || '/merchant.html';
+        else location.href = safeNext || '/account.html';
       } catch (ex) {
         err.textContent =
           ex.status === 0 || /Failed to fetch|NetworkError|API offline/i.test(ex.message)

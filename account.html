@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Личный кабинет — Mplace Energy</title>
+  <base href="/" />
+
+  <link rel="stylesheet" href="/assets/css/store.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
+
+  <style>
+    .account-page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .account-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 40px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .account-header h1 {
+      font-size: 2rem;
+      font-weight: 800;
+    }
+
+    .welcome {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .account-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 32px;
+    }
+
+    .sidebar-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 24px;
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+
+    .user-info {
+      text-align: center;
+      margin-bottom: 28px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .user-avatar {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      font-size: 1.8rem;
+      font-weight: 800;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 14px;
+    }
+
+    .user-name {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .user-email {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .user-role {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 4px 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border-radius: 99px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .nav-menu {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      color: var(--text);
+      text-decoration: none;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    .nav-item:hover, .nav-item.active {
+      background: var(--primary-soft);
+      color: var(--primary);
+    }
+
+    .content-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .content-card h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .orders-preview {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .order-preview-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+    .order-preview-item:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+    }
+
+    .state-block {
+      text-align: center;
+      padding: 80px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    @media (max-width: 800px) {
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+      .sidebar-card {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="store-header">
+    <div class="header-top">
+      <a class="logo" href="/">M<span>place</span> Energy</a>
+      <div class="header-actions">
+        <button class="theme-btn" id="themeToggle">🌙</button>
+        <div id="localeMount"></div>
+        <a class="icon-btn" href="/account.html">👤</a>
+        <a href="/cart.html" class="cart-btn" style="text-decoration:none;">🛒 Корзина</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="account-page">
+    <div id="accountContent">
+      <div style="text-align:center; padding:80px 0; opacity:0.6;">Загрузка кабинета...</div>
+    </div>
+  </div>
+
+  <script src="/assets/js/i18n.js"></script>
+  <script src="/assets/js/api.js"></script>
+
+  <script>
+    const I = window.MplaceI18n;
+
+    // Theme
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('mplace_theme', theme);
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+    themeToggle.onclick = () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    };
+    setTheme(localStorage.getItem('mplace_theme') || 'dark');
+    I.mountSwitcher('#localeMount');
+
+    function getStatusText(status) {
+      const map = {
+        PENDING_PAYMENT: 'Ожидает оплаты',
+        PAID: 'Оплачена',
+        PROCESSING: 'В обработке',
+        SHIPPED: 'Отправлена',
+        COMPLETED: 'Завершена',
+        CANCELLED: 'Отменена'
+      };
+      return map[status] || status;
+    }
+
+    async function init() {
+      const token = MplaceApi.getToken?.() || sessionStorage.getItem('mplace_token');
+      const user = MplaceApi.getUser?.() || JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
+
+      if (!token || !user) {
+        showLoginRequired();
+        return;
+      }
+
+      // Пробуем обновить данные с сервера
+      let freshUser = user;
+      try {
+        if (MplaceApi.me) {
+          freshUser = await MplaceApi.me();
+        }
+      } catch (e) {
+        console.warn('Не удалось обновить профиль', e);
+      }
+
+      await renderDashboard(freshUser);
+    }
+
+    function showLoginRequired() {
+      document.getElementById('accountContent').innerHTML = `
+        <div class="state-block">
+          <div style="font-size:4rem; margin-bottom:20px; opacity:0.5;">🔒</div>
+          <h2 style="margin-bottom:12px;">Требуется вход</h2>
+          <p style="color:var(--text-muted); margin-bottom:28px;">Войдите в аккаунт, чтобы открыть личный кабинет</p>
+          <a href="/login.html" class="btn-primary" style="display:inline-block; text-decoration:none; padding:14px 32px;">Войти</a>
+        </div>
+      `;
+    }
+
+    async function renderDashboard(user) {
+      let orders = [];
+      try {
+        const res = await MplaceApi.orders();
+        orders = Array.isArray(res) ? res : (res.items || res.data || []);
+      } catch (e) {
+        console.warn('Не удалось загрузить заявки', e);
+      }
+
+      const totalSum = orders.reduce((sum, o) => sum + (o.totalCents || o.subtotalCents || 0), 0);
+      const recentOrders = orders.slice(0, 5);
+
+      const initials = (user.name || user.email || 'U').split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+      document.getElementById('accountContent').innerHTML = `
+        <div class="account-header">
+          <div>
+            <h1>Личный кабинет</h1>
+            <div class="welcome">Добро пожаловать, ${user.name || 'Пользователь'}!</div>
+          </div>
+        </div>
+
+        <div class="account-grid">
+          <!-- Sidebar -->
+          <div class="sidebar-card">
+            <div class="user-info">
+              <div class="user-avatar">${initials}</div>
+              <div class="user-name">${user.name || 'Без имени'}</div>
+              <div class="user-email">${user.email}</div>
+              <div class="user-role">${user.role || 'CUSTOMER'}</div>
+            </div>
+
+            <div class="nav-menu">
+              <a href="/account.html" class="nav-item active">Обзор</a>
+              <a href="/orders.html" class="nav-item">Мои заявки</a>
+              <a href="/" class="nav-item">Каталог</a>
+              <a href="#" class="nav-item" onclick="logout(); return false;">Выйти</a>
+            </div>
+          </div>
+
+          <!-- Main content -->
+          <div>
+            <div class="stats-grid">
+              <div class="stat-card">
+                <div class="stat-value">${orders.length}</div>
+                <div class="stat-label">Всего заявок</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">${I.formatMoney(totalSum)}</div>
+                <div class="stat-label">На сумму</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value">${recentOrders.filter(o => ['PENDING_PAYMENT','PROCESSING','PAID'].includes(o.status)).length}</div>
+                <div class="stat-label">Активных</div>
+              </div>
+            </div>
+
+            <div class="content-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <h2 style="margin:0;">Последние заявки</h2>
+                <a href="/orders.html" style="color:var(--primary); font-weight:600; text-decoration:none;">Все заявки →</a>
+              </div>
+
+              ${recentOrders.length === 0 ? `
+                <div style="text-align:center; padding:40px 0; color:var(--text-muted);">
+                  У вас пока нет заявок
+                </div>
+              ` : `
+                <div class="orders-preview">
+                  ${recentOrders.map(order => `
+                    <a href="/order.html?id=${order.id}" class="order-preview-item">
+                      <div>
+                        <div style="font-weight:600;">${order.orderNumber || order.id}</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                          ${new Date(order.createdAt).toLocaleDateString('ru-RU')} · ${getStatusText(order.status)}
+                        </div>
+                      </div>
+                      <div style="font-weight:700; color:var(--primary);">
+                        ${I.formatMoney(order.totalCents || order.subtotalCents || 0)}
+                      </div>
+                    </a>
+                  `).join('')}
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function logout() {
+      if (MplaceApi.clearSession) {
+        MplaceApi.clearSession();
+      } else {
+        sessionStorage.removeItem('mplace_token');
+        sessionStorage.removeItem('mplace_user');
+      }
+      window.location.href = '/login.html';
+    }
+
+    init();
+  </script>
+</body>
+</html>

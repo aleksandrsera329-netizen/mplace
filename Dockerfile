@@ -1,4 +1,4 @@
-# Mplace — single free-tier container (API + static storefront)
+﻿# Mplace вЂ” single free-tier container (API + static storefront)
 FROM node:22-bookworm-slim AS build
 
 WORKDIR /app
@@ -33,7 +33,7 @@ COPY --from=build /app/apps/api/node_modules/@prisma ./node_modules/@prisma
 
 # Storefront (static)
 WORKDIR /app
-COPY index.html login.html cart.html product.html checkout.html orders.html ./frontend/
+COPY index.html login.html cart.html product.html checkout.html orders.html order.html account.html merchant.html merchant-products.html ./frontend/
 COPY admin ./frontend/admin
 COPY merchant ./frontend/merchant
 COPY assets ./frontend/assets

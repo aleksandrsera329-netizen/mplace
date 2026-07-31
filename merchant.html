@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Админ-панель — Mplace Energy</title>
+  <title>Кабинет поставщика — Mplace Energy</title>
   <base href="/" />
 
   <link rel="stylesheet" href="/assets/css/store.css" />
   <link rel="stylesheet" href="/assets/css/locale.css" />
 
   <style>
-    .admin-page {
-      max-width: 1300px;
+    .merchant-page {
+      max-width: 1200px;
       margin: 0 auto;
       padding: 40px 24px 80px;
     }
 
-    .admin-header {
+    .merchant-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -25,7 +25,7 @@
       gap: 16px;
     }
 
-    .admin-header h1 {
+    .merchant-header h1 {
       font-size: 2rem;
       font-weight: 800;
     }
@@ -89,10 +89,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 13px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--border);
       text-decoration: none;
       color: var(--text);
+      transition: all 0.2s;
     }
     .list-item:last-child {
       border-bottom: none;
@@ -107,17 +108,19 @@
       margin-top: 3px;
     }
 
-    .quick-links {
+    .quick-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
+      margin-top: 20px;
     }
 
-    .quick-link {
+    .action-btn {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 14px 16px;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px;
       background: var(--bg);
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -126,7 +129,7 @@
       font-weight: 600;
       transition: all 0.2s;
     }
-    .quick-link:hover {
+    .action-btn:hover {
       border-color: var(--primary);
       background: var(--primary-soft);
       color: var(--primary);
@@ -158,14 +161,14 @@
       <div class="header-actions">
         <button class="theme-btn" id="themeToggle">🌙</button>
         <div id="localeMount"></div>
-        <a href="/account.html" class="icon-btn">👤</a>
+        <a class="icon-btn" href="/account.html">👤</a>
       </div>
     </div>
   </header>
 
-  <div class="admin-page">
-    <div id="adminContent">
-      <div style="text-align:center; padding:80px 0; opacity:0.6;">Загрузка админ-панели...</div>
+  <div class="merchant-page">
+    <div id="merchantContent">
+      <div style="text-align:center; padding:80px 0; opacity:0.6;">Загрузка кабинета поставщика...</div>
     </div>
   </div>
 
@@ -206,13 +209,14 @@
       const user = MplaceApi.getUser?.() || JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
 
       if (!token || !user) {
-        showAccessDenied('Требуется вход');
+        showAccessDenied('Требуется вход в аккаунт');
         return;
       }
 
+      // Проверяем роль
       const role = (user.role || '').toUpperCase();
-      if (!['ADMIN', 'SUPER_ADMIN'].includes(role)) {
-        showAccessDenied('Доступ только для администраторов');
+      if (!['MERCHANT', 'ADMIN', 'SUPER_ADMIN'].includes(role) && !user.shopId) {
+        showAccessDenied('Этот раздел доступен только поставщикам');
         return;
       }
 
@@ -220,7 +224,7 @@
     }
 
     function showAccessDenied(message) {
-      document.getElementById('adminContent').innerHTML = `
+      document.getElementById('merchantContent').innerHTML = `
         <div class="state-block">
           <div style="font-size:4rem; margin-bottom:20px; opacity:0.5;">🚫</div>
           <h2 style="margin-bottom:12px;">${message}</h2>
@@ -230,31 +234,35 @@
     }
 
     async function renderDashboard(user) {
-      let orders = [];
       let products = [];
+      let orders = [];
+      let balance = null;
 
       try {
-        const [ordRes, prodRes] = await Promise.all([
+        const [prodRes, ordRes, balRes] = await Promise.all([
+          MplaceApi.products().catch(() => []),
           MplaceApi.orders().catch(() => []),
-          MplaceApi.products().catch(() => [])
+          MplaceApi.balance ? MplaceApi.balance().catch(() => null) : null
         ]);
 
-        orders = Array.isArray(ordRes) ? ordRes : (ordRes.items || []);
         products = Array.isArray(prodRes) ? prodRes : (prodRes.items || []);
+        orders = Array.isArray(ordRes) ? ordRes : (ordRes.items || []);
+        balance = balRes;
       } catch (e) {
         console.error(e);
       }
 
       const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || o.subtotalCents || 0), 0);
-      const pendingOrders = orders.filter(o => ['PENDING_PAYMENT', 'PROCESSING', 'PAID'].includes(o.status)).length;
-      const recentOrders = orders.slice(0, 6);
+      const activeOrders = orders.filter(o => ['PENDING_PAYMENT', 'PAID', 'PROCESSING'].includes(o.status)).length;
+      const recentOrders = orders.slice(0, 5);
+      const recentProducts = products.slice(0, 5);
 
-      document.getElementById('adminContent').innerHTML = `
-        <div class="admin-header">
+      document.getElementById('merchantContent').innerHTML = `
+        <div class="merchant-header">
           <div>
-            <h1>Админ-панель</h1>
+            <h1>Кабинет поставщика</h1>
             <div style="color:var(--text-muted); margin-top:6px;">
-              ${user.name || user.email} · ${user.role}
+              ${user.name || user.email} ${user.shopId ? '· Магазин активен' : ''}
             </div>
           </div>
         </div>
@@ -262,20 +270,20 @@
         <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card">
+            <div class="stat-value">${products.length}</div>
+            <div class="stat-label">Товаров</div>
+          </div>
+          <div class="stat-card">
             <div class="stat-value">${orders.length}</div>
             <div class="stat-label">Всего заявок</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${pendingOrders}</div>
+            <div class="stat-value">${activeOrders}</div>
             <div class="stat-label">Активных заявок</div>
           </div>
           <div class="stat-card">
-            <div class="stat-value">${products.length}</div>
-            <div class="stat-label">Товаров в каталоге</div>
-          </div>
-          <div class="stat-card">
             <div class="stat-value">${I.formatMoney(totalRevenue)}</div>
-            <div class="stat-label">Общий оборот</div>
+            <div class="stat-label">Оборот</div>
           </div>
         </div>
 
@@ -300,22 +308,27 @@
             `).join('')}
           </div>
 
-          <!-- Быстрые ссылки -->
+          <!-- Товары + действия -->
           <div class="card">
-            <h2>Управление</h2>
-            <div class="quick-links">
-              <a href="/orders.html" class="quick-link">📋 Все заявки</a>
-              <a href="/merchant-products.html" class="quick-link">📦 Товары</a>
-              <a href="/merchant.html" class="quick-link">🏪 Поставщики</a>
-              <a href="/account.html" class="quick-link">👤 Пользователи</a>
-            </div>
+            <h2>
+              Мои товары
+              <a href="/merchant-products.html">Управление →</a>
+            </h2>
 
-            <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border);">
-              <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Система</div>
-              <div style="font-size:0.95rem;">
-                Версия: MVP 0.9<br>
-                Режим: ${window.location.hostname.includes('localhost') ? 'Development' : 'Production'}
+            ${recentProducts.length === 0 ? `
+              <div style="text-align:center; padding:30px 0; color:var(--text-muted);">Товаров пока нет</div>
+            ` : recentProducts.map(p => `
+              <div class="list-item">
+                <div>
+                  <div style="font-weight:600;">${p.name}</div>
+                  <div class="meta">Остаток: ${p.stock} · ${I.formatMoney(p.priceCents)}</div>
+                </div>
               </div>
+            `).join('')}
+
+            <div class="quick-actions">
+              <a href="/merchant-products.html" class="action-btn">+ Добавить товар</a>
+              <a href="/orders.html" class="action-btn">Все заявки</a>
             </div>
           </div>
         </div>
