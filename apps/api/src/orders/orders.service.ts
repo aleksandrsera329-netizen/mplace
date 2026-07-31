@@ -232,7 +232,9 @@ export class OrdersService {
                 fromStatus: null,
                 toStatus: OrderStatus.PENDING_PAYMENT,
                 actorId: user?.sub ?? null,
-                reason: 'checkout',
+                reason: dto.comment
+                  ? `checkout: ${dto.comment.slice(0, 500)}`
+                  : 'checkout',
               },
             },
           },

@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CheckoutDto {
   @IsOptional()
@@ -9,6 +9,12 @@ export class CheckoutDto {
   @IsOptional()
   @IsEmail()
   customerEmail?: string;
+
+  /** Free-text note from buyer (stored in status history reason) */
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  comment?: string;
 }
 
 export class UpdateOrderStatusDto {

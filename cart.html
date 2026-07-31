@@ -388,7 +388,6 @@
 
       clearBtn.style.display = 'block';
 
-      const user = MplaceApi.getUser() || {};
       const itemsHtml = cart.items.map((item) => {
         const p = item.product || {};
         const unit = unitPrice(item);
@@ -438,22 +437,10 @@
               <span>${I.formatMoney(cart.subtotalCents || 0)}</span>
             </div>
 
-            <div class="form-field" style="margin-top:20px">
-              <label data-i18n="cart.name">Контакт</label>
-              <input type="text" id="customerName" value="${(user.name || '').replace(/"/g, '&quot;')}" data-i18n-placeholder="cart.namePh" placeholder="ФИО / отдел закупок" />
-            </div>
-            <div class="form-field">
-              <label data-i18n="cart.email">Email</label>
-              <input type="email" id="customerEmail" value="${(user.email || '').replace(/"/g, '&quot;')}" data-i18n-placeholder="cart.emailPh" placeholder="zakupki@company.ru" />
-            </div>
-            <p class="pay-hint" data-i18n="cart.payHint">Демо-оплата: карты не сохраняются. Комиссия площадки 10%.</p>
-
             <div class="summary-actions">
-              <button type="button" class="btn-checkout" id="checkoutBtn" data-i18n="cart.payBtn">Оформить заявку</button>
+              <a href="/checkout.html" class="btn-checkout" style="text-decoration:none; text-align:center;" data-i18n="cart.payBtn">Оформить заявку</a>
               <a href="/" class="btn-continue" data-i18n="nav.continueShopping">Продолжить покупки</a>
             </div>
-            <div class="checkout-msg" id="checkoutMsg"></div>
-            <div id="checkoutResult"></div>
           </div>
         </div>
       `;
@@ -470,7 +457,6 @@
       content.querySelectorAll('[data-remove]').forEach((btn) => {
         btn.addEventListener('click', () => removeItem(btn.getAttribute('data-remove')));
       });
-      document.getElementById('checkoutBtn').onclick = submitRequest;
     }
 
     async function updateQty(itemId, newQty) {
@@ -500,64 +486,6 @@
         await loadCart();
       } catch (e) {
         alert(e.message || 'Ошибка очистки');
-      }
-    }
-
-    function showMsg(text, type) {
-      const el = document.getElementById('checkoutMsg');
-      if (!el) return;
-      el.className = 'checkout-msg show ' + (type || 'error');
-      el.textContent = text;
-    }
-
-    async function submitRequest() {
-      const btn = document.getElementById('checkoutBtn');
-      const name = (document.getElementById('customerName')?.value || '').trim() || 'Guest';
-      const email = (document.getElementById('customerEmail')?.value || '').trim() || undefined;
-      btn.disabled = true;
-      btn.textContent = I.t('cart.processing') || 'Оформление…';
-      document.getElementById('checkoutResult').innerHTML = '';
-      try {
-        const checkout = await MplaceApi.checkout({
-          customerName: name,
-          customerEmail: email,
-        });
-        const orders = checkout.orders || [];
-        const lines = [];
-        for (const order of orders) {
-          const intent = await MplaceApi.paymentIntent(
-            order.id,
-            order.paymentToken,
-            'checkout_' + order.id + '_' + Date.now(),
-          );
-          lines.push({
-            orderNumber: order.orderNumber,
-            totalCents: order.totalCents,
-            shop: order.shop?.name || order.shop || '',
-            status: intent.status || 'PENDING_PAYMENT',
-            mode: intent.mode,
-            paymentToken: order.paymentToken,
-            id: order.id,
-          });
-        }
-
-        document.getElementById('checkoutResult').innerHTML = `
-          <div class="checkout-msg show warn" style="margin-top:16px">
-            <strong>✓ Заявка создана</strong>
-            <ul style="margin:10px 0 0 18px;padding:0">
-              ${lines.map((o) =>
-                `<li><code>${o.orderNumber}</code> · ${I.formatMoney(o.totalCents)} · ${o.status}</li>`
-              ).join('')}
-            </ul>
-            <p style="margin-top:10px">Оплата в demo-режиме. Заказы в статусе PENDING_PAYMENT.</p>
-            <p style="margin-top:8px"><a href="/" style="color:var(--primary)">← В каталог</a></p>
-          </div>
-        `;
-        await loadCart();
-      } catch (e) {
-        showMsg(e.message || 'Ошибка оформления', 'error');
-        btn.disabled = false;
-        btn.textContent = I.t('cart.payBtn') || 'Оформить заявку';
       }
     }
 
