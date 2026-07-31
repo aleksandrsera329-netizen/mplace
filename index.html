@@ -10,30 +10,28 @@
   <link rel="stylesheet" href="assets/css/store.css" />
   <link rel="stylesheet" href="assets/css/locale.css" />
   <style>
-    /* Cart drawer — themed for industrial UI */
     .cart-drawer {
       position: fixed; top: 0; right: 0; width: min(400px, 100%); height: 100%;
-      background: var(--card); box-shadow: var(--shadow); z-index: 100;
-      border-left: 1px solid var(--border);
-      transform: translateX(100%); transition: transform var(--transition);
-      display: flex; flex-direction: column; color: var(--text);
+      background: var(--card); box-shadow: -8px 0 30px rgba(0,0,0,.5); z-index: 100;
+      transform: translateX(100%); transition: transform .25s ease; display: flex; flex-direction: column;
+      border-left: 1px solid var(--border); color: var(--text);
     }
     .cart-drawer.open { transform: translateX(0); }
     .cart-backdrop {
-      position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 99; display: none;
+      position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; display: none;
     }
     .cart-backdrop.open { display: block; }
     .cart-head {
-      padding: 16px 18px; border-bottom: 1px solid var(--border);
+      padding: 18px 20px; border-bottom: 1px solid var(--border);
       display: flex; justify-content: space-between; align-items: center;
     }
-    .cart-body { flex: 1; overflow: auto; padding: 12px 16px; }
+    .cart-body { flex: 1; overflow: auto; padding: 16px; }
     .cart-item {
-      display: flex; gap: 10px; padding: 12px 0;
-      border-bottom: 1px solid var(--border); font-size: 13px;
+      display: flex; gap: 12px; padding: 12px 0;
+      border-bottom: 1px solid var(--border); font-size: 14px;
     }
-    .cart-foot { padding: 16px 18px; border-top: 1px solid var(--border); }
-    .cart-foot .total { font-size: 18px; font-weight: 800; margin-bottom: 12px; color: var(--accent); }
+    .cart-foot { padding: 20px; border-top: 1px solid var(--border); }
+    .cart-foot .total { font-size: 1.3rem; font-weight: 700; margin-bottom: 14px; color: var(--accent); }
     .qty-btn {
       border: 1px solid var(--border); background: var(--bg); color: var(--text);
       width: 28px; height: 28px; cursor: pointer; border-radius: 8px;
@@ -43,186 +41,117 @@
       border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px;
     }
     .api-badge.down { color: var(--danger); }
-    .hero-strip {
-      max-width: 1600px; margin: 0 auto; padding: 28px 24px 0;
-    }
-    .hero-card {
-      background: linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #1c1917 100%);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 28px 32px; box-shadow: var(--shadow-sm);
-    }
-    [data-theme="light"] .hero-card {
-      background: linear-gradient(135deg, #fff7ed 0%, #ffffff 60%, #f8fafc 100%);
-    }
-    .hero-card h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
-    .hero-card p { color: var(--text-muted); margin-bottom: 16px; max-width: 520px; }
-    .btn-hero {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--primary); color: #000; font-weight: 800;
-      padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer;
-      transition: all var(--transition);
-    }
-    .btn-hero:hover { background: var(--primary-hover); transform: translateY(-1px); }
-    .cats-inline {
-      display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px;
-    }
-    .cat-chip {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 99px; padding: 8px 14px; font-size: 0.88rem; font-weight: 600;
-      cursor: pointer; transition: all var(--transition); color: var(--text);
-    }
-    .cat-chip:hover, .cat-chip.active {
-      border-color: var(--primary); background: var(--primary-soft); color: var(--primary);
-    }
-    .vendors-row {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 16px; margin-top: 12px;
-    }
-    .vendor-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 18px; transition: all var(--transition);
-    }
-    .vendor-card:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: var(--shadow-sm); }
-    .v-icon {
-      width: 44px; height: 44px; border-radius: 12px; background: var(--primary-soft);
-      color: var(--primary); display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 1.1rem; margin-bottom: 12px;
-    }
-    .vendor-card h4 { font-size: 1rem; margin-bottom: 4px; }
-    .vendor-card p { color: var(--text-muted); font-size: 0.85rem; }
-    .store-footer {
-      border-top: 1px solid var(--border); margin-top: 20px;
-      padding: 28px 24px; color: var(--text-muted); font-size: 0.9rem;
-    }
-    .footer-bottom {
-      max-width: 1600px; margin: 0 auto;
-      display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    .header-links {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     }
     .ha-link {
-      color: var(--text-muted); font-size: 0.9rem; font-weight: 600;
-      padding: 8px 10px; border-radius: 10px; transition: all var(--transition);
+      color: var(--text-muted); font-size: 0.82rem; font-weight: 600;
+      padding: 6px 8px; border-radius: 10px;
     }
     .ha-link:hover { color: var(--primary); background: var(--primary-soft); }
-    .ha-link strong { display: block; color: var(--text); font-size: 0.92rem; }
-    .section-block { margin-top: 36px; }
-    .section-title {
-      font-size: 1.15rem; font-weight: 800; margin-bottom: 14px; letter-spacing: -0.02em;
+    .ha-link strong { display: block; color: var(--text); font-size: 0.88rem; }
+    .product-image img {
+      max-height: 100px; max-width: 100%; object-fit: contain;
     }
-    .products-header {
-      display: flex; justify-content: space-between; align-items: center;
-      gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
-    }
-    .products-header h2 { font-size: 1.25rem; font-weight: 800; }
-    #localeMount select, #localeMount button {
-      background: var(--card); border: 1px solid var(--border); color: var(--text);
-      border-radius: 10px; padding: 8px 10px;
-    }
-    .product-img { height: 170px; display:flex; align-items:center; justify-content:center; }
-    .product-img img { max-height: 110px; max-width: 85%; object-fit: contain; }
-    .product-shop, .product-rating { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 6px; }
   </style>
 </head>
 <body>
+
+  <!-- ========== HEADER ========== -->
   <header class="store-header">
     <div class="header-top">
       <a class="logo" href="index.html">M<span>place</span> Energy</a>
-      <div id="localeMount"></div>
+
       <div class="header-actions">
-        <button type="button" class="theme-btn" id="themeBtn" title="Theme">🌓</button>
-        <a class="ha-link" href="login.html" id="accountLink">
-          <span id="helloLine" data-i18n="hello.signIn">Hello</span>
-          <strong data-i18n="nav.account">Account</strong>
-        </a>
-        <a class="ha-link" href="login.html?email=merchant@demo.com">
-          <span data-i18n="nav.sell">Sell</span>
-          <strong data-i18n="nav.sellOn">on Mplace</strong>
-        </a>
-        <a class="ha-link" href="login.html?email=superadmin@demo.com">
-          <strong data-i18n="nav.admin">Admin</strong>
-        </a>
+        <button type="button" class="theme-btn" id="themeToggle" title="Тема">🌙</button>
+        <div id="localeMount"></div>
+        <span class="api-badge" id="apiBadge" data-i18n="api.loading">API …</span>
+        <div class="header-links">
+          <a class="ha-link" href="login.html" id="accountLink">
+            <span id="helloLine" data-i18n="hello.signIn">Войти</span>
+            <strong data-i18n="nav.account">Аккаунт</strong>
+          </a>
+          <a class="ha-link" href="login.html?email=merchant@demo.com">
+            <span data-i18n="nav.sell">Sell</span>
+            <strong data-i18n="nav.sellOn">on Mplace</strong>
+          </a>
+          <a class="ha-link" href="login.html?email=superadmin@demo.com">
+            <strong data-i18n="nav.admin">Admin</strong>
+          </a>
+        </div>
         <button type="button" class="cart-btn" id="cartBtn">
-          <span>🛒</span>
-          <span data-i18n="nav.cart">Cart</span>
+          🛒 <span data-i18n="nav.cart">Корзина</span>
           <span class="cart-count" id="cartCount">0</span>
         </button>
       </div>
     </div>
   </header>
 
-  <div class="hero-strip">
-    <div class="hero-card">
-      <div style="display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start">
-        <div>
-          <h1 data-i18n="hero.title">Oil & Gas B2B Marketplace</h1>
-          <p data-i18n="hero.sub">Multi-vendor industrial marketplace — equipment, parts, chemicals, services.</p>
-          <a class="btn-hero" href="#products" data-i18n="hero.cta">Browse products</a>
-        </div>
-        <div style="text-align:right">
-          <span class="api-badge" id="apiBadge" data-i18n="api.loading">API …</span>
-          <div style="margin-top:10px;font-size:12px;color:var(--text-muted)">
-            <a href="#vendors" data-i18n="nav.vendors">Vendors</a> ·
-            <a href="cart.html" data-i18n="nav.checkout">Checkout</a> ·
-            <a href="login.html" data-i18n="nav.login">Login</a>
-          </div>
-        </div>
-      </div>
-      <div class="cats-inline" id="catsGrid"></div>
-    </div>
-  </div>
-
+  <!-- ========== MAIN LAYOUT ========== -->
   <div class="layout">
+
+    <!-- LEFT SIDEBAR -->
     <aside class="sidebar" id="sidebar">
-      <h3 data-i18n="search.filters">Filters</h3>
-      <div style="margin:14px 0 18px">
-        <input class="search-box" type="search" id="searchInput" data-i18n-placeholder="search.placeholder" placeholder="Search products…" />
+      <h3 data-i18n="search.title">Поиск</h3>
+      <input type="search" class="search-box" id="searchInput" placeholder="Название, SKU..." data-i18n-placeholder="search.placeholder" />
+
+      <h3 data-i18n="search.category">Категории</h3>
+      <div class="filter-group" id="categoryFilters">
+        <label><input type="radio" name="category" value="" checked /> <span data-i18n="search.allCategories">Все категории</span></label>
       </div>
-      <div style="margin-bottom:18px">
-        <label style="font-size:0.78rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:8px" data-i18n="search.category">Category</label>
-        <select class="filter-select" id="catFilter" aria-label="Category">
-          <option value="" data-i18n="search.all">All</option>
-        </select>
+
+      <h3 data-i18n="search.vendors">Поставщики</h3>
+      <div class="filter-group" id="vendorFilters">
+        <label><input type="radio" name="vendor" value="" checked /> <span data-i18n="search.allVendors">Все поставщики</span></label>
       </div>
-      <button type="button" class="btn-add" id="searchBtn" style="width:100%" data-i18n="search.apply">Apply</button>
-      <div style="margin-top:22px;padding-top:16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-muted)">
-        Dark industrial UI · Oil & Gas B2B
+
+      <h3 data-i18n="search.stock">Наличие</h3>
+      <div class="filter-group">
+        <label><input type="checkbox" id="inStockOnly" /> <span data-i18n="search.inStockOnly">Только в наличии</span></label>
       </div>
+
+      <h3 data-i18n="search.sort">Сортировка</h3>
+      <select class="filter-select" id="sortSelect">
+        <option value="default" data-i18n="search.sortDefault">По умолчанию</option>
+        <option value="price-asc" data-i18n="search.sortPriceAsc">Цена ↑</option>
+        <option value="price-desc" data-i18n="search.sortPriceDesc">Цена ↓</option>
+        <option value="name" data-i18n="search.sortName">Название</option>
+        <option value="stock" data-i18n="search.sortStock">Остаток</option>
+      </select>
+
+      <button type="button" class="btn-add" style="width:100%; margin-top:20px;" id="applyFiltersBtn" data-i18n="search.apply">Применить</button>
     </aside>
 
+    <!-- PRODUCTS AREA -->
     <main>
-      <section id="products">
-        <div class="products-header">
-          <h2><span data-i18n="section.products">Products</span> <span id="prodCount" style="font-size:14px;font-weight:500;color:var(--text-muted)"></span></h2>
-          <button type="button" class="mobile-filter-btn icon-btn" id="mobileFilterBtn" title="Filters" style="display:none">☰</button>
-        </div>
-        <div class="products-grid" id="productsGrid"><p data-i18n="common.loading">Loading…</p></div>
-      </section>
+      <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ <span data-i18n="search.filters">Фильтры</span></button>
 
-      <section class="section-block" id="vendors">
-        <h2 class="section-title" data-i18n="section.vendors">Vendors</h2>
-        <div class="vendors-row" id="vendorsRow"></div>
-      </section>
+      <div class="products-header">
+        <h2>
+          <span data-i18n="section.products">Оборудование и материалы</span>
+          <span id="prodCount" style="font-size:1rem; font-weight:400; opacity:0.7; margin-left:8px;"></span>
+        </h2>
+      </div>
+
+      <div class="products-grid" id="productsGrid">
+        <p data-i18n="common.loading">Загрузка…</p>
+      </div>
     </main>
   </div>
 
+  <!-- CART DRAWER -->
   <div class="cart-backdrop" id="cartBackdrop"></div>
   <aside class="cart-drawer" id="cartDrawer">
     <div class="cart-head">
-      <strong data-i18n="cart.title">Your Cart</strong>
-      <button type="button" id="closeCart" class="icon-btn" style="width:36px;height:36px">&times;</button>
+      <strong data-i18n="cart.title">Ваша заявка</strong>
+      <button type="button" id="closeCart" style="border:none;background:none;font-size:24px;cursor:pointer;color:var(--text)">&times;</button>
     </div>
     <div class="cart-body" id="cartBody"></div>
     <div class="cart-foot">
-      <div class="total"><span data-i18n="cart.total">Total</span>: <span id="cartTotal">—</span></div>
-      <a class="btn-add" href="cart.html" style="display:block;text-align:center;text-decoration:none" data-i18n="cart.checkout">Checkout</a>
+      <div class="total"><span data-i18n="cart.total">Итого</span>: <span id="cartTotal">—</span></div>
+      <a class="btn-add" href="cart.html" style="display:block;text-align:center;text-decoration:none;" data-i18n="cart.checkout">Оформить заявку</a>
     </div>
   </aside>
-
-  <footer class="store-footer">
-    <div class="footer-bottom">
-      <div class="logo">M<span>place</span> Energy</div>
-      <div data-i18n="footer.copy">© 2026 Mplace — Industrial marketplace</div>
-    </div>
-  </footer>
 
   <script src="assets/js/i18n.js"></script>
   <script src="assets/js/api.js"></script>
@@ -230,170 +159,80 @@
     const I = window.MplaceI18n;
     const icons = ['🛢️', '⚙️', '🔧', '🦺', '🚰', '📡', '🧪', '🏗️', '🔩', '🏭'];
     let allProducts = [];
+    let allCategories = [];
+    let allShops = [];
 
-    // Theme toggle
-    (function initTheme() {
-      const saved = localStorage.getItem('mplace_theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
-      document.getElementById('themeBtn').onclick = () => {
-        const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', cur);
-        localStorage.setItem('mplace_theme', cur);
-      };
-    })();
+    // ===== Theme =====
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('mplace_theme', theme);
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+    themeToggle.addEventListener('click', () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    });
+    setTheme(localStorage.getItem('mplace_theme') || 'dark');
 
-    I.mountSwitcher('#localeMount');
+    // ===== Mobile sidebar =====
+    document.getElementById('mobileFilterBtn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
 
+    // ===== Cart =====
     function openCart(open) {
       document.getElementById('cartDrawer').classList.toggle('open', open);
       document.getElementById('cartBackdrop').classList.toggle('open', open);
     }
+    document.getElementById('cartBtn').addEventListener('click', () => {
+      openCart(true);
+      refreshCart();
+    });
+    document.getElementById('closeCart').addEventListener('click', () => openCart(false));
+    document.getElementById('cartBackdrop').addEventListener('click', () => openCart(false));
 
     async function refreshCart() {
       try {
         const cart = await MplaceApi.cart();
         document.getElementById('cartCount').textContent = cart.itemCount || 0;
         document.getElementById('cartTotal').textContent = I.formatMoney(cart.subtotalCents || 0);
+
         const body = document.getElementById('cartBody');
         if (!cart.items?.length) {
-          body.innerHTML = `<p style="color:var(--text-muted);padding:12px">${I.t('cart.empty')}</p>`;
+          body.innerHTML = `<p style="opacity:0.6; text-align:center; margin-top:40px;">${I.t('cart.empty')}</p>`;
           return;
         }
-        body.innerHTML = cart.items.map(i => `
+        body.innerHTML = cart.items.map((item) => {
+          const unit = item.product?.priceCents ?? item.priceCents ?? 0;
+          return `
           <div class="cart-item">
             <div style="flex:1">
-              <div><strong>${i.product.name}</strong></div>
-              <div style="color:var(--text-muted)">${i.product.shop?.name || ''} · ${I.formatMoney(i.product.priceCents)}</div>
+              <div style="font-weight:600">${item.product?.name || 'Товар'}</div>
+              <div style="font-size:13px; opacity:0.7">${item.product?.shop?.name || ''} · ${I.formatMoney(unit)}</div>
               <div style="margin-top:6px">
-                <button class="qty-btn" data-dec="${i.id}">−</button>
-                <span style="margin:0 8px">${i.quantity}</span>
-                <button class="qty-btn" data-inc="${i.id}">+</button>
+                <button type="button" class="qty-btn" data-dec="${item.id}">−</button>
+                <span style="margin:0 8px">${item.quantity}</span>
+                <button type="button" class="qty-btn" data-inc="${item.id}">+</button>
               </div>
             </div>
-            <div style="font-weight:700;color:var(--accent)">${I.formatMoney(i.product.priceCents * i.quantity)}</div>
-          </div>`).join('');
-      } catch {
-        document.getElementById('cartCount').textContent = '0';
-      }
-    }
-
-    function productImageHtml(p, i) {
-      const fallback = icons[i % icons.length];
-      if (p.imageUrl) {
-        return `<div class="product-image product-img"><img src="${p.imageUrl}" alt="${String(p.name || '').replace(/"/g, '&quot;')}" loading="lazy" onerror="this.style.display='none';this.parentElement.innerHTML='${fallback}'" /></div>`;
-      }
-      return `<div class="product-image product-img">${fallback}</div>`;
-    }
-
-    function renderProducts(list) {
-      document.getElementById('prodCount').textContent = `(${list.length})`;
-      document.getElementById('productsGrid').innerHTML = list.map((p, i) => `
-        <article class="product-card">
-          ${p.status === 'ACTIVE' ? '<span class="product-badge">Live</span>' : ''}
-          ${productImageHtml(p, i)}
-          <div class="product-body">
-            <div class="product-category">${p.category?.name || I.t('common.general')}</div>
-            <h3 class="product-title">${p.name}</h3>
-            <div class="product-meta product-shop">${I.t('product.soldBy', { shop: p.shop?.name || '—' })}</div>
-            <div class="product-meta ${p.stock > 5 ? 'stock-ok' : 'stock-low'}">${I.t('product.stock', { n: p.stock })}</div>
-            <div class="product-footer">
-              <div class="product-price">${I.formatMoney(p.priceCents)}</div>
-              <button class="btn-add" data-id="${p.id}">${I.t('product.addToCart')}</button>
-            </div>
-          </div>
-        </article>`).join('') || `<p style="color:var(--text-muted)">${I.t('admin.noProducts')}</p>`;
-    }
-
-    async function loadCatalog() {
-      const badge = document.getElementById('apiBadge');
-      try {
-        await MplaceApi.health();
-        badge.textContent = I.t('api.ok');
-        badge.classList.remove('down');
-      } catch {
-        badge.textContent = I.t('api.off');
-        badge.classList.add('down');
-      }
-
-      const user = MplaceApi.getUser();
-      if (user) {
-        document.getElementById('helloLine').textContent = I.t('hello.user', { name: user.name || user.email });
-        const role = String(user.role || '').toUpperCase();
-        if (role === 'ADMIN' || role === 'SUPER_ADMIN') document.getElementById('accountLink').href = 'admin/index.html';
-        else if (role === 'MERCHANT') document.getElementById('accountLink').href = 'merchant/index.html';
-      } else {
-        document.getElementById('helloLine').textContent = I.t('hello.signIn');
-      }
-
-      try {
-        const [products, categories, shops] = await Promise.all([
-          MplaceApi.products(),
-          MplaceApi.categories(),
-          MplaceApi.shops(),
-        ]);
-        allProducts = products;
-        renderProducts(products);
-
-        document.getElementById('catsGrid').innerHTML = categories.map((c, idx) =>
-          `<button type="button" class="cat-chip" data-cat="${c.id}">${icons[idx % icons.length]} ${c.name}</button>`
-        ).join('') || '';
-
-        document.querySelectorAll('.cat-chip').forEach(chip => {
-          chip.addEventListener('click', () => {
-            document.getElementById('catFilter').value = chip.dataset.cat;
-            document.getElementById('searchBtn').click();
-            document.querySelectorAll('.cat-chip').forEach(x => x.classList.remove('active'));
-            chip.classList.add('active');
-          });
-        });
-
-        const sel = document.getElementById('catFilter');
-        sel.innerHTML = `<option value="">${I.t('search.all')}</option>`;
-        categories.forEach(c => {
-          const o = document.createElement('option');
-          o.value = c.id; o.textContent = c.name;
-          sel.appendChild(o);
-        });
-
-        document.getElementById('vendorsRow').innerHTML = shops.map(s =>
-          `<div class="vendor-card">
-            <div class="v-icon">${(s.name || '?').charAt(0)}</div>
-            <h4>${s.name}</h4>
-            <p>${s._count?.products ?? 0} · ${s.status}</p>
-          </div>`
-        ).join('');
+            <div style="font-weight:700;color:var(--accent)">${I.formatMoney(unit * item.quantity)}</div>
+          </div>`;
+        }).join('');
       } catch (e) {
-        document.getElementById('productsGrid').innerHTML =
-          `<p style="color:var(--danger)">${e.message}</p>`;
+        document.getElementById('cartCount').textContent = '0';
+        console.warn('Cart error', e);
       }
-      await refreshCart();
-      I.applyDocument();
     }
 
-    document.getElementById('productsGrid').addEventListener('click', async e => {
-      const btn = e.target.closest('[data-id]');
-      if (!btn) return;
-      btn.disabled = true;
-      try {
-        await MplaceApi.addToCart(btn.dataset.id, 1);
-        btn.textContent = I.t('product.added');
-        await refreshCart();
-        openCart(true);
-        setTimeout(() => { btn.textContent = I.t('product.addToCart'); btn.disabled = false; }, 800);
-      } catch (ex) {
-        alert(ex.message);
-        btn.disabled = false;
-      }
-    });
-
-    document.getElementById('cartBody').addEventListener('click', async e => {
+    document.getElementById('cartBody').addEventListener('click', async (e) => {
       const dec = e.target.closest('[data-dec]');
       const inc = e.target.closest('[data-inc]');
       if (!dec && !inc) return;
       try {
         const cart = await MplaceApi.cart();
         const id = (dec || inc).dataset.dec || (dec || inc).dataset.inc;
-        const item = cart.items.find(i => i.id === id);
+        const item = cart.items.find((i) => i.id === id);
         if (!item) return;
         await MplaceApi.updateCartItem(id, dec ? item.quantity - 1 : item.quantity + 1);
         await refreshCart();
@@ -402,34 +241,183 @@
       }
     });
 
-    document.getElementById('cartBtn').addEventListener('click', e => {
-      e.preventDefault();
-      openCart(true);
-      refreshCart();
-    });
-    document.getElementById('closeCart').onclick = () => openCart(false);
-    document.getElementById('cartBackdrop').onclick = () => openCart(false);
+    // ===== Render products =====
+    function productImageHtml(p, i) {
+      const fallback = icons[i % icons.length];
+      if (p.imageUrl) {
+        return `<img src="${p.imageUrl}" alt="${String(p.name || '').replace(/"/g, '&quot;')}" loading="lazy" onerror="this.replaceWith(document.createTextNode('${fallback}'))" />`;
+      }
+      return fallback;
+    }
 
-    document.getElementById('searchBtn').onclick = () => {
-      const q = document.getElementById('searchInput').value.trim().toLowerCase();
-      const cat = document.getElementById('catFilter').value;
-      renderProducts(allProducts.filter(p => {
-        const okQ = !q || p.name.toLowerCase().includes(q);
-        const okC = !cat || p.categoryId === cat || p.category?.id === cat;
-        return okQ && okC;
-      }));
-    };
-    document.getElementById('searchInput').addEventListener('keydown', e => {
-      if (e.key === 'Enter') document.getElementById('searchBtn').click();
+    function renderProducts(products) {
+      const grid = document.getElementById('productsGrid');
+      document.getElementById('prodCount').textContent = `(${products.length})`;
+
+      if (!products.length) {
+        grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; opacity:0.6; padding:60px 0;">${I.t('admin.noProducts') || 'Ничего не найдено'}</p>`;
+        return;
+      }
+
+      grid.innerHTML = products.map((p, i) => {
+        const stockClass = p.stock > 10 ? 'stock-ok' : 'stock-low';
+        const stockText = p.stock > 0
+          ? (I.t('product.stock', { n: p.stock }) || `В наличии: ${p.stock}`)
+          : 'Нет в наличии';
+        const lowBadge = p.stock < 8 && p.stock > 0
+          ? '<span class="product-badge">Мало</span>'
+          : (p.status === 'ACTIVE' ? '<span class="product-badge">Live</span>' : '');
+
+        return `
+          <article class="product-card">
+            <div class="product-image">
+              ${productImageHtml(p, i)}
+              ${lowBadge}
+            </div>
+            <div class="product-body">
+              <div class="product-category">${p.category?.name || I.t('common.general') || ''}</div>
+              <h3 class="product-title">${p.name}</h3>
+              <div class="product-meta">
+                ${p.shop?.name || ''} · <span class="${stockClass}">${stockText}</span>
+              </div>
+              <div class="product-footer">
+                <div class="product-price">${I.formatMoney(p.priceCents)}</div>
+                <button type="button" class="btn-add" data-id="${p.id}">${I.t('product.addToCart') || 'В заявку'}</button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // ===== Filters =====
+    function applyFilters() {
+      const search = document.getElementById('searchInput').value.toLowerCase().trim();
+      const category = document.querySelector('input[name="category"]:checked')?.value || '';
+      const vendor = document.querySelector('input[name="vendor"]:checked')?.value || '';
+      const inStockOnly = document.getElementById('inStockOnly').checked;
+      const sort = document.getElementById('sortSelect').value;
+
+      let filtered = [...allProducts];
+
+      if (search) {
+        filtered = filtered.filter((p) =>
+          (p.name || '').toLowerCase().includes(search) ||
+          (p.sku || '').toLowerCase().includes(search) ||
+          (p.description || '').toLowerCase().includes(search)
+        );
+      }
+      if (category) filtered = filtered.filter((p) => p.categoryId === category || p.category?.id === category);
+      if (vendor) filtered = filtered.filter((p) => p.shopId === vendor || p.shop?.id === vendor);
+      if (inStockOnly) filtered = filtered.filter((p) => p.stock > 0);
+
+      if (sort === 'price-asc') filtered.sort((a, b) => a.priceCents - b.priceCents);
+      if (sort === 'price-desc') filtered.sort((a, b) => b.priceCents - a.priceCents);
+      if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (sort === 'stock') filtered.sort((a, b) => b.stock - a.stock);
+
+      renderProducts(filtered);
+    }
+
+    document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('sortSelect').addEventListener('change', applyFilters);
+    document.getElementById('inStockOnly').addEventListener('change', applyFilters);
+
+    // ===== Add to cart =====
+    document.getElementById('productsGrid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-id]');
+      if (!btn) return;
+      btn.disabled = true;
+      try {
+        await MplaceApi.addToCart(btn.dataset.id, 1);
+        btn.textContent = I.t('product.added') || 'Добавлено';
+        await refreshCart();
+        openCart(true);
+        setTimeout(() => {
+          btn.textContent = I.t('product.addToCart') || 'В заявку';
+          btn.disabled = false;
+        }, 800);
+      } catch (ex) {
+        alert(ex.message || 'Ошибка добавления в заявку');
+        btn.disabled = false;
+      }
     });
+
+    // ===== Init =====
+    async function init() {
+      I.mountSwitcher('#localeMount');
+
+      const badge = document.getElementById('apiBadge');
+      try {
+        await MplaceApi.health();
+        badge.textContent = I.t('api.ok') || 'API OK';
+        badge.classList.remove('down');
+      } catch {
+        badge.textContent = I.t('api.off') || 'API off';
+        badge.classList.add('down');
+      }
+
+      const user = MplaceApi.getUser();
+      if (user) {
+        document.getElementById('helloLine').textContent = I.t('hello.user', { name: user.name || user.email }) || user.email;
+        const role = String(user.role || '').toUpperCase();
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') document.getElementById('accountLink').href = 'admin/index.html';
+        else if (role === 'MERCHANT') document.getElementById('accountLink').href = 'merchant/index.html';
+      }
+
+      try {
+        const [products, categories, shops] = await Promise.all([
+          MplaceApi.products(),
+          MplaceApi.categories(),
+          MplaceApi.shops(),
+        ]);
+
+        allProducts = Array.isArray(products) ? products : (products.items || []);
+        allCategories = Array.isArray(categories) ? categories : [];
+        allShops = Array.isArray(shops) ? shops : [];
+
+        const catContainer = document.getElementById('categoryFilters');
+        allCategories.forEach((c) => {
+          catContainer.insertAdjacentHTML('beforeend', `
+            <label>
+              <input type="radio" name="category" value="${c.id}" />
+              <span>${c.name}</span>
+            </label>`);
+        });
+        catContainer.querySelectorAll('input[name="category"]').forEach((el) => {
+          el.addEventListener('change', applyFilters);
+        });
+
+        const vendContainer = document.getElementById('vendorFilters');
+        allShops.forEach((s) => {
+          vendContainer.insertAdjacentHTML('beforeend', `
+            <label>
+              <input type="radio" name="vendor" value="${s.id}" />
+              <span>${s.name}</span>
+            </label>`);
+        });
+        vendContainer.querySelectorAll('input[name="vendor"]').forEach((el) => {
+          el.addEventListener('change', applyFilters);
+        });
+
+        applyFilters();
+        await refreshCart();
+        I.applyDocument();
+      } catch (err) {
+        console.error(err);
+        document.getElementById('productsGrid').innerHTML =
+          `<p style="color:var(--danger)">${err.message || 'Ошибка загрузки данных'}</p>`;
+      }
+    }
 
     window.addEventListener('mplace:locale', () => {
       I.applyDocument();
-      renderProducts(allProducts);
+      applyFilters();
       refreshCart();
     });
 
-    loadCatalog();
+    init();
   </script>
 </body>
 </html>
