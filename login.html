@@ -4,10 +4,43 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mplace Energy — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/store.css" />
   <link rel="stylesheet" href="assets/css/admin.css" />
   <link rel="stylesheet" href="assets/css/locale.css" />
+  <style>
+    html, body { min-height: 100%; }
+    body { background: var(--bg) !important; color: var(--text); font-family: Inter, system-ui, sans-serif; }
+    .login-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at top, #1e293b 0%, var(--bg) 55%) !important;
+      padding: 24px;
+    }
+    .login-box {
+      background: var(--card) !important; border: 1px solid var(--border) !important;
+      border-radius: 16px !important; box-shadow: var(--shadow) !important; overflow: hidden;
+      width: min(420px, 100%);
+    }
+    .login-logo { background: transparent !important; border-bottom: 1px solid var(--border); padding: 24px; text-align: center; }
+    .login-logo h1 { color: var(--text) !important; font-weight: 800; letter-spacing: -0.03em; }
+    .login-logo h1 span { color: var(--primary); }
+    .login-logo p, .login-body h3, .login-hints, .login-footer a, .form-group label { color: var(--text-muted) !important; }
+    .login-body h3 { color: var(--text) !important; font-weight: 700; }
+    .form-control {
+      background: var(--bg) !important; border: 1px solid var(--border) !important;
+      color: var(--text) !important; border-radius: 10px !important;
+    }
+    .btn-primary {
+      background: var(--primary) !important; color: #000 !important; border: none !important;
+      font-weight: 800 !important; border-radius: 12px !important;
+    }
+    .login-hints { background: var(--bg) !important; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .login-hints code { color: var(--primary); }
+    .login-footer { border-top: 1px solid var(--border) !important; background: transparent !important; }
+  </style>
 </head>
-<body>
+<body data-theme="dark">
   <div class="login-page">
     <div class="login-locale" id="localeMount"></div>
     <div class="login-box">
@@ -76,7 +109,7 @@
           role: role,
           shopId: user.shopId || null,
         });
-        if (role === 'ADMIN') location.href = 'admin/index.html';
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') location.href = 'admin/index.html';
         else if (role === 'MERCHANT') location.href = 'merchant/index.html';
         else location.href = 'index.html';
       } catch (ex) {
