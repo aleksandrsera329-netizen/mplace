@@ -96,64 +96,119 @@ var bcrypt = __importStar(require("bcrypt"));
 var prisma = new client_1.PrismaClient();
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var passwordHash, drillTech, pipeValve, fieldSafe, customer, drilling, pipeline, ppe, pumps, instruments, chemicals, catalog, createdProducts, _i, catalog_1, p, description, rest, _a, _b, p0, p1;
+        var passwordHash, wipe, drillTech, pipeValve, fieldSafe, customer, drilling, pipeline, ppe, pumps, instruments, chemicals, catalog, createdProducts, _i, catalog_1, p, description, rest, _a, _b, p0, p1;
+        var _this = this;
         return __generator(this, function (_c) {
             switch (_c.label) {
                 case 0: return [4 /*yield*/, bcrypt.hash('123456', 12)];
                 case 1:
                     passwordHash = _c.sent();
-                    // clean demo data for clean seed (keep schema)
-                    return [4 /*yield*/, prisma.ticketMessage.deleteMany().catch(function () { return undefined; })];
+                    wipe = function (fn) { return __awaiter(_this, void 0, void 0, function () {
+                        var _a;
+                        return __generator(this, function (_b) {
+                            switch (_b.label) {
+                                case 0:
+                                    _b.trys.push([0, 2, , 3]);
+                                    return [4 /*yield*/, fn()];
+                                case 1:
+                                    _b.sent();
+                                    return [3 /*break*/, 3];
+                                case 2:
+                                    _a = _b.sent();
+                                    return [3 /*break*/, 3];
+                                case 3: return [2 /*return*/];
+                            }
+                        });
+                    }); };
+                    return [4 /*yield*/, wipe(function () { return prisma.ticketMessage.deleteMany(); })];
                 case 2:
-                    // clean demo data for clean seed (keep schema)
                     _c.sent();
-                    return [4 /*yield*/, prisma.ticket.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.ticket.deleteMany(); })];
                 case 3:
                     _c.sent();
-                    return [4 /*yield*/, prisma.refund.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.refund.deleteMany(); })];
                 case 4:
                     _c.sent();
-                    return [4 /*yield*/, prisma.dispute.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.dispute.deleteMany(); })];
                 case 5:
                     _c.sent();
-                    return [4 /*yield*/, prisma.orderStatusHistory.deleteMany().catch(function () { return undefined; })];
+                    return [4 /*yield*/, wipe(function () { return prisma.orderStatusHistory.deleteMany(); })];
                 case 6:
                     _c.sent();
-                    return [4 /*yield*/, prisma.payment.deleteMany().catch(function () { return undefined; })];
+                    return [4 /*yield*/, wipe(function () { return prisma.payment.deleteMany(); })];
                 case 7:
                     _c.sent();
-                    return [4 /*yield*/, prisma.ledgerEntry.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.ledgerEntry.deleteMany(); })];
                 case 8:
                     _c.sent();
-                    return [4 /*yield*/, prisma.orderItem.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.orderItem.deleteMany(); })];
                 case 9:
                     _c.sent();
-                    return [4 /*yield*/, prisma.order.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.order.deleteMany(); })];
                 case 10:
                     _c.sent();
-                    return [4 /*yield*/, prisma.cartItem.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.cartItem.deleteMany(); })];
                 case 11:
                     _c.sent();
-                    return [4 /*yield*/, prisma.cart.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.cart.deleteMany(); })];
                 case 12:
                     _c.sent();
-                    return [4 /*yield*/, prisma.payoutRequest.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.payoutRequest.deleteMany(); })];
                 case 13:
                     _c.sent();
-                    return [4 /*yield*/, prisma.product.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqOfferItem.deleteMany(); })];
                 case 14:
                     _c.sent();
-                    return [4 /*yield*/, prisma.category.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqOffer.deleteMany(); })];
                 case 15:
                     _c.sent();
-                    return [4 /*yield*/, prisma.user.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqMessage.deleteMany(); })];
                 case 16:
                     _c.sent();
-                    return [4 /*yield*/, prisma.shop.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqMatch.deleteMany(); })];
                 case 17:
                     _c.sent();
-                    return [4 /*yield*/, prisma.auditLog.deleteMany()];
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqAttachment.deleteMany(); })];
                 case 18:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqItem.deleteMany(); })];
+                case 19:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.rfqRequest.deleteMany(); })];
+                case 20:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.wishlistItem.deleteMany(); })];
+                case 21:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.savedSearch.deleteMany(); })];
+                case 22:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.productDocument.deleteMany(); })];
+                case 23:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.productImage.deleteMany(); })];
+                case 24:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.product.deleteMany(); })];
+                case 25:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.category.deleteMany(); })];
+                case 26:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.kycDocument.deleteMany(); })];
+                case 27:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.refreshToken.deleteMany(); })];
+                case 28:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.auditLog.deleteMany(); })];
+                case 29:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.user.deleteMany(); })];
+                case 30:
+                    _c.sent();
+                    return [4 /*yield*/, wipe(function () { return prisma.shop.deleteMany(); })];
+                case 31:
                     _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
@@ -164,7 +219,7 @@ function main() {
                                 verified: true,
                             },
                         })];
-                case 19:
+                case 32:
                     drillTech = _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
@@ -175,7 +230,7 @@ function main() {
                                 verified: true,
                             },
                         })];
-                case 20:
+                case 33:
                     pipeValve = _c.sent();
                     return [4 /*yield*/, prisma.shop.create({
                             data: {
@@ -186,7 +241,7 @@ function main() {
                                 verified: true,
                             },
                         })];
-                case 21:
+                case 34:
                     fieldSafe = _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
@@ -194,11 +249,11 @@ function main() {
                                 passwordHash: passwordHash,
                                 name: 'SuperAdmin',
                                 role: client_1.UserRole.SUPER_ADMIN,
-                                emailVerifiedAt: new Date(),
                                 status: client_1.UserStatus.ACTIVE,
+                                emailVerifiedAt: new Date(),
                             },
                         })];
-                case 22:
+                case 35:
                     _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
@@ -210,7 +265,7 @@ function main() {
                                 shopId: drillTech.id,
                             },
                         })];
-                case 23:
+                case 36:
                     _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
@@ -222,7 +277,7 @@ function main() {
                                 shopId: pipeValve.id,
                             },
                         })];
-                case 24:
+                case 37:
                     _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
@@ -233,7 +288,7 @@ function main() {
                                 status: client_1.UserStatus.ACTIVE,
                             },
                         })];
-                case 25:
+                case 38:
                     customer = _c.sent();
                     return [4 /*yield*/, prisma.user.create({
                             data: {
@@ -244,37 +299,37 @@ function main() {
                                 status: client_1.UserStatus.ACTIVE,
                             },
                         })];
-                case 26:
+                case 39:
                     _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'Drilling Equipment', slug: 'drilling-equipment' },
                         })];
-                case 27:
+                case 40:
                     drilling = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'Pipeline & Valves', slug: 'pipeline-valves' },
                         })];
-                case 28:
+                case 41:
                     pipeline = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'PPE & HSE', slug: 'ppe-hse' },
                         })];
-                case 29:
+                case 42:
                     ppe = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'Pumps & Compressors', slug: 'pumps-compressors' },
                         })];
-                case 30:
+                case 43:
                     pumps = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'Instrumentation', slug: 'instrumentation' },
                         })];
-                case 31:
+                case 44:
                     instruments = _c.sent();
                     return [4 /*yield*/, prisma.category.create({
                             data: { name: 'Chemicals & Fluids', slug: 'chemicals-fluids' },
                         })];
-                case 32:
+                case 45:
                     chemicals = _c.sent();
                     catalog = [
                         {
@@ -400,9 +455,9 @@ function main() {
                     ];
                     createdProducts = [];
                     _i = 0, catalog_1 = catalog;
-                    _c.label = 33;
-                case 33:
-                    if (!(_i < catalog_1.length)) return [3 /*break*/, 36];
+                    _c.label = 46;
+                case 46:
+                    if (!(_i < catalog_1.length)) return [3 /*break*/, 49];
                     p = catalog_1[_i];
                     description = p.description, rest = __rest(p, ["description"]);
                     _b = (_a = createdProducts).push;
@@ -410,13 +465,13 @@ function main() {
                             data: __assign(__assign({}, rest), { description: description ||
                                     "".concat(p.name, " \u2014 oil & gas supply catalog item (Mplace Energy)."), currency: 'USD', status: client_1.ProductStatus.ACTIVE, sku: p.slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 16) }),
                         })];
-                case 34:
+                case 47:
                     _b.apply(_a, [_c.sent()]);
-                    _c.label = 35;
-                case 35:
+                    _c.label = 48;
+                case 48:
                     _i++;
-                    return [3 /*break*/, 33];
-                case 36:
+                    return [3 /*break*/, 46];
+                case 49:
                     p0 = createdProducts[0];
                     p1 = createdProducts[2];
                     return [4 /*yield*/, prisma.order.create({
@@ -444,7 +499,7 @@ function main() {
                                 },
                             },
                         })];
-                case 37:
+                case 50:
                     _c.sent();
                     return [4 /*yield*/, prisma.order.create({
                             data: {
@@ -471,7 +526,7 @@ function main() {
                                 },
                             },
                         })];
-                case 38:
+                case 51:
                     _c.sent();
                     return [4 /*yield*/, prisma.ticket.createMany({
                             data: [
@@ -489,7 +544,7 @@ function main() {
                                 },
                             ],
                         })];
-                case 39:
+                case 52:
                     _c.sent();
                     // eslint-disable-next-line no-console
                     console.log('Seed OK (Oil & Gas):', {
