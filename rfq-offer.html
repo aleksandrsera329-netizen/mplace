@@ -1,0 +1,313 @@
+!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Отправить предложение — Mplace Energy</title>
+  <base href="/" />
+
+  <link rel="stylesheet" href="/assets/css/store.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
+
+  <style>
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+    .page-header h1 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .item-row {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .item-name {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .item-meta {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 12px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 5px;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 11px 13px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #000;
+      border: none;
+      padding: 16px 32px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.25s;
+    }
+    .btn-submit:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+    }
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .state-block {
+      text-align: center;
+      padding: 70px 20px;
+      background: var(--card);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="store-header">
+    <div class="header-top">
+      <a class="logo" href="/">M<span>place</span> Energy</a>
+      <div class="header-actions">
+        <button class="theme-btn" id="themeToggle">🌙</button>
+        <div id="localeMount"></div>
+        <a href="/rfqs.html" class="cart-btn" style="text-decoration:none;">← К RFQ</a>
+      </div>
+    </div>
+  </header>
+
+  <div class="page">
+    <div id="offerContent">
+      <div style="text-align:center; padding:80px 0; opacity:0.6;">Загрузка...</div>
+    </div>
+  </div>
+
+  <script src="/assets/js/i18n.js"></script>
+  <script src="/assets/js/api.js"></script>
+
+  <script>
+    const I = window.MplaceI18n;
+    let currentRfq = null;
+
+    // Theme
+    const themeToggle = document.getElementById('themeToggle');
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('mplace_theme', theme);
+      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    }
+    themeToggle.onclick = () => {
+      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      setTheme(next);
+    };
+    setTheme(localStorage.getItem('mplace_theme') || 'dark');
+    I.mountSwitcher('#localeMount');
+
+    function getIdFromUrl() {
+      return new URLSearchParams(window.location.search).get('id');
+    }
+
+    async function loadRfq() {
+      const id = getIdFromUrl();
+      if (!id) {
+        showError('Не указан ID RFQ');
+        return;
+      }
+
+      const token = MplaceApi.getToken?.() || sessionStorage.getItem('mplace_token');
+      const user = MplaceApi.getUser?.() || JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
+
+      if (!token || !user) {
+        showError('Требуется вход в аккаунт поставщика');
+        return;
+      }
+
+      try {
+        currentRfq = await MplaceApi.rfq(id);
+        renderForm(currentRfq);
+      } catch (err) {
+        console.error(err);
+        showError('Не удалось загрузить RFQ');
+      }
+    }
+
+    function showError(msg) {
+      document.getElementById('offerContent').innerHTML = `
+        <div class="state-block">
+          <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">⚠️</div>
+          <h2>${msg}</h2>
+          <a href="/rfqs.html" class="btn-submit" style="display:inline-block; width:auto; margin-top:24px; text-decoration:none;">Вернуться</a>
+        </div>`;
+    }
+
+    function renderForm(rfq) {
+      const itemsHtml = (rfq.items || []).map((item, index) => `
+        <div class="item-row" data-rfq-item-id="${item.id}">
+          <div class="item-name">${item.name}</div>
+          <div class="item-meta">
+            Запрошено: ${item.quantity} ${item.unit || 'шт'}
+            ${item.specs ? ` · ${item.specs}` : ''}
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Ваша цена за единицу (центы USD) *</label>
+              <input type="number" class="unit-price" min="1" placeholder="например 12500">
+            </div>
+            <div class="form-group">
+              <label>Количество, которое можете поставить</label>
+              <input type="number" class="offer-qty" min="1" value="${item.quantity}">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Комментарий / альтернатива</label>
+            <input type="text" class="offer-note" placeholder="Срок поставки, аналог и т.д.">
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('offerContent').innerHTML = `
+        <div class="page-header">
+          <h1>Отправить предложение</h1>
+          <p style="color:var(--text-muted);">RFQ: <strong>${rfq.number}</strong> — ${rfq.title}</p>
+        </div>
+
+        <div class="card">
+          <h2>Позиции и ваши цены</h2>
+          ${itemsHtml}
+        </div>
+
+        <div class="card">
+          <h2>Общий комментарий к предложению</h2>
+          <div class="form-group">
+            <textarea id="offerMessage" rows="3" placeholder="Условия оплаты, сроки поставки, дополнительные комментарии..."></textarea>
+          </div>
+        </div>
+
+        <button class="btn-submit" id="submitBtn" onclick="submitOffer()">
+          Отправить предложение
+        </button>
+      `;
+    }
+
+    async function submitOffer() {
+      const rows = document.querySelectorAll('.item-row');
+      const items = [];
+      let hasError = false;
+
+      rows.forEach(row => {
+        const rfqItemId = row.dataset.rfqItemId;
+        const unitPriceCents = parseInt(row.querySelector('.unit-price').value);
+        const quantity = parseInt(row.querySelector('.offer-qty').value);
+        const note = row.querySelector('.offer-note').value.trim();
+
+        if (!unitPriceCents || unitPriceCents <= 0 || !quantity || quantity <= 0) {
+          hasError = true;
+        } else {
+          items.push({
+            rfqItemId,
+            unitPriceCents,
+            quantity,
+            note: note || undefined
+          });
+        }
+      });
+
+      if (hasError) {
+        alert('Заполните цену и количество по всем позициям');
+        return;
+      }
+
+      const message = document.getElementById('offerMessage').value.trim();
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Отправляем...';
+
+      try {
+        await MplaceApi.createRfqOffer(currentRfq.id, {
+          message: message || undefined,
+          items
+        });
+
+        document.getElementById('offerContent').innerHTML = `
+          <div class="state-block">
+            <div style="font-size:4rem; margin-bottom:20px;">✅</div>
+            <h2>Предложение успешно отправлено!</h2>
+            <p style="color:var(--text-muted); margin:16px 0 32px;">
+              Покупатель увидит ваше предложение и сможет его выбрать.
+            </p>
+            <a href="/rfq.html?id=${currentRfq.id}" class="btn-submit" style="display:inline-block; width:auto; text-decoration:none; padding:14px 28px;">
+              Вернуться к RFQ
+            </a>
+          </div>
+        `;
+      } catch (err) {
+        console.error(err);
+        btn.disabled = false;
+        btn.textContent = 'Отправить предложение';
+        alert('Ошибка при отправке предложения. Проверьте данные и права.');
+      }
+    }
+
+    loadRfq();
+  </script>
+</body>
+</html>
