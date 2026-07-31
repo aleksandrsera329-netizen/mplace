@@ -24,8 +24,8 @@ import { SupportModule } from './support/support.module';
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000,
-        limit: 120,
+        ttl: 60_000, // 60 seconds
+        limit: 80, // max requests per IP per window
       },
     ]),
     PrismaModule,

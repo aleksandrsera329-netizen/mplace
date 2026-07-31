@@ -360,7 +360,14 @@
         }
 
         if (!found) {
-          document.getElementById('productContent').innerHTML = '<p>Товар не найден</p>';
+          document.getElementById('productContent').innerHTML = `
+            <div class="empty-state" style="grid-column: 1 / -1;">
+              <div class="icon">😕</div>
+              <h3>Товар не найден</h3>
+              <p style="color: var(--text-muted); margin: 12px 0 24px;">Возможно, он был удалён или ссылка устарела</p>
+              <a href="/" class="btn-primary" style="display:inline-block; text-decoration:none;">Вернуться в каталог</a>
+            </div>
+          `;
           return;
         }
 

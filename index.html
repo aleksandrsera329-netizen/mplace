@@ -56,6 +56,7 @@
   </style>
 </head>
 <body>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <!-- ========== HEADER ========== -->
   <header class="store-header">
@@ -124,11 +125,12 @@
       </select>
 
       <button type="button" class="btn-add" style="width:100%; margin-top:20px;" id="applyFiltersBtn" data-i18n="search.apply">Применить</button>
+      <button type="button" class="btn-remove" id="resetFiltersBtn" style="width:100%; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600;">Сбросить всё</button>
     </aside>
 
     <!-- PRODUCTS AREA -->
     <main>
-      <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ <span data-i18n="search.filters">Фильтры</span></button>
+      <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ Фильтры</button>
 
       <div class="products-header">
         <h2>
@@ -183,10 +185,24 @@
     });
     setTheme(localStorage.getItem('mplace_theme') || 'dark');
 
-    // ===== Mobile sidebar =====
-    document.getElementById('mobileFilterBtn').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.toggle('open');
-    });
+    // ===== Mobile Sidebar =====
+    const sidebar = document.getElementById('sidebar');
+    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+    const mobileFilterBtn = document.getElementById('mobileFilterBtn');
+
+    function openSidebar(open) {
+      if (!sidebar) return;
+      sidebar.classList.toggle('open', open);
+      if (sidebarBackdrop) sidebarBackdrop.classList.toggle('open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    if (mobileFilterBtn) {
+      mobileFilterBtn.addEventListener('click', () => openSidebar(true));
+    }
+    if (sidebarBackdrop) {
+      sidebarBackdrop.addEventListener('click', () => openSidebar(false));
+    }
 
     // ===== Cart =====
     function openCart(open) {
@@ -263,7 +279,15 @@
       document.getElementById('prodCount').textContent = `(${products.length})`;
 
       if (!products.length) {
-        grid.innerHTML = `<p style="grid-column:1/-1; text-align:center; opacity:0.6; padding:60px 0;">${I.t('admin.noProducts') || 'Ничего не найдено'}</p>`;
+        grid.innerHTML = `
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="icon">🔍</div>
+            <h3 style="margin-bottom: 8px; font-size: 1.3rem;">Ничего не найдено</h3>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Попробуйте изменить фильтры или поисковый запрос</p>
+            <button type="button" class="btn-add" id="emptyResetBtn">Сбросить фильтры</button>
+          </div>
+        `;
+        document.getElementById('emptyResetBtn')?.addEventListener('click', resetFilters);
         return;
       }
 
@@ -299,39 +323,116 @@
       }).join('');
     }
 
-    // ===== Filters =====
+    // ===== Filters (smart search + URL sync) =====
     function applyFilters() {
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
       const category = document.querySelector('input[name="category"]:checked')?.value || '';
       const vendor = document.querySelector('input[name="vendor"]:checked')?.value || '';
-      const inStockOnly = document.getElementById('inStockOnly').checked;
-      const sort = document.getElementById('sortSelect').value;
+      const inStockOnly = document.getElementById('inStockOnly')?.checked || false;
+      const sort = document.getElementById('sortSelect')?.value || 'default';
 
       let filtered = [...allProducts];
 
       if (search) {
-        filtered = filtered.filter((p) =>
-          (p.name || '').toLowerCase().includes(search) ||
-          (p.sku || '').toLowerCase().includes(search) ||
-          (p.description || '').toLowerCase().includes(search)
-        );
+        filtered = filtered.filter((p) => {
+          const name = (p.name || '').toLowerCase();
+          const desc = (p.description || '').toLowerCase();
+          const sku = (p.sku || '').toLowerCase();
+          const shop = (p.shop?.name || '').toLowerCase();
+          const cat = (p.category?.name || '').toLowerCase();
+          return name.includes(search) || desc.includes(search) || sku.includes(search) ||
+            shop.includes(search) || cat.includes(search);
+        });
       }
-      if (category) filtered = filtered.filter((p) => p.categoryId === category || p.category?.id === category);
-      if (vendor) filtered = filtered.filter((p) => p.shopId === vendor || p.shop?.id === vendor);
-      if (inStockOnly) filtered = filtered.filter((p) => p.stock > 0);
+
+      if (category) {
+        filtered = filtered.filter((p) => p.categoryId === category || p.category?.id === category);
+      }
+      if (vendor) {
+        filtered = filtered.filter((p) => p.shopId === vendor || p.shop?.id === vendor);
+      }
+      if (inStockOnly) {
+        filtered = filtered.filter((p) => p.stock > 0);
+      }
 
       if (sort === 'price-asc') filtered.sort((a, b) => a.priceCents - b.priceCents);
       if (sort === 'price-desc') filtered.sort((a, b) => b.priceCents - a.priceCents);
-      if (sort === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+      if (sort === 'name') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       if (sort === 'stock') filtered.sort((a, b) => b.stock - a.stock);
 
       renderProducts(filtered);
+      updateUrlParams({ search, category, vendor, inStockOnly, sort });
+
+      if (window.innerWidth <= 900) {
+        openSidebar(false);
+      }
+    }
+
+    function updateUrlParams(params) {
+      const url = new URL(window.location.href);
+      if (params.search) url.searchParams.set('q', params.search);
+      else url.searchParams.delete('q');
+      if (params.category) url.searchParams.set('category', params.category);
+      else url.searchParams.delete('category');
+      if (params.vendor) url.searchParams.set('vendor', params.vendor);
+      else url.searchParams.delete('vendor');
+      if (params.inStockOnly) url.searchParams.set('instock', '1');
+      else url.searchParams.delete('instock');
+      if (params.sort && params.sort !== 'default') url.searchParams.set('sort', params.sort);
+      else url.searchParams.delete('sort');
+      window.history.replaceState({}, '', url);
+    }
+
+    function loadFiltersFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('q');
+      if (q) document.getElementById('searchInput').value = q;
+
+      const category = params.get('category');
+      if (category) {
+        document.querySelectorAll('input[name="category"]').forEach((el) => {
+          if (el.value === category) el.checked = true;
+        });
+      }
+
+      const vendor = params.get('vendor');
+      if (vendor) {
+        document.querySelectorAll('input[name="vendor"]').forEach((el) => {
+          if (el.value === vendor) el.checked = true;
+        });
+      }
+
+      if (params.get('instock') === '1') {
+        document.getElementById('inStockOnly').checked = true;
+      }
+
+      const sort = params.get('sort');
+      if (sort) document.getElementById('sortSelect').value = sort;
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.querySelectorAll('input[name="category"]').forEach((el) => {
+        el.checked = el.value === '';
+      });
+      document.querySelectorAll('input[name="vendor"]').forEach((el) => {
+        el.checked = el.value === '';
+      });
+      document.getElementById('inStockOnly').checked = false;
+      document.getElementById('sortSelect').value = 'default';
+      applyFilters();
     }
 
     document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
-    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
     document.getElementById('sortSelect').addEventListener('change', applyFilters);
     document.getElementById('inStockOnly').addEventListener('change', applyFilters);
+
+    let searchTimeout = null;
+    document.getElementById('searchInput')?.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => applyFilters(), 350);
+    });
 
     // ===== Add to cart =====
     document.getElementById('productsGrid').addEventListener('click', async (e) => {
@@ -410,13 +511,19 @@
           el.addEventListener('change', applyFilters);
         });
 
+        loadFiltersFromUrl();
         applyFilters();
         await refreshCart();
         I.applyDocument();
       } catch (err) {
         console.error(err);
-        document.getElementById('productsGrid').innerHTML =
-          `<p style="color:var(--danger)">${err.message || 'Ошибка загрузки данных'}</p>`;
+        document.getElementById('productsGrid').innerHTML = `
+          <div class="error-state" style="grid-column:1/-1">
+            <div class="icon">⚠️</div>
+            <h3>Ошибка загрузки</h3>
+            <p style="color:var(--text-muted);margin:12px 0 20px">${err.message || 'Не удалось загрузить каталог'}</p>
+            <button type="button" class="btn-add" onclick="location.reload()">Обновить</button>
+          </div>`;
       }
     }
 

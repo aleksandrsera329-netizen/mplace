@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -13,6 +13,7 @@ async function bootstrap() {
     rawBody: true,
   });
   const config = app.get(ConfigService);
+  const logger = new Logger('Bootstrap');
 
   app.use(
     helmet({
@@ -35,12 +36,30 @@ async function bootstrap() {
         .split(',')
         .map((o) => o.trim())
         .filter(Boolean)
-    : true; // same-origin deploy: reflect request origin
+    : [
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
+        'http://127.0.0.1:3000',
+        'http://localhost:3000',
+        'https://mplace-vu4o.onrender.com',
+      ];
 
   app.enableCors({
-    origin: origins,
+    origin: origins.includes('*') ? true : origins,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Session-Key',
+      'X-Order-Access-Token',
+    ],
   });
+
+  // Soft check critical env (warn only — Docker generates JWT_SECRET)
+  if (!config.get('JWT_SECRET') && !process.env.JWT_SECRET) {
+    logger.warn('JWT_SECRET is not set — using insecure default for local only');
+  }
 
   // Production / Docker: serve storefront from FRONTEND_DIR
   const serveFrontend =
