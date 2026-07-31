@@ -13,24 +13,44 @@ const prisma = new PrismaClient();
 async function main() {
   const passwordHash = await bcrypt.hash('123456', 12);
 
-  // clean demo data for clean seed (keep schema)
-  await prisma.ticketMessage.deleteMany().catch(() => undefined);
-  await prisma.ticket.deleteMany();
-  await prisma.refund.deleteMany();
-  await prisma.dispute.deleteMany();
-  await prisma.orderStatusHistory.deleteMany().catch(() => undefined);
-  await prisma.payment.deleteMany().catch(() => undefined);
-  await prisma.ledgerEntry.deleteMany();
-  await prisma.orderItem.deleteMany();
-  await prisma.order.deleteMany();
-  await prisma.cartItem.deleteMany();
-  await prisma.cart.deleteMany();
-  await prisma.payoutRequest.deleteMany();
-  await prisma.product.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.shop.deleteMany();
-  await prisma.auditLog.deleteMany();
+  // clean demo data for clean seed (keep schema) — order respects FKs
+  const wipe = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn();
+    } catch {
+      /* table may not exist yet */
+    }
+  };
+  await wipe(() => prisma.ticketMessage.deleteMany());
+  await wipe(() => prisma.ticket.deleteMany());
+  await wipe(() => prisma.refund.deleteMany());
+  await wipe(() => prisma.dispute.deleteMany());
+  await wipe(() => prisma.orderStatusHistory.deleteMany());
+  await wipe(() => prisma.payment.deleteMany());
+  await wipe(() => prisma.ledgerEntry.deleteMany());
+  await wipe(() => prisma.orderItem.deleteMany());
+  await wipe(() => prisma.order.deleteMany());
+  await wipe(() => prisma.cartItem.deleteMany());
+  await wipe(() => prisma.cart.deleteMany());
+  await wipe(() => prisma.payoutRequest.deleteMany());
+  await wipe(() => prisma.rfqOfferItem.deleteMany());
+  await wipe(() => prisma.rfqOffer.deleteMany());
+  await wipe(() => prisma.rfqMessage.deleteMany());
+  await wipe(() => prisma.rfqMatch.deleteMany());
+  await wipe(() => prisma.rfqAttachment.deleteMany());
+  await wipe(() => prisma.rfqItem.deleteMany());
+  await wipe(() => prisma.rfqRequest.deleteMany());
+  await wipe(() => prisma.wishlistItem.deleteMany());
+  await wipe(() => prisma.savedSearch.deleteMany());
+  await wipe(() => prisma.productDocument.deleteMany());
+  await wipe(() => prisma.productImage.deleteMany());
+  await wipe(() => prisma.product.deleteMany());
+  await wipe(() => prisma.category.deleteMany());
+  await wipe(() => prisma.kycDocument.deleteMany());
+  await wipe(() => prisma.refreshToken.deleteMany());
+  await wipe(() => prisma.auditLog.deleteMany());
+  await wipe(() => prisma.user.deleteMany());
+  await wipe(() => prisma.shop.deleteMany());
 
   // Oil & Gas suppliers
   const drillTech = await prisma.shop.create({

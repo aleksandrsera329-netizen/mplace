@@ -33,7 +33,7 @@ COPY --from=build /app/apps/api/node_modules/@prisma ./node_modules/@prisma
 
 # Storefront (static)
 WORKDIR /app
-COPY index.html login.html cart.html ./frontend/
+COPY index.html login.html cart.html product.html ./frontend/
 COPY admin ./frontend/admin
 COPY merchant ./frontend/merchant
 COPY assets ./frontend/assets

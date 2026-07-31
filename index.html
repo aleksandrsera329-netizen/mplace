@@ -272,8 +272,9 @@
           ? '<span class="product-badge">Мало</span>'
           : (p.status === 'ACTIVE' ? '<span class="product-badge">Live</span>' : '');
 
+        const href = 'product.html?id=' + encodeURIComponent(p.slug || p.id);
         return `
-          <article class="product-card">
+          <article class="product-card" style="cursor:pointer" onclick="location.href='${href}'">
             <div class="product-image">
               ${productImageHtml(p, i)}
               ${lowBadge}
@@ -286,7 +287,7 @@
               </div>
               <div class="product-footer">
                 <div class="product-price">${I.formatMoney(p.priceCents)}</div>
-                <button type="button" class="btn-add" data-id="${p.id}">${I.t('product.addToCart') || 'В заявку'}</button>
+                <button type="button" class="btn-add" data-id="${p.id}" onclick="event.stopPropagation()">${I.t('product.addToCart') || 'В заявку'}</button>
               </div>
             </div>
           </article>

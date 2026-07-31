@@ -3,8 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -50,6 +51,16 @@ async function bootstrap() {
     join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src
 
   if (serveFrontend && existsSync(frontendDir)) {
+    // Pretty URLs: /product/:slug → product.html (client reads path or ?id=)
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      const m = req.path.match(/^\/product\/([^/]+)\/?$/);
+      if (!m) return next();
+      const file = join(frontendDir, 'product.html');
+      if (!existsSync(file)) return next();
+      res.type('html').send(readFileSync(file, 'utf8'));
+    });
+
     // Serve storefront + admin/merchant static files (same origin as /api)
     app.useStaticAssets(frontendDir, {
       index: ['index.html'],
