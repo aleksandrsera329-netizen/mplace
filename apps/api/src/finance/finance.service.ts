@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -45,7 +45,7 @@ export class FinanceService {
   }
 
   async listPayouts(user: JwtPayload) {
-    if (user.role === UserRole.ADMIN) {
+    if ((user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
       return this.prisma.payoutRequest.findMany({
         orderBy: { createdAt: 'desc' },
         include: { shop: { select: { id: true, name: true } } },
@@ -97,7 +97,7 @@ export class FinanceService {
     decision: 'APPROVED' | 'REJECTED' | 'PAID',
     adminNote?: string,
   ) {
-    if (user.role !== UserRole.ADMIN) throw new ForbiddenException();
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) throw new ForbiddenException();
     const row = await this.prisma.payoutRequest.findUnique({ where: { id } });
     if (!row) throw new NotFoundException();
 
@@ -153,7 +153,7 @@ export class FinanceService {
   }
 
   async listLedger(user: JwtPayload, shopId?: string) {
-    if (user.role === UserRole.ADMIN) {
+    if ((user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
       return this.prisma.ledgerEntry.findMany({
         where: shopId ? { shopId } : {},
         orderBy: { createdAt: 'desc' },
@@ -171,7 +171,7 @@ export class FinanceService {
   }
 
   async reportsSummary(user: JwtPayload) {
-    if (user.role !== UserRole.ADMIN) throw new ForbiddenException();
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) throw new ForbiddenException();
     const [orders, gmv, shops, products, pendingPayouts] = await Promise.all([
       this.prisma.order.count({
         where: { status: { notIn: ['CANCELLED', 'PENDING_PAYMENT'] } },

@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -287,7 +287,7 @@ export class OrdersService {
 
   async listOrders(user: JwtPayload) {
     const where =
-      user.role === UserRole.ADMIN
+      (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)
         ? {}
         : user.role === UserRole.MERCHANT
           ? { shopId: user.shopId ?? '__none__' }
@@ -339,7 +339,7 @@ export class OrdersService {
       if (order.shopId !== user.shopId) throw new ForbiddenException();
     } else if (user.role === UserRole.CUSTOMER) {
       if (order.customerId !== user.sub) throw new ForbiddenException();
-    } else if (user.role !== UserRole.ADMIN) {
+    } else if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException();
     }
 
@@ -355,7 +355,7 @@ export class OrdersService {
     }
 
     if (
-      user.role === UserRole.ADMIN &&
+      (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) &&
       (toStatus === OrderStatus.CANCELLED ||
         toStatus === OrderStatus.REFUNDED ||
         toStatus === OrderStatus.PARTIALLY_REFUNDED) &&
@@ -547,7 +547,7 @@ export class OrdersService {
     },
     paymentToken?: string,
   ) {
-    if (user?.role === UserRole.ADMIN) return;
+    if ((user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN)) return;
     if (
       user?.role === UserRole.MERCHANT &&
       user.shopId &&

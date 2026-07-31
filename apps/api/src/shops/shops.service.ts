@@ -13,7 +13,7 @@ export class ShopsService {
 
   list(user: JwtPayload | null) {
     const where =
-      user?.role === UserRole.ADMIN
+      user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN
         ? {}
         : { status: ShopStatus.ACTIVE };
 
@@ -45,7 +45,7 @@ export class ShopsService {
     status: ShopStatus,
     rejectionReason?: string,
   ) {
-    if (user.role !== UserRole.ADMIN) {
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) {
       throw new ForbiddenException();
     }
     await this.get(id);

@@ -206,7 +206,7 @@ export class CatalogService {
       }
       return user.shopId;
     }
-    if (user.role === UserRole.ADMIN) {
+    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) {
       if (!bodyShopId) {
         throw new ForbiddenException('Admin must pass shopId');
       }
@@ -216,7 +216,7 @@ export class CatalogService {
   }
 
   private assertCanWriteShop(user: JwtPayload, shopId: string) {
-    if (user.role === UserRole.ADMIN) return;
+    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) return;
     if (user.role === UserRole.MERCHANT && user.shopId === shopId) return;
     throw new ForbiddenException('Not your shop');
   }
@@ -230,7 +230,7 @@ export class CatalogService {
     if (!user) {
       throw new NotFoundException('Product not found');
     }
-    if (user.role === UserRole.ADMIN) return;
+    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) return;
     if (user.role === UserRole.MERCHANT && user.shopId === shopId) return;
     throw new NotFoundException('Product not found');
   }

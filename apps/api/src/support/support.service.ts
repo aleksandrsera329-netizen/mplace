@@ -1,4 +1,4 @@
-import {
+﻿import {
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -17,7 +17,7 @@ export class SupportService {
   constructor(private readonly prisma: PrismaService) {}
 
   listTickets(user: JwtPayload) {
-    if (user.role === UserRole.ADMIN) {
+    if ((user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
       return this.prisma.ticket.findMany({
         orderBy: { updatedAt: 'desc' },
         include: {
@@ -54,7 +54,7 @@ export class SupportService {
     });
     if (!ticket) throw new NotFoundException();
     if (
-      user.role !== UserRole.ADMIN &&
+      user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN &&
       ticket.authorId !== user.sub
     ) {
       throw new ForbiddenException();
@@ -69,12 +69,12 @@ export class SupportService {
     id: string,
     status: TicketStatus,
   ) {
-    if (user.role !== UserRole.ADMIN) throw new ForbiddenException();
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) throw new ForbiddenException();
     return this.prisma.ticket.update({ where: { id }, data: { status } });
   }
 
   listDisputes(user: JwtPayload) {
-    if (user.role === UserRole.ADMIN) {
+    if ((user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
       return this.prisma.dispute.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -144,7 +144,7 @@ export class SupportService {
     resolution: string,
     status: DisputeStatus = DisputeStatus.RESOLVED,
   ) {
-    if (user.role !== UserRole.ADMIN) throw new ForbiddenException();
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) throw new ForbiddenException();
     return this.prisma.dispute.update({
       where: { id },
       data: { resolution, status },
@@ -152,7 +152,7 @@ export class SupportService {
   }
 
   listRefunds(user: JwtPayload) {
-    if (user.role === UserRole.ADMIN) {
+    if ((user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)) {
       return this.prisma.refund.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -204,7 +204,7 @@ export class SupportService {
     status: 'APPROVED' | 'REJECTED' | 'COMPLETED',
     adminNote?: string,
   ) {
-    if (user.role !== UserRole.ADMIN && user.role !== UserRole.MERCHANT) {
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN && user.role !== UserRole.MERCHANT) {
       throw new ForbiddenException();
     }
     const refund = await this.prisma.refund.findUnique({
@@ -249,7 +249,7 @@ export class SupportService {
   }
 
   listAudit(user: JwtPayload) {
-    if (user.role !== UserRole.ADMIN) throw new ForbiddenException();
+    if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN) throw new ForbiddenException();
     return this.prisma.auditLog.findMany({
       orderBy: { createdAt: 'desc' },
       take: 200,

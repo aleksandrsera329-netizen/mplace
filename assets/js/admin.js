@@ -2,7 +2,8 @@
 (function () {
   const user = JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
   const role = String(user?.role || '').toUpperCase();
-  if (!user || role !== 'ADMIN' || !sessionStorage.getItem('mplace_token')) {
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  if (!user || !isAdmin || !sessionStorage.getItem('mplace_token')) {
     location.href = '../login.html?email=superadmin@demo.com';
     return;
   }

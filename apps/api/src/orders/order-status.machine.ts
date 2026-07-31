@@ -55,7 +55,9 @@ export function allowedTransitions(
   }
   if (role === UserRole.MERCHANT) return MERCHANT_TRANSITIONS[from] ?? [];
   if (role === UserRole.CUSTOMER) return CUSTOMER_TRANSITIONS[from] ?? [];
-  if (role === UserRole.ADMIN) return ADMIN_TRANSITIONS[from] ?? [];
+  if (role === UserRole.ADMIN || role === UserRole.SUPER_ADMIN) {
+    return ADMIN_TRANSITIONS[from] ?? [];
+  }
   return [];
 }
 
