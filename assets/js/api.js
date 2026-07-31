@@ -217,5 +217,49 @@
         body: { orderId, amountCents, reason },
       }),
     audit: () => request('/admin/audit'),
+
+    // ====================== RFQ ======================
+
+    /**
+     * Создать RFQ
+     * @param {Object} data - { title, description?, deadline?, items: [{name, quantity, unit?, specs?}] }
+     */
+    createRfq: (data) =>
+      request('/rfq', {
+        method: 'POST',
+        body: data,
+      }),
+
+    /** Список RFQ текущего пользователя */
+    rfqs: () => request('/rfq'),
+
+    /** Получить один RFQ по ID */
+    rfq: (id) => request('/rfq/' + id),
+
+    /** Сравнение предложений по RFQ */
+    rfqCompare: (id) => request('/rfq/' + id + '/compare'),
+
+    /** Поставщик отправляет предложение (оффер) */
+    createRfqOffer: (rfqId, data) =>
+      request('/rfq/' + rfqId + '/offers', {
+        method: 'POST',
+        body: data,
+      }),
+
+    /** Покупатель выбирает победившее предложение */
+    awardRfqOffer: (rfqId, offerId) =>
+      request('/rfq/' + rfqId + '/award/' + offerId, {
+        method: 'POST',
+      }),
+
+    /**
+     * Отправить сообщение в RFQ
+     * API DTO field is `body` (not text)
+     */
+    rfqMessage: (rfqId, text) =>
+      request('/rfq/' + rfqId + '/messages', {
+        method: 'POST',
+        body: { body: text },
+      }),
   };
 })(window);
