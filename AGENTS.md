@@ -44,6 +44,24 @@
 
 - `node_modules/`, `apps/api/dist/`
 
+## GitHub — обязательно после изменений
+
+**Правило заказчика:** любое изменение кода/стилей/доков в `mplace` сразу заливать на GitHub.
+
+```powershell
+cd C:\Users\sasha\mplace
+git add -A
+git status
+git commit -m "описание изменений"
+git push origin master
+```
+
+- Remote: `https://github.com/aleksandrsera329-netizen/mplace.git`
+- Ветка: `master`
+- Не коммитить `.env`, секреты, `node_modules/`, локальные tunnel-логи
+- После UI/CSS — push сразу, не ждать отдельной просьбы
+- Render auto-deploy может быть выключен: при необходимости напомнить про Manual Deploy
+
 ## Проверки после API
 
 ```powershell
