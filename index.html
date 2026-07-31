@@ -272,7 +272,7 @@
           ? '<span class="product-badge">Мало</span>'
           : (p.status === 'ACTIVE' ? '<span class="product-badge">Live</span>' : '');
 
-        const href = 'product.html?id=' + encodeURIComponent(p.slug || p.id);
+        const href = '/product.html?id=' + encodeURIComponent(p.slug || p.id);
         return `
           <article class="product-card" style="cursor:pointer" onclick="location.href='${href}'">
             <div class="product-image">

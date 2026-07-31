@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Товар — Mplace Energy</title>
+  <base href="/" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/store.css" />
-  <link rel="stylesheet" href="assets/css/locale.css" />
+  <link rel="stylesheet" href="/assets/css/store.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
   <style>
     .product-page {
       max-width: 1400px;
@@ -222,11 +223,11 @@
 
   <header class="store-header">
     <div class="header-top">
-      <a class="logo" href="index.html">M<span>place</span> Energy</a>
+      <a class="logo" href="/">M<span>place</span> Energy</a>
       <div class="header-actions">
         <button type="button" class="theme-btn" id="themeToggle" title="Тема">🌙</button>
         <div id="localeMount"></div>
-        <a class="icon-btn" href="login.html" title="Аккаунт">👤</a>
+        <a class="icon-btn" href="/login.html" title="Аккаунт">👤</a>
         <button type="button" class="cart-btn" id="cartBtn">
           🛒 <span data-i18n="nav.cart">Корзина</span>
           <span class="cart-count" id="cartCount">0</span>
@@ -237,9 +238,9 @@
 
   <div class="product-page">
     <div class="breadcrumbs" id="breadcrumbs">
-      <a href="index.html" data-i18n="admin.home">Главная</a>
+      <a href="/" data-i18n="admin.home">Главная</a>
       <span>›</span>
-      <a href="index.html#products" data-i18n="section.products">Каталог</a>
+      <a href="/#products" data-i18n="section.products">Каталог</a>
       <span>›</span>
       <span id="breadcrumbName">Товар</span>
     </div>
@@ -265,12 +266,12 @@
     <div class="cart-body" id="cartBody"></div>
     <div class="cart-foot">
       <div class="total"><span data-i18n="cart.total">Итого</span>: <span id="cartTotal">—</span></div>
-      <a class="btn-add" href="cart.html" style="display:block;text-align:center;text-decoration:none;" data-i18n="cart.checkout">Оформить заявку</a>
+      <a class="btn-add" href="/cart.html" style="display:block;text-align:center;text-decoration:none;" data-i18n="cart.checkout">Оформить заявку</a>
     </div>
   </aside>
 
-  <script src="assets/js/i18n.js"></script>
-  <script src="assets/js/api.js"></script>
+  <script src="/assets/js/i18n.js"></script>
+  <script src="/assets/js/api.js"></script>
   <script>
     const I = window.MplaceI18n;
     let currentProduct = null;
@@ -321,7 +322,7 @@
 
     function productUrl(p) {
       const key = p.slug || p.id;
-      return 'product.html?id=' + encodeURIComponent(key);
+      return '/product.html?id=' + encodeURIComponent(key);
     }
 
     function getSlugFromUrl() {
