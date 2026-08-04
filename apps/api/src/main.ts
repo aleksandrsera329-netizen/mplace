@@ -35,26 +35,24 @@ async function bootstrap() {
     }),
   );
 
-  const originsRaw = config.get<string>('CORS_ORIGINS');
-  const origins = originsRaw
-    ? originsRaw
-        .split(',')
-        .map((o) => o.trim())
-        .filter(Boolean)
-    : [
-        'http://localhost',
-        'http://127.0.0.1',
-        'http://localhost:8080',
-        'http://127.0.0.1:8080',
-        'http://localhost:8088',
-        'http://127.0.0.1:8088',
-        'http://127.0.0.1:3000',
-        'http://localhost:3000',
-        'https://mplace-vu4o.onrender.com',
-      ];
+  const corsOrigins =
+    config
+      .get<string>('CORS_ORIGINS')
+      ?.split(',')
+      .map((o) => o.trim())
+      .filter(Boolean) || [
+      'http://localhost',
+      'http://127.0.0.1',
+      'http://localhost:8080',
+      'http://127.0.0.1:8080',
+      'http://localhost:8088',
+      'http://127.0.0.1:8088',
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ];
 
   app.enableCors({
-    origin: origins.includes('*') ? true : origins,
+    origin: corsOrigins.includes('*') ? true : corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -105,17 +103,16 @@ async function bootstrap() {
     },
   });
 
-  // Critical env
-  const jwt = config.get('JWT_SECRET') || process.env.JWT_SECRET;
-  const dbUrl = config.get('DATABASE_URL') || process.env.DATABASE_URL;
+  // Critical env — only ConfigService (no process.env)
+  const dbUrl = config.get<string>('DATABASE_URL');
   if (!dbUrl) {
     logger.error('Missing required env: DATABASE_URL');
     process.exit(1);
   }
+  const jwt = config.get<string>('JWT_SECRET');
   if (!jwt) {
-    logger.warn(
-      'JWT_SECRET is not set — using insecure default for local only',
-    );
+    logger.error('Missing required env: JWT_SECRET');
+    process.exit(1);
   }
 
   // Production / Docker: serve storefront from FRONTEND_DIR
@@ -143,7 +140,7 @@ async function bootstrap() {
     logger.log(`frontend static: ${frontendDir}`);
   }
 
-  const port = Number(config.get('PORT') || process.env.PORT || 3000);
+  const port = Number(config.get<string | number>('PORT') ?? 3000);
   await app.listen(port, '0.0.0.0');
 
   logger.log(`API running on http://0.0.0.0:${port}/api`);
