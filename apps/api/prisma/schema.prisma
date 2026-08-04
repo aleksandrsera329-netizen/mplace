@@ -231,6 +231,15 @@ model Shop {
   payoutDetails   String?
   kycNotes        String?
   rejectionReason String?
+
+  // Stripe Connect (Express / Custom)
+  stripeAccountId     String?   @unique
+  stripeAccountStatus String? // currently_due, pending, enabled, restricted...
+  stripeOnboardedAt   DateTime?
+  chargesEnabled      Boolean   @default(false)
+  payoutsEnabled      Boolean   @default(false)
+  detailsSubmitted    Boolean   @default(false)
+
   owner           User?
   products        Product[]
   orders          Order[]
@@ -239,10 +248,27 @@ model Shop {
   kycDocuments    KycDocument[]
   rfqMatches      RfqMatch[]
   rfqOffers       RfqOffer[]
+  stripeConnected StripeConnectedAccount?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@index([status])
+}
+
+/// History / snapshot of Connect onboarding for a shop
+model StripeConnectedAccount {
+  id               String   @id @default(cuid())
+  shopId           String   @unique
+  shop             Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  stripeAccountId  String   @unique
+  type             String   @default("express") // express | standard | custom
+  status           String?
+  chargesEnabled   Boolean  @default(false)
+  payoutsEnabled   Boolean  @default(false)
+  detailsSubmitted Boolean  @default(false)
+  raw              Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Category {
