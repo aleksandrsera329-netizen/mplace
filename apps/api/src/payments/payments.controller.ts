@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Get,
   Headers,
   Ip,
   NotFoundException,
@@ -9,13 +11,19 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { IsOptional, IsString } from 'class-validator';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
+import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 import { PaymentsService } from './payments.service';
+import { StripeConnectService } from './stripe-connect.service';
 
 class PaymentIntentDto {
   @IsOptional()
@@ -42,7 +50,54 @@ class DevConfirmDto {
 
 @Controller()
 export class PaymentsController {
-  constructor(private readonly payments: PaymentsService) {}
+  constructor(
+    private readonly payments: PaymentsService,
+    private readonly stripeConnect: StripeConnectService,
+    private readonly config: ConfigService,
+  ) {}
+
+  /**
+   * Merchant: create Express Connect account (if needed) + onboarding URL.
+   * POST /api/connect/onboard
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @Post('connect/onboard')
+  async startOnboarding(@CurrentUser() user: JwtPayload) {
+    if (!user.shopId) {
+      throw new BadRequestException('No shop linked to merchant');
+    }
+    if (!user.email) {
+      throw new BadRequestException('Merchant email required for Stripe');
+    }
+
+    await this.stripeConnect.createConnectedAccount(user.shopId, user.email);
+
+    const baseUrl =
+      this.config.get<string>('APP_PUBLIC_URL') ||
+      this.config.get<string>('FRONTEND_URL') ||
+      'http://127.0.0.1:8088';
+
+    return this.stripeConnect.createAccountLink(
+      user.shopId,
+      `${baseUrl}/merchant.html?stripe=refresh`,
+      `${baseUrl}/merchant.html?stripe=return`,
+    );
+  }
+
+  /**
+   * Merchant: sync + return Connect status.
+   * GET /api/connect/status
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.MERCHANT)
+  @Get('connect/status')
+  getConnectStatus(@CurrentUser() user: JwtPayload) {
+    if (!user.shopId) {
+      throw new BadRequestException('No shop linked to merchant');
+    }
+    return this.stripeConnect.syncAccountStatus(user.shopId);
+  }
 
   @UseGuards(OptionalJwtAuthGuard)
   @Post('orders/:id/payment-intent')
