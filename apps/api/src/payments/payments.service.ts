@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -11,6 +13,7 @@ import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { OrdersService } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { StripeConnectService } from './stripe-connect.service';
 
 function isLocalRuntime(nodeEnv: string | undefined, allowLocal: string | undefined) {
   if (nodeEnv === 'production' || nodeEnv === 'staging') return false;
@@ -27,6 +30,8 @@ export class PaymentsService {
     private readonly prisma: PrismaService,
     private readonly orders: OrdersService,
     private readonly config: ConfigService,
+    @Inject(forwardRef(() => StripeConnectService))
+    private readonly stripeConnect: StripeConnectService,
   ) {
     this.provider = (
       this.config.get<string>('PAYMENT_PROVIDER') || 'dev'
@@ -203,7 +208,10 @@ export class PaymentsService {
     };
   }
 
-  /** Stripe webhook — only path that marks orders PAID for stripe */
+  /**
+   * Stripe webhook — Connect + payments.
+   * Events: account.updated, payment_intent.succeeded, refunds/disputes (logged).
+   */
   async handleStripeWebhook(rawBody: Buffer, signature: string | undefined) {
     const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
     const apiKey = this.config.get<string>('STRIPE_SECRET_KEY');
@@ -213,7 +221,11 @@ export class PaymentsService {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Stripe = require('stripe');
     const stripe = new Stripe(apiKey);
-    let event: { type: string; data: { object: Record<string, unknown> } };
+    let event: {
+      id?: string;
+      type: string;
+      data: { object: Record<string, unknown> };
+    };
     try {
       event = stripe.webhooks.constructEvent(rawBody, signature, secret);
     } catch (e) {
@@ -221,18 +233,95 @@ export class PaymentsService {
       throw new BadRequestException('Invalid webhook signature');
     }
 
-    if (event.type === 'payment_intent.succeeded') {
-      const pi = event.data.object as {
-        id: string;
-        amount?: number;
-        amount_received?: number;
-        currency?: string;
-        metadata?: Record<string, string>;
-      };
-      await this.completeStripeSucceeded(pi);
+    this.logger.log(`Stripe webhook ${event.type} id=${event.id || 'n/a'}`);
+
+    switch (event.type) {
+      case 'account.updated': {
+        await this.handleConnectAccountUpdated(
+          event.data.object as {
+            id: string;
+            metadata?: Record<string, string>;
+          },
+        );
+        break;
+      }
+      case 'payment_intent.succeeded': {
+        // Works with Destination Charges — amount/currency/metadata.orderId still validated
+        const pi = event.data.object as {
+          id: string;
+          amount?: number;
+          amount_received?: number;
+          currency?: string;
+          metadata?: Record<string, string>;
+          transfer_data?: { destination?: string };
+          application_fee_amount?: number;
+        };
+        await this.completeStripeSucceeded(pi);
+        break;
+      }
+      case 'charge.refunded':
+      case 'refund.created':
+      case 'refund.updated': {
+        this.logger.log(
+          `Stripe refund event ${event.type}: ${JSON.stringify({
+            id: event.data.object?.id,
+            payment_intent: event.data.object?.payment_intent,
+            amount:
+              event.data.object?.amount_refunded ??
+              event.data.object?.amount,
+          })}`,
+        );
+        // Full refund state machine can wire to Refund model later
+        break;
+      }
+      case 'payout.paid':
+      case 'payout.failed': {
+        this.logger.log(
+          `Stripe payout ${event.type} id=${String(event.data.object?.id)} status=${String(event.data.object?.status)}`,
+        );
+        break;
+      }
+      case 'charge.dispute.created': {
+        this.logger.warn(
+          `Stripe dispute created charge=${String(event.data.object?.charge)} id=${String(event.data.object?.id)}`,
+        );
+        break;
+      }
+      default:
+        this.logger.debug(`Stripe event ignored: ${event.type}`);
     }
 
-    return { received: true };
+    return { received: true, type: event.type };
+  }
+
+  /** Sync Shop Connect flags when Stripe account changes */
+  private async handleConnectAccountUpdated(account: {
+    id: string;
+    metadata?: Record<string, string>;
+  }) {
+    const shopIdFromMeta = account.metadata?.shopId?.trim();
+    if (shopIdFromMeta) {
+      await this.stripeConnect.syncAccountStatus(shopIdFromMeta);
+      this.logger.log(
+        `Connect account.updated synced shopId=${shopIdFromMeta} account=${account.id}`,
+      );
+      return;
+    }
+
+    const shop = await this.prisma.shop.findFirst({
+      where: { stripeAccountId: account.id },
+    });
+    if (shop) {
+      await this.stripeConnect.syncAccountStatus(shop.id);
+      this.logger.log(
+        `Connect account.updated synced via stripeAccountId shopId=${shop.id}`,
+      );
+      return;
+    }
+
+    this.logger.warn(
+      `account.updated: no shop for account ${account.id} (missing metadata.shopId)`,
+    );
   }
 
   /**
