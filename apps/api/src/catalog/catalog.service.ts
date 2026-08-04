@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ProductStatus, UserRole } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -21,7 +22,10 @@ function slugify(input: string): string {
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   // ── Categories ─────────────────────────────────────────
 
@@ -121,7 +125,7 @@ export class CatalogService {
       throw new ForbiddenException('Invalid price');
     }
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: {
         shopId,
         name: dto.name.trim(),
@@ -140,6 +144,21 @@ export class CatalogService {
         category: { select: { id: true, name: true } },
       },
     });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'CREATE',
+      entityType: 'Product',
+      entityId: product.id,
+      meta: {
+        name: product.name,
+        priceCents: product.priceCents,
+        shopId: product.shopId,
+        status: product.status,
+      },
+    });
+
+    return product;
   }
 
   async updateProduct(user: JwtPayload, id: string, dto: UpdateProductDto) {
@@ -163,7 +182,7 @@ export class CatalogService {
       data.priceCents = this.resolvePriceCents(dto as CreateProductDto);
     }
 
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id },
       data,
       include: {
@@ -171,6 +190,20 @@ export class CatalogService {
         category: { select: { id: true, name: true } },
       },
     });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: dto.status !== undefined ? 'STATUS_CHANGE' : 'UPDATE',
+      entityType: 'Product',
+      entityId: product.id,
+      meta: {
+        changes: data,
+        name: product.name,
+        priceCents: product.priceCents,
+      },
+    });
+
+    return product;
   }
 
   async deleteProduct(user: JwtPayload, id: string) {
@@ -184,6 +217,15 @@ export class CatalogService {
       where: { id },
       data: { status: ProductStatus.ARCHIVED },
     });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'DELETE',
+      entityType: 'Product',
+      entityId: id,
+      meta: { soft: true, previousStatus: existing.status, name: existing.name },
+    });
+
     return { archived: true, id };
   }
 

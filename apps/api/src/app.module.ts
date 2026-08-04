@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { AdminModule } from './admin/admin.module';
+import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -50,6 +51,7 @@ import { SupportModule } from './support/support.module';
       },
     ]),
     PrismaModule,
+    AuditModule,
     NotificationModule,
     HealthModule,
     AuthModule,
