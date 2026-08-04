@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
+import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddCartItemDto } from './dto/cart.dto';
@@ -24,7 +25,10 @@ const PAYMENT_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   // ── Cart ───────────────────────────────────────────────
 
@@ -257,6 +261,22 @@ export class OrdersService {
       await tx.cartItem.deleteMany({ where: { cartId: cart.id } });
     });
 
+    for (const o of result) {
+      await this.audit.log({
+        actorId: user?.sub ?? null,
+        action: 'CREATE',
+        entityType: 'Order',
+        entityId: o.id,
+        meta: {
+          orderNumber: o.orderNumber,
+          totalCents: o.totalCents,
+          shopId: o.shop?.id,
+          status: o.status,
+          guest: !user?.sub,
+        },
+      });
+    }
+
     return {
       orders: result,
       message:
@@ -384,20 +404,19 @@ export class OrdersService {
           reason: reason?.trim() || null,
         },
       });
-      await tx.auditLog.create({
-        data: {
-          actorId: user.sub,
-          action: 'order.status_change',
-          entityType: 'Order',
-          entityId: id,
-          meta: JSON.stringify({
-            from: order.status,
-            to: toStatus,
-            reason,
-          }),
-        },
-      });
       return o;
+    });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'STATUS_CHANGE',
+      entityType: 'Order',
+      entityId: id,
+      meta: {
+        from: order.status,
+        to: toStatus,
+        reason: reason?.trim() || null,
+      },
     });
 
     return updated;

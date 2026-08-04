@@ -10,6 +10,7 @@ import {
   ShopStatus,
   UserRole,
 } from '@prisma/client';
+import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -20,7 +21,10 @@ import {
 
 @Injectable()
 export class RfqService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private async nextNumber(): Promise<string> {
     const n = await this.prisma.rfqRequest.count();
@@ -65,6 +69,19 @@ export class RfqService {
     await this.prisma.rfqRequest.update({
       where: { id: rfq.id },
       data: { status: matches.length ? RfqStatus.MATCHED : RfqStatus.OPEN },
+    });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'RFQ_CREATE',
+      entityType: 'Rfq',
+      entityId: rfq.id,
+      meta: {
+        title: rfq.title,
+        number: rfq.number,
+        itemsCount: rfq.items.length,
+        matches: matches.length,
+      },
     });
 
     return this.get(rfq.id, user);
@@ -309,6 +326,19 @@ export class RfqService {
       update: { score: 100, reason: 'submitted_offer' },
     });
 
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'RFQ_OFFER',
+      entityType: 'RfqOffer',
+      entityId: offer.id,
+      meta: {
+        rfqId,
+        shopId: user.shopId,
+        totalCents: offer.totalCents,
+        lines: dto.items.length,
+      },
+    });
+
     return offer;
   }
 
@@ -382,6 +412,20 @@ export class RfqService {
         data: { status: RfqStatus.AWARDED, awardedOfferId: offerId },
       }),
     ]);
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'RFQ_AWARD',
+      entityType: 'Rfq',
+      entityId: rfqId,
+      meta: {
+        offerId,
+        shopId: offer.shopId,
+        totalCents: offer.totalCents,
+        fromStatus: rfq.status,
+      },
+    });
+
     return this.get(rfqId, user);
   }
 
