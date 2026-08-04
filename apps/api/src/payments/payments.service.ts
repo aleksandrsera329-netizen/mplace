@@ -105,6 +105,14 @@ export class PaymentsService {
       totalCents: number;
       currency: string;
       orderNumber: string;
+      shopId: string | null;
+      commissionCents?: number;
+      shop?: {
+        id: string;
+        stripeAccountId: string | null;
+        chargesEnabled: boolean;
+        name?: string;
+      } | null;
     },
     idempotencyKey: string,
   ) {
@@ -113,21 +121,57 @@ export class PaymentsService {
       throw new ServiceUnavailableException('STRIPE_SECRET_KEY not configured');
     }
 
+    // Load shop Connect flags if not included
+    let shop = order.shop;
+    if (!shop && order.shopId) {
+      shop = await this.prisma.shop.findUnique({
+        where: { id: order.shopId },
+        select: {
+          id: true,
+          stripeAccountId: true,
+          chargesEnabled: true,
+          name: true,
+        },
+      });
+    }
+
+    if (!shop?.stripeAccountId || !shop.chargesEnabled) {
+      throw new BadRequestException(
+        'Seller is not ready to accept payments via Stripe Connect (complete onboarding: chargesEnabled)',
+      );
+    }
+
+    // Platform fee: PLATFORM_COMMISSION_PERCENT (default 10) or order.commissionCents
+    const commissionPercent = Number(
+      this.config.get<string | number>('PLATFORM_COMMISSION_PERCENT') ?? 10,
+    );
+    const applicationFee =
+      order.commissionCents != null && order.commissionCents > 0
+        ? order.commissionCents
+        : Math.round(order.totalCents * (commissionPercent / 100));
+
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Stripe = require('stripe');
     const stripe = new Stripe(secret);
 
+    // Destination charge: funds → connected account, platform keeps application_fee
     const intent = await stripe.paymentIntents.create(
       {
         amount: order.totalCents,
         currency: order.currency.toLowerCase(),
+        automatic_payment_methods: { enabled: true },
+        application_fee_amount: applicationFee,
+        transfer_data: {
+          destination: shop.stripeAccountId,
+        },
         metadata: {
           orderId: order.id,
           orderNumber: order.orderNumber,
+          shopId: shop.id,
           amountCents: String(order.totalCents),
+          applicationFeeCents: String(applicationFee),
           currency: order.currency.toUpperCase(),
         },
-        automatic_payment_methods: { enabled: true },
       },
       { idempotencyKey },
     );
@@ -141,7 +185,11 @@ export class PaymentsService {
         amountCents: order.totalCents,
         currency: order.currency,
         idempotencyKey,
-        rawPayload: JSON.stringify({ client_secret: 'redacted' }),
+        rawPayload: JSON.stringify({
+          client_secret: 'redacted',
+          destination: shop.stripeAccountId,
+          application_fee_amount: applicationFee,
+        }),
       },
     });
 
@@ -150,6 +198,8 @@ export class PaymentsService {
       mode: 'stripe',
       clientSecret: intent.client_secret as string,
       publishableKey: this.config.get<string>('STRIPE_PUBLISHABLE_KEY') || null,
+      applicationFeeCents: applicationFee,
+      destinationAccountId: shop.stripeAccountId,
     };
   }
 
