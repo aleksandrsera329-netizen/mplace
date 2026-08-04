@@ -10,6 +10,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { HealthModule } from './health/health.module';
 import { FinanceModule } from './finance/finance.module';
 import { KycModule } from './kyc/kyc.module';
+import { NotificationModule } from './notification/notification.module';
 import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -49,6 +50,7 @@ import { SupportModule } from './support/support.module';
       },
     ]),
     PrismaModule,
+    NotificationModule,
     HealthModule,
     AuthModule,
     AdminModule,

@@ -14,6 +14,7 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 class UploadKycDto {
@@ -42,7 +43,10 @@ class ReviewKycDto {
 @Controller('kyc')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class KycController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationService,
+  ) {}
 
   @Post('documents')
   @Roles(UserRole.MERCHANT)
@@ -100,7 +104,10 @@ export class KycController {
         reviewedById: user.sub,
         reviewedAt: new Date(),
       },
-      include: { shop: true },
+      include: {
+        shop: true,
+        uploadedBy: { select: { id: true, name: true, email: true } },
+      },
     });
 
     if (dto.status === KycDocStatus.APPROVED) {
@@ -139,13 +146,52 @@ export class KycController {
       },
     });
 
-    // Notification stub (email/telegram later)
+    // Notify merchant (uploader or first shop merchant)
+    let notifyEmail = doc.uploadedBy?.email;
+    let notifyName = doc.uploadedBy?.name;
+    if (!notifyEmail) {
+      const merchant = await this.prisma.user.findFirst({
+        where: {
+          shopId: doc.shopId,
+          role: { in: [UserRole.MERCHANT] },
+        },
+        select: { email: true, name: true },
+      });
+      notifyEmail = merchant?.email;
+      notifyName = merchant?.name;
+    }
+
+    let notification: {
+      success: boolean;
+      channel: string;
+      sentTo?: string;
+      status?: string;
+      skipped?: string;
+    } | null = null;
+
+    if (
+      notifyEmail &&
+      (dto.status === KycDocStatus.APPROVED ||
+        dto.status === KycDocStatus.REJECTED)
+    ) {
+      notification = await this.notifications.sendKycStatus({
+        email: notifyEmail,
+        name: notifyName,
+        status: dto.status === KycDocStatus.APPROVED ? 'APPROVED' : 'REJECTED',
+        reason: dto.notes,
+        shopName: doc.shop.name,
+      });
+    } else if (!notifyEmail) {
+      notification = {
+        success: false,
+        channel: 'log',
+        skipped: 'no merchant email for shop',
+      };
+    }
+
     return {
       document: doc,
-      notification: {
-        channel: 'stub',
-        message: `KYC ${dto.status} for shop ${doc.shop.name}`,
-      },
+      notification,
     };
   }
 }

@@ -14,6 +14,7 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
+import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import {
@@ -40,7 +41,12 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly notifications: NotificationService,
   ) {}
+
+  private isProd(): boolean {
+    return (this.config.get<string>('NODE_ENV') || '') === 'production';
+  }
 
   private slugify(input: string): string {
     return input
@@ -171,12 +177,15 @@ export class AuthService {
       meta: { role: 'CUSTOMER' },
     });
 
+    if (email && emailVerifyToken) {
+      await this.notifications.sendEmailVerification(email, emailVerifyToken);
+    }
+
     // Dev: return verify token so UI/tests can confirm without SMTP
     const tokens = await this.issueTokens(user, { ip });
     return {
       ...tokens,
-      emailVerificationToken:
-        process.env.NODE_ENV === 'production' ? undefined : emailVerifyToken,
+      emailVerificationToken: this.isProd() ? undefined : emailVerifyToken,
       message: email
         ? 'Registered. Verify email to unlock full access.'
         : 'Registered with phone.',
@@ -224,11 +233,12 @@ export class AuthService {
       entityId: shop.id,
       ip,
     });
+    await this.notifications.sendEmailVerification(email, emailVerifyToken);
+
     const tokens = await this.issueTokens(user, { ip });
     return {
       ...tokens,
-      emailVerificationToken:
-        process.env.NODE_ENV === 'production' ? undefined : emailVerifyToken,
+      emailVerificationToken: this.isProd() ? undefined : emailVerifyToken,
       message: 'Merchant registered. Shop pending KYC approval.',
     };
   }
@@ -409,11 +419,12 @@ export class AuthService {
       actorId: user.id,
       ip,
     });
+    await this.notifications.sendPasswordReset(email, token);
     return {
       ok: true,
       message: 'If the email exists, a reset link was sent',
       // Dev only
-      resetToken: process.env.NODE_ENV === 'production' ? undefined : token,
+      resetToken: this.isProd() ? undefined : token,
     };
   }
 
