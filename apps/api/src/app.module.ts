@@ -44,10 +44,22 @@ import { SupportModule } from './support/support.module';
         quietReqLogger: true,
       },
     }),
+    // Differentiated rate limits (all apply unless overridden per-route)
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000,
-        limit: 80,
+        name: 'short',
+        ttl: 1000, // 1s
+        limit: 5,
+      },
+      {
+        name: 'medium',
+        ttl: 10_000, // 10s
+        limit: 20,
+      },
+      {
+        name: 'long',
+        ttl: 60_000, // 1 min
+        limit: 100,
       },
     ]),
     PrismaModule,

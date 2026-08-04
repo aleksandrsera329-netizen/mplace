@@ -8,10 +8,12 @@ import {
   HealthIndicatorResult,
   PrismaHealthIndicator,
 } from '@nestjs/terminus';
+import { SkipThrottle } from '@nestjs/throttler';
 import Redis from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 
 @ApiTags('Health')
+@SkipThrottle()
 @Controller('health')
 export class HealthController implements OnModuleDestroy {
   private redis: Redis | null = null;

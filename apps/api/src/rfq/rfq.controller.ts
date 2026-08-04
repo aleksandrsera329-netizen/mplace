@@ -6,6 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
@@ -35,6 +36,11 @@ export class RfqController {
     return this.rfq.listForUser(user);
   }
 
+  @Throttle({
+    short: { limit: 2, ttl: 1000 },
+    medium: { limit: 5, ttl: 10_000 },
+    long: { limit: 20, ttl: 60_000 },
+  })
   @Post()
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateRfqDto) {
@@ -58,6 +64,11 @@ export class RfqController {
     return this.rfq.comparison(id, user);
   }
 
+  @Throttle({
+    short: { limit: 2, ttl: 1000 },
+    medium: { limit: 8, ttl: 10_000 },
+    long: { limit: 30, ttl: 60_000 },
+  })
   @Post(':id/offers')
   @Roles(UserRole.MERCHANT)
   offer(

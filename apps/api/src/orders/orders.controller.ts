@@ -9,6 +9,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
 import { IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -71,6 +72,11 @@ export class OrdersController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Throttle({
+    short: { limit: 2, ttl: 1000 },
+    medium: { limit: 5, ttl: 10_000 },
+    long: { limit: 15, ttl: 60_000 },
+  })
   @Post('checkout')
   checkout(
     @CurrentUser() user: JwtPayload | undefined,
