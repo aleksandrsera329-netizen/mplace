@@ -8,8 +8,9 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, RefundStatus } from '@prisma/client';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { OrdersService } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -32,10 +33,115 @@ export class PaymentsService {
     private readonly config: ConfigService,
     @Inject(forwardRef(() => StripeConnectService))
     private readonly stripeConnect: StripeConnectService,
+    private readonly audit: AuditService,
   ) {
     this.provider = (
       this.config.get<string>('PAYMENT_PROVIDER') || 'dev'
     ).toLowerCase();
+  }
+
+  private stripeClient() {
+    const secret = this.config.get<string>('STRIPE_SECRET_KEY');
+    if (!secret) {
+      throw new ServiceUnavailableException('STRIPE_SECRET_KEY not configured');
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Stripe = require('stripe');
+    return new Stripe(secret);
+  }
+
+  /**
+   * Refund via Stripe (full or partial). Destination charges: reverse_transfer.
+   */
+  async refundPayment(
+    orderId: string,
+    amountCents?: number,
+    reason?: string,
+    actorId?: string,
+  ) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payments: true },
+    });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const payment = order.payments.find(
+      (p) =>
+        p.provider === 'stripe' && p.status === PaymentStatus.SUCCEEDED,
+    );
+    if (!payment?.providerPaymentId) {
+      throw new BadRequestException('No successful Stripe payment found');
+    }
+
+    if (
+      amountCents != null &&
+      (amountCents <= 0 || amountCents > payment.amountCents)
+    ) {
+      throw new BadRequestException('Invalid refund amount');
+    }
+
+    const stripe = this.stripeClient();
+    const stripeReason =
+      reason === 'fraudulent' || reason === 'duplicate'
+        ? reason
+        : 'requested_by_customer';
+
+    const refund = await stripe.refunds.create({
+      payment_intent: payment.providerPaymentId,
+      ...(amountCents != null ? { amount: amountCents } : {}),
+      reason: stripeReason,
+      // Destination charges: pull funds back from connected account
+      reverse_transfer: true,
+      refund_application_fee: true,
+      metadata: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        paymentId: payment.id,
+      },
+    });
+
+    const refundAmount =
+      typeof refund.amount === 'number' ? refund.amount : amountCents ?? payment.amountCents;
+    const full = refundAmount >= payment.amountCents;
+
+    const refundRow = await this.prisma.refund.create({
+      data: {
+        orderId: order.id,
+        amountCents: refundAmount,
+        reason: reason || stripeReason,
+        status: RefundStatus.COMPLETED,
+        adminNote: `stripe_refund=${refund.id}`,
+      },
+    });
+
+    await this.prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
+      },
+    });
+
+    await this.audit.log({
+      actorId: actorId ?? null,
+      action: 'PAYMENT',
+      entityType: 'Refund',
+      entityId: refundRow.id,
+      meta: {
+        orderId: order.id,
+        stripeRefundId: refund.id,
+        amountCents: refundAmount,
+        full,
+      },
+    });
+
+    return {
+      ok: true,
+      refundId: refundRow.id,
+      stripeRefundId: refund.id,
+      amountCents: refundAmount,
+      status: refund.status,
+      orderStatus: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
+    };
   }
 
   /** Whether browser-facing dev confirm is enabled (never in production/staging). */
@@ -262,16 +368,10 @@ export class PaymentsService {
       case 'charge.refunded':
       case 'refund.created':
       case 'refund.updated': {
-        this.logger.log(
-          `Stripe refund event ${event.type}: ${JSON.stringify({
-            id: event.data.object?.id,
-            payment_intent: event.data.object?.payment_intent,
-            amount:
-              event.data.object?.amount_refunded ??
-              event.data.object?.amount,
-          })}`,
+        await this.handleStripeRefundEvent(
+          event.type,
+          event.data.object as Record<string, unknown>,
         );
-        // Full refund state machine can wire to Refund model later
         break;
       }
       case 'payout.paid':
@@ -281,9 +381,11 @@ export class PaymentsService {
         );
         break;
       }
-      case 'charge.dispute.created': {
-        this.logger.warn(
-          `Stripe dispute created charge=${String(event.data.object?.charge)} id=${String(event.data.object?.id)}`,
+      case 'charge.dispute.created':
+      case 'charge.dispute.updated': {
+        await this.handleStripeDispute(
+          event.type,
+          event.data.object as Record<string, unknown>,
         );
         break;
       }
@@ -292,6 +394,146 @@ export class PaymentsService {
     }
 
     return { received: true, type: event.type };
+  }
+
+  /**
+   * Apply refund side-effects from Stripe webhooks.
+   * Supports Refund object (refund.*) and Charge (charge.refunded).
+   */
+  private async handleStripeRefundEvent(
+    type: string,
+    obj: Record<string, unknown>,
+  ) {
+    const meta = (obj.metadata || {}) as Record<string, string>;
+    let orderId = meta.orderId?.trim() || '';
+    const paymentIntentId = String(
+      obj.payment_intent || obj.paymentIntent || '',
+    );
+    const refundId = String(obj.id || '');
+    const amount =
+      typeof obj.amount === 'number'
+        ? obj.amount
+        : typeof obj.amount_refunded === 'number'
+          ? obj.amount_refunded
+          : null;
+
+    if (!orderId && paymentIntentId) {
+      const payment = await this.prisma.payment.findFirst({
+        where: { provider: 'stripe', providerPaymentId: paymentIntentId },
+      });
+      orderId = payment?.orderId || '';
+    }
+
+    this.logger.log(
+      `Refund event ${type} refund=${refundId} orderId=${orderId || 'n/a'} amount=${amount}`,
+    );
+
+    if (!orderId) return;
+
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { payments: true },
+    });
+    if (!order) return;
+
+    const payment = order.payments.find(
+      (p) => p.status === PaymentStatus.SUCCEEDED,
+    );
+    const refundAmount = amount ?? payment?.amountCents ?? order.totalCents;
+    const full = refundAmount >= order.totalCents;
+
+    // Idempotent: avoid duplicate Refund rows for same stripe id
+    const existing = await this.prisma.refund.findFirst({
+      where: {
+        orderId,
+        adminNote: { contains: refundId },
+      },
+    });
+    if (!existing && refundId) {
+      await this.prisma.refund.create({
+        data: {
+          orderId,
+          amountCents: refundAmount,
+          reason: type,
+          status: RefundStatus.COMPLETED,
+          adminNote: `stripe_refund=${refundId}`,
+        },
+      });
+    }
+
+    if (
+      order.status !== OrderStatus.REFUNDED &&
+      order.status !== OrderStatus.PARTIALLY_REFUNDED
+    ) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          status: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
+        },
+      });
+    }
+
+    await this.audit.log({
+      action: 'PAYMENT',
+      entityType: 'Order',
+      entityId: orderId,
+      meta: {
+        event: type,
+        stripeRefundId: refundId,
+        amountCents: refundAmount,
+        full,
+      },
+    });
+  }
+
+  private async handleStripeDispute(
+    type: string,
+    dispute: Record<string, unknown>,
+  ) {
+    const paymentIntentId = String(dispute.payment_intent || '');
+    const disputeId = String(dispute.id || '');
+    const amount =
+      typeof dispute.amount === 'number' ? dispute.amount : undefined;
+
+    this.logger.warn(
+      `Dispute ${type}: id=${disputeId} pi=${paymentIntentId} amount=${amount}`,
+    );
+
+    let orderId: string | undefined;
+    if (paymentIntentId) {
+      const payment = await this.prisma.payment.findFirst({
+        where: { provider: 'stripe', providerPaymentId: paymentIntentId },
+      });
+      orderId = payment?.orderId;
+    }
+
+    if (orderId) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: { status: OrderStatus.DISPUTED },
+      });
+      await this.prisma.dispute
+        .create({
+          data: {
+            orderId,
+            reason: `stripe_dispute=${disputeId}`,
+            status: 'OPEN',
+          },
+        })
+        .catch(() => undefined);
+
+      await this.audit.log({
+        action: 'STATUS_CHANGE',
+        entityType: 'Order',
+        entityId: orderId,
+        meta: {
+          event: type,
+          disputeId,
+          amount,
+          to: OrderStatus.DISPUTED,
+        },
+      });
+    }
   }
 
   /** Sync Shop Connect flags when Stripe account changes */

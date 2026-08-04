@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IsOptional, IsString } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
 import { UserRole } from '@prisma/client';
@@ -46,6 +46,17 @@ class DevConfirmDto {
   @IsOptional()
   @IsString()
   idempotencyKey?: string;
+}
+
+class RefundPaymentDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  amountCents?: number;
+
+  @IsOptional()
+  @IsString()
+  reason?: string;
 }
 
 @Controller()
@@ -97,6 +108,26 @@ export class PaymentsController {
       throw new BadRequestException('No shop linked to merchant');
     }
     return this.stripeConnect.syncAccountStatus(user.shopId);
+  }
+
+  /**
+   * Admin: Stripe refund (full or partial) for paid order.
+   * POST /api/orders/:id/refund
+   */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post('orders/:id/refund')
+  refundOrder(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: RefundPaymentDto,
+  ) {
+    return this.payments.refundPayment(
+      id,
+      dto.amountCents,
+      dto.reason,
+      user.sub,
+    );
   }
 
   @UseGuards(OptionalJwtAuthGuard)
