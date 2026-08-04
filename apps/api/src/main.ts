@@ -1,23 +1,28 @@
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Request, Response, NextFunction } from 'express';
+import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    rawBody: true,
+    bufferLogs: true,
+    rawBody: true, // Stripe webhooks
   });
+
   const config = app.get(ConfigService);
-  const logger = new Logger('Bootstrap');
+  const logger = app.get(PinoLogger);
+  app.useLogger(logger);
 
   app.use(
     helmet({
-      contentSecurityPolicy: false, // allow Stripe.js + inline for storefront
+      contentSecurityPolicy: false, // Swagger UI + Stripe.js + storefront
       crossOriginEmbedderPolicy: false,
     }),
   );
@@ -37,8 +42,12 @@ async function bootstrap() {
         .map((o) => o.trim())
         .filter(Boolean)
     : [
+        'http://localhost',
+        'http://127.0.0.1',
         'http://localhost:8080',
         'http://127.0.0.1:8080',
+        'http://localhost:8088',
+        'http://127.0.0.1:8088',
         'http://127.0.0.1:3000',
         'http://localhost:3000',
         'https://mplace-vu4o.onrender.com',
@@ -56,9 +65,57 @@ async function bootstrap() {
     ],
   });
 
-  // Soft check critical env (warn only — Docker generates JWT_SECRET)
-  if (!config.get('JWT_SECRET') && !process.env.JWT_SECRET) {
-    logger.warn('JWT_SECRET is not set — using insecure default for local only');
+  // ===== SWAGGER =====
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Mplace API')
+    .setDescription('Multi-vendor B2B Marketplace API (Oil & Gas)')
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'Authorization',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-Session-Key',
+        in: 'header',
+      },
+      'Session-Key',
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-Order-Access-Token',
+        in: 'header',
+      },
+      'Order-Access-Token',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
+  // Critical env
+  const jwt = config.get('JWT_SECRET') || process.env.JWT_SECRET;
+  const dbUrl = config.get('DATABASE_URL') || process.env.DATABASE_URL;
+  if (!dbUrl) {
+    logger.error('Missing required env: DATABASE_URL');
+    process.exit(1);
+  }
+  if (!jwt) {
+    logger.warn(
+      'JWT_SECRET is not set — using insecure default for local only',
+    );
   }
 
   // Production / Docker: serve storefront from FRONTEND_DIR
@@ -67,10 +124,9 @@ async function bootstrap() {
     !!config.get<string>('FRONTEND_DIR');
   const frontendDir =
     config.get<string>('FRONTEND_DIR') ||
-    join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src
+    join(__dirname, '..', '..', '..', '..');
 
   if (serveFrontend && existsSync(frontendDir)) {
-    // Pretty URLs: /product/:slug → product.html (client reads path or ?id=)
     app.use((req: Request, res: Response, next: NextFunction) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
       const m = req.path.match(/^\/product\/([^/]+)\/?$/);
@@ -80,21 +136,19 @@ async function bootstrap() {
       res.type('html').send(readFileSync(file, 'utf8'));
     });
 
-    // Serve storefront + admin/merchant static files (same origin as /api)
     app.useStaticAssets(frontendDir, {
       index: ['index.html'],
       fallthrough: true,
     });
-    // eslint-disable-next-line no-console
-    console.log(`frontend static: ${frontendDir}`);
+    logger.log(`frontend static: ${frontendDir}`);
   }
 
   const port = Number(config.get('PORT') || process.env.PORT || 3000);
   await app.listen(port, '0.0.0.0');
-  // eslint-disable-next-line no-console
-  console.log(`mplace-api listening on 0.0.0.0:${port}/api`);
-  // eslint-disable-next-line no-console
-  console.log(
+
+  logger.log(`API running on http://0.0.0.0:${port}/api`);
+  logger.log(`Swagger: http://localhost:${port}/api/docs`);
+  logger.log(
     `payments: provider=${config.get('PAYMENT_PROVIDER') || 'dev'}`,
   );
 }

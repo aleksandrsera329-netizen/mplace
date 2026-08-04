@@ -1,12 +1,18 @@
 /* Mplace API client */
 (function (global) {
   function defaultApiBase() {
-    // Same-origin when deployed (API serves frontend)
-    if (typeof location !== 'undefined' && location.hostname && location.hostname !== '127.0.0.1' && location.hostname !== 'localhost') {
-      return location.origin + '/api';
+    if (typeof location === 'undefined' || !location.hostname) {
+      return 'http://127.0.0.1:3000/api';
     }
-    // Local split: UI :8080, API :3000
-    return 'http://127.0.0.1:3000/api';
+    var host = location.hostname;
+    var port = location.port || '';
+    // Dev split: static server on 8080/5500 → API on 3000
+    var isLoopback = host === '127.0.0.1' || host === 'localhost';
+    if (isLoopback && (port === '8080' || port === '5500')) {
+      return 'http://127.0.0.1:3000/api';
+    }
+    // Docker nginx (:80), Render, same-origin tunnels
+    return location.origin + '/api';
   }
 
   function getBase() {

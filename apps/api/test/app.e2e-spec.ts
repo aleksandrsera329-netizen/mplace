@@ -43,7 +43,17 @@ describe('API (e2e)', () => {
   it('/api/health (GET)', async () => {
     const res = await request(app.getHttpServer()).get('/api/health');
     expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('status', 'ok');
+    expect(res.body.info?.database?.status || res.body.details?.database?.status).toBe(
+      'up',
+    );
+  });
+
+  it('/api/health/status (GET)', async () => {
+    const res = await request(app.getHttpServer()).get('/api/health/status');
+    expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('service', 'mplace-api');
     expect(res.body).toHaveProperty('status');
   });
 });
+

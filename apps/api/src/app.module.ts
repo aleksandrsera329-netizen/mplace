@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
@@ -20,12 +21,31 @@ import { SupportModule } from './support/support.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../../.env'],
+      // Prefer production overrides, then local .env (apps/api and monorepo root)
+      envFilePath: [
+        '.env.production',
+        '../../.env.production',
+        '.env',
+        '../../.env',
+      ],
+      // validationSchema: Joi — later (Этап 1)
+    }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        // LoggerModule boots before ConfigService injection here — env is fine
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { singleLine: true } }
+            : undefined,
+        level: process.env.NODE_ENV !== 'production' ? 'debug' : 'info',
+        autoLogging: true,
+        quietReqLogger: true,
+      },
     }),
     ThrottlerModule.forRoot([
       {
-        ttl: 60_000, // 60 seconds
-        limit: 80, // max requests per IP per window
+        ttl: 60_000,
+        limit: 80,
       },
     ]),
     PrismaModule,

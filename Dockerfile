@@ -1,9 +1,12 @@
-﻿# Mplace вЂ” single free-tier container (API + static storefront)
+# Mplace — API image for docker-compose (PostgreSQL + Redis stack)
 FROM node:22-bookworm-slim AS build
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# API deps + build
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
 WORKDIR /app/apps/api
 RUN npm ci
@@ -17,9 +20,12 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=10000
+ENV PORT=3000
 
-# Production deps + prisma CLI (needed for migrate/seed at container start)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY apps/api/package.json apps/api/package-lock.json ./apps/api/
 WORKDIR /app/apps/api
 RUN npm ci --omit=dev \
@@ -28,28 +34,15 @@ RUN npm ci --omit=dev \
 
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
-COPY --from=build /app/apps/api/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/apps/api/node_modules/@prisma ./node_modules/@prisma
+# Generate client for this image's OpenSSL (debian-openssl-3.0.x)
+RUN npx prisma generate
 
-# Storefront (static)
-WORKDIR /app
-COPY index.html login.html cart.html product.html checkout.html orders.html order.html account.html merchant.html merchant-products.html rfq-create.html rfqs.html rfq.html rfq-offer.html ./frontend/
-COPY admin ./frontend/admin
-COPY merchant ./frontend/merchant
-COPY assets ./frontend/assets
-
-# SQLite data dir (ephemeral on free tier unless disk attached)
-RUN mkdir -p /data && chown -R node:node /data /app
-
-ENV DATABASE_URL=file:/data/mplace.db
-ENV FRONTEND_DIR=/app/frontend
-ENV PAYMENT_PROVIDER=dev
-ENV ALLOW_DEV_PAYMENTS=false
+RUN chown -R node:node /app
 
 USER node
 WORKDIR /app/apps/api
 
-EXPOSE 10000
+EXPOSE 3000
 
-# migrate + seed + start
-CMD ["sh", "-c", "npx prisma migrate deploy && (npx prisma db seed || true) && node dist/src/main.js"]
+# db push for first-boot Postgres; seed optional
+CMD ["sh", "-c", "npx prisma db push && (npx prisma db seed || true) && node dist/src/main.js"]

@@ -58,9 +58,16 @@ describe('Security (e2e)', () => {
   it('GET /api/health', async () => {
     const res = await request(app.getHttpServer()).get('/api/health');
     expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ok');
+  });
+
+  it('GET /api/health/status', async () => {
+    const res = await request(app.getHttpServer()).get('/api/health/status');
+    expect(res.status).toBe(200);
     expect(res.body.service).toBe('mplace-api');
     expect(res.body.database).toBe('up');
   });
+
 
   it('rejects POST /api/orders/:id/pay (removed)', async () => {
     await request(app.getHttpServer())
