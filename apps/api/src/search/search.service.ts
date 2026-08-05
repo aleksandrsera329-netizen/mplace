@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MeiliSearch, type Index } from 'meilisearch';
+import { Meilisearch, type Index } from 'meilisearch';
 
 export type ProductSearchDoc = {
   id: string;
@@ -19,7 +19,7 @@ export type ProductSearchDoc = {
 @Injectable()
 export class SearchService implements OnModuleInit {
   private readonly logger = new Logger(SearchService.name);
-  private client: MeiliSearch | null = null;
+  private client: Meilisearch | null = null;
   private productsIndex: Index | null = null;
 
   constructor(private readonly config: ConfigService) {}
