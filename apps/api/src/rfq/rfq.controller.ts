@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -13,6 +14,7 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { ListRfqDto } from './dto/list-rfq.dto';
 import {
   CreateRfqDto,
   CreateRfqOfferDto,
@@ -32,8 +34,12 @@ export class RfqController {
     UserRole.ADMIN,
     UserRole.SUPER_ADMIN,
   )
-  list(@CurrentUser() user: JwtPayload) {
-    return this.rfq.listForUser(user);
+  list(@CurrentUser() user: JwtPayload, @Query() dto: ListRfqDto) {
+    return this.rfq.listForUser(user, {
+      cursor: dto.cursor,
+      limit: dto.limit,
+      status: dto.status,
+    });
   }
 
   @Throttle({

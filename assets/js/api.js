@@ -218,7 +218,35 @@
         body: { paymentToken, idempotencyKey },
         orderAccessToken: paymentToken,
       }),
-    orders: () => request('/orders'),
+    /** Cursor page: { items, nextCursor, hasMore } */
+    ordersPage: (opts) => {
+      const q = new URLSearchParams();
+      if (opts && typeof opts === 'object') {
+        if (opts.cursor) q.set('cursor', opts.cursor);
+        if (opts.limit != null) q.set('limit', String(opts.limit));
+        else q.set('limit', '100');
+        if (opts.status) q.set('status', opts.status);
+      } else {
+        q.set('limit', '100');
+      }
+      const qs = q.toString();
+      return request('/orders' + (qs ? '?' + qs : '')).then(function (data) {
+        if (Array.isArray(data)) {
+          return { items: data, nextCursor: null, hasMore: false };
+        }
+        return {
+          items: data.items || [],
+          nextCursor: data.nextCursor || null,
+          hasMore: !!data.hasMore,
+        };
+      });
+    },
+    /** Orders as array (backward compatible) */
+    orders: function (opts) {
+      return window.MplaceApi.ordersPage(opts).then(function (page) {
+        return page.items || [];
+      });
+    },
     order: (id, paymentToken) =>
       request('/orders/' + id, {
         orderAccessToken: paymentToken,
@@ -269,8 +297,35 @@
         body: data,
       }),
 
-    /** Список RFQ текущего пользователя */
-    rfqs: () => request('/rfq'),
+    /** Cursor page: { items, nextCursor, hasMore } */
+    rfqsPage: (opts) => {
+      const q = new URLSearchParams();
+      if (opts && typeof opts === 'object') {
+        if (opts.cursor) q.set('cursor', opts.cursor);
+        if (opts.limit != null) q.set('limit', String(opts.limit));
+        else q.set('limit', '100');
+        if (opts.status) q.set('status', opts.status);
+      } else {
+        q.set('limit', '100');
+      }
+      const qs = q.toString();
+      return request('/rfq' + (qs ? '?' + qs : '')).then(function (data) {
+        if (Array.isArray(data)) {
+          return { items: data, nextCursor: null, hasMore: false };
+        }
+        return {
+          items: data.items || [],
+          nextCursor: data.nextCursor || null,
+          hasMore: !!data.hasMore,
+        };
+      });
+    },
+    /** Список RFQ (массив, backward compatible) */
+    rfqs: function (opts) {
+      return window.MplaceApi.rfqsPage(opts).then(function (page) {
+        return page.items || [];
+      });
+    },
 
     /** Получить один RFQ по ID */
     rfq: (id) => request('/rfq/' + id),

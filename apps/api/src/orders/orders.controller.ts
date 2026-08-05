@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -20,6 +21,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { AddCartItemDto, UpdateCartItemDto } from './dto/cart.dto';
 import { CheckoutDto, UpdateOrderStatusDto } from './dto/checkout.dto';
+import { ListOrdersDto } from './dto/list-orders.dto';
 import { OrdersService } from './orders.service';
 
 class StatusBodyDto extends UpdateOrderStatusDto {
@@ -90,8 +92,12 @@ export class OrdersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('orders')
-  list(@CurrentUser() user: JwtPayload) {
-    return this.orders.listOrders(user);
+  list(@CurrentUser() user: JwtPayload, @Query() dto: ListOrdersDto) {
+    return this.orders.listOrders(user, {
+      cursor: dto.cursor,
+      limit: dto.limit,
+      status: dto.status,
+    });
   }
 
   @UseGuards(OptionalJwtAuthGuard)

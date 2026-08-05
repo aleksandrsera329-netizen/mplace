@@ -140,42 +140,75 @@ export class RfqService {
     return rows;
   }
 
-  async listForUser(user: JwtPayload) {
+  async listForUser(
+    user: JwtPayload,
+    opts?: { cursor?: string; limit?: number; status?: string },
+  ) {
+    const limit = opts?.limit ?? 20;
+    const empty = { items: [] as unknown[], nextCursor: null, hasMore: false };
+
+    const pageOpts = {
+      take: limit,
+      ...(opts?.cursor
+        ? { skip: 1, cursor: { id: opts.cursor } }
+        : {}),
+      orderBy: [{ createdAt: 'desc' as const }, { id: 'desc' as const }],
+    };
+
+    const statusFilter =
+      opts?.status && opts.status in RfqStatus
+        ? (opts.status as RfqStatus)
+        : undefined;
+
     if (
       user.role === UserRole.ADMIN ||
       user.role === UserRole.SUPER_ADMIN
     ) {
-      return this.prisma.rfqRequest.findMany({
-        orderBy: { createdAt: 'desc' },
+      const items = await this.prisma.rfqRequest.findMany({
+        where: statusFilter ? { status: statusFilter } : undefined,
+        ...pageOpts,
         include: {
           buyer: { select: { id: true, name: true, email: true } },
           items: true,
           _count: { select: { offers: true, matches: true, messages: true } },
         },
       });
+      const nextCursor =
+        items.length === limit ? items[items.length - 1].id : null;
+      return { items, nextCursor, hasMore: !!nextCursor };
     }
+
     if (user.role === UserRole.MERCHANT) {
-      if (!user.shopId) return [];
-      return this.prisma.rfqRequest.findMany({
+      if (!user.shopId) return empty;
+      const items = await this.prisma.rfqRequest.findMany({
         where: {
           OR: [
             { matches: { some: { shopId: user.shopId } } },
             { offers: { some: { shopId: user.shopId } } },
           ],
-          status: { notIn: [RfqStatus.DRAFT, RfqStatus.CANCELLED] },
+          status: statusFilter
+            ? statusFilter
+            : { notIn: [RfqStatus.DRAFT, RfqStatus.CANCELLED] },
         },
-        orderBy: { createdAt: 'desc' },
+        ...pageOpts,
         include: {
           items: true,
           offers: { where: { shopId: user.shopId } },
           _count: { select: { offers: true, messages: true } },
         },
       });
+      const nextCursor =
+        items.length === limit ? items[items.length - 1].id : null;
+      return { items, nextCursor, hasMore: !!nextCursor };
     }
+
     // buyer
-    return this.prisma.rfqRequest.findMany({
-      where: { buyerId: user.sub },
-      orderBy: { createdAt: 'desc' },
+    const items = await this.prisma.rfqRequest.findMany({
+      where: {
+        buyerId: user.sub,
+        ...(statusFilter ? { status: statusFilter } : {}),
+      },
+      ...pageOpts,
       include: {
         items: true,
         offers: {
@@ -187,6 +220,9 @@ export class RfqService {
         _count: { select: { offers: true, matches: true, messages: true } },
       },
     });
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].id : null;
+    return { items, nextCursor, hasMore: !!nextCursor };
   }
 
   async get(id: string, user: JwtPayload) {

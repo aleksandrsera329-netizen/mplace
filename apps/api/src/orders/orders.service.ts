@@ -307,17 +307,32 @@ export class OrdersService {
     return safe;
   }
 
-  async listOrders(user: JwtPayload) {
-    const where =
-      (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN)
+  async listOrders(
+    user: JwtPayload,
+    opts?: { cursor?: string; limit?: number; status?: string },
+  ) {
+    const limit = opts?.limit ?? 20;
+    const where: Record<string, unknown> =
+      user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN
         ? {}
         : user.role === UserRole.MERCHANT
           ? { shopId: user.shopId ?? '__none__' }
           : { customerId: user.sub };
 
-    return this.prisma.order.findMany({
+    if (opts?.status && opts.status in OrderStatus) {
+      where.status = opts.status as OrderStatus;
+    }
+
+    const items = await this.prisma.order.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      take: limit,
+      ...(opts?.cursor
+        ? {
+            skip: 1,
+            cursor: { id: opts.cursor },
+          }
+        : {}),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       include: {
         shop: { select: { id: true, name: true } },
         customer: { select: { id: true, name: true, email: true } },
@@ -325,6 +340,15 @@ export class OrdersService {
         _count: { select: { items: true } },
       },
     });
+
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].id : null;
+
+    return {
+      items,
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
   }
 
   /**
