@@ -3,150 +3,194 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Админ-панель — Mplace Energy</title>
-  <base href="/" />
+  <title>Mplace — Admin Panel</title>
 
   <link rel="stylesheet" href="/assets/css/store.css" />
   <link rel="stylesheet" href="/assets/css/locale.css" />
 
   <style>
-    .admin-page {
-      max-width: 1300px;
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 70px);
+      max-width: 1600px;
       margin: 0 auto;
-      padding: 40px 24px 80px;
     }
 
-    .admin-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 36px;
-      flex-wrap: wrap;
-      gap: 16px;
+    .admin-sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      position: sticky;
+      top: 70px;
+      height: calc(100vh - 70px);
+      overflow-y: auto;
     }
 
-    .admin-header h1 {
-      font-size: 2rem;
-      font-weight: 800;
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 18px;
-      margin-bottom: 36px;
-    }
-
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-    }
-
-    .stat-value {
-      font-size: 1.9rem;
-      font-weight: 800;
-      color: var(--primary);
-      margin-bottom: 6px;
-    }
-
-    .stat-label {
-      font-size: 0.95rem;
-      color: var(--text-muted);
-    }
-
-    .content-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 28px;
-    }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      padding: 26px;
-    }
-
-    .card h2 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .card h2 a {
-      font-size: 0.9rem;
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .list-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 13px 0;
-      border-bottom: 1px solid var(--border);
-      text-decoration: none;
-      color: var(--text);
-    }
-    .list-item:last-child {
-      border-bottom: none;
-    }
-    .list-item:hover {
-      color: var(--primary);
-    }
-
-    .list-item .meta {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-top: 3px;
-    }
-
-    .quick-links {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-
-    .quick-link {
+    .admin-sidebar .nav-item {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 14px 16px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      text-decoration: none;
-      font-weight: 600;
-      transition: all 0.2s;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 500;
+      margin-bottom: 4px;
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-size: 0.95rem;
     }
-    .quick-link:hover {
-      border-color: var(--primary);
-      background: var(--primary-soft);
-      color: var(--primary);
+    .admin-sidebar .nav-item:hover {
+      background: var(--card);
+      color: var(--text);
+    }
+    .admin-sidebar .nav-item.active {
+      background: var(--primary);
+      color: #000;
+      font-weight: 600;
     }
 
-    .state-block {
-      text-align: center;
-      padding: 80px 20px;
+    .admin-content {
+      padding: 28px 24px;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 20px;
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stat-card .value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-top: 6px;
+      color: var(--accent);
     }
 
-    @media (max-width: 800px) {
-      .content-grid {
-        grid-template-columns: 1fr;
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    th {
+      background: var(--bg-secondary);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+    tr:hover td { background: var(--card-hover); }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-active, .badge-ACTIVE { background: #10b98133; color: #10b981; }
+    .badge-pending, .badge-PENDING, .badge-PENDING_PAYMENT, .badge-PENDING_VERIFICATION { background: #f59e0b33; color: #f59e0b; }
+    .badge-suspended, .badge-SUSPENDED, .badge-BLOCKED, .badge-INACTIVE { background: #ef444433; color: #ef4444; }
+    .badge-OPEN, .badge-APPEALED { background: #3b82f633; color: #3b82f6; }
+    .badge-PAID, .badge-COMPLETED, .badge-RESOLVED { background: #10b98133; color: #10b981; }
+    .badge-SHIPPED, .badge-PROCESSING { background: #8b5cf633; color: #a78bfa; }
+    .badge-CANCELLED, .badge-REFUNDED, .badge-DISPUTED { background: #ef444433; color: #f87171; }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .filters input, .filters select {
+      padding: 9px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .filters input { min-width: 220px; }
+
+    .btn-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary);
+      color: #000;
+      margin: 2px;
+    }
+    .btn-sm.danger { background: #ef4444; color: #fff; }
+    .btn-sm.outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .theme-btn, .icon-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    @media (max-width: 900px) {
+      .admin-layout { grid-template-columns: 1fr; }
+      .admin-sidebar {
+        position: fixed;
+        left: -260px;
+        top: 0;
+        z-index: 60;
+        width: 240px;
+        height: 100%;
+        transition: left 0.3s;
       }
-      .stats-grid {
-        grid-template-columns: 1fr 1fr;
-      }
+      .admin-sidebar.open { left: 0; }
+      #mobileMenuBtn { display: inline-block !important; }
     }
   </style>
 </head>
@@ -156,170 +200,520 @@
     <div class="header-top">
       <a class="logo" href="/">M<span>place</span> Energy</a>
       <div class="header-actions">
-        <button class="theme-btn" id="themeToggle">🌙</button>
+        <button class="theme-btn" id="themeToggle" title="Тема">🌙</button>
         <div id="localeMount"></div>
-        <a href="/account.html" class="icon-btn">👤</a>
+        <a class="icon-btn" href="/account.html" title="Аккаунт">👤</a>
+        <a class="icon-btn" href="/login.html" id="logoutLink" title="Выход">↩</a>
       </div>
     </div>
   </header>
 
-  <div class="admin-page">
-    <div id="adminContent">
-      <div style="text-align:center; padding:80px 0; opacity:0.6;">Загрузка админ-панели...</div>
-    </div>
+  <div class="admin-layout">
+    <aside class="admin-sidebar" id="sidebar">
+      <button type="button" class="nav-item active" data-section="dashboard">📊 Dashboard</button>
+      <button type="button" class="nav-item" data-section="users">👥 Users</button>
+      <button type="button" class="nav-item" data-section="shops">🏪 Shops</button>
+      <button type="button" class="nav-item" data-section="orders">📦 Orders</button>
+      <button type="button" class="nav-item" data-section="disputes">⚖️ Disputes</button>
+    </aside>
+
+    <main class="admin-content">
+      <button type="button" class="btn-sm outline" id="mobileMenuBtn" style="display:none; margin-bottom:16px;">☰ Меню</button>
+
+      <section id="section-dashboard" class="section active">
+        <h2 style="margin-bottom:20px;">Dashboard</h2>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="label">Загрузка…</div></div>
+        </div>
+      </section>
+
+      <section id="section-users" class="section">
+        <h2 style="margin-bottom:16px;">Users</h2>
+        <div class="filters">
+          <input type="search" id="userSearch" placeholder="Email / имя…">
+          <select id="userRole">
+            <option value="">Все роли</option>
+            <option value="CUSTOMER">Customer</option>
+            <option value="MERCHANT">Merchant</option>
+            <option value="ADMIN">Admin</option>
+            <option value="SUPER_ADMIN">Super Admin</option>
+          </select>
+          <select id="userStatus">
+            <option value="">Все статусы</option>
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="PENDING_VERIFICATION">Pending verification</option>
+          </select>
+          <button type="button" class="btn-sm" onclick="loadUsers(true)">Найти</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Имя</th>
+                <th>Роль</th>
+                <th>Статус</th>
+                <th>Заказов</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+          <div class="pagination">
+            <button type="button" class="btn-sm outline" id="usersPrev" disabled>← Назад</button>
+            <span id="usersInfo"></span>
+            <button type="button" class="btn-sm outline" id="usersNext">Вперёд →</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-shops" class="section">
+        <h2 style="margin-bottom:16px;">Shops</h2>
+        <div class="filters">
+          <input type="search" id="shopSearch" placeholder="Название / slug…">
+          <select id="shopStatus">
+            <option value="">Все статусы</option>
+            <option value="PENDING">Pending</option>
+            <option value="ACTIVE">Active</option>
+            <option value="SUSPENDED">Suspended</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+          <button type="button" class="btn-sm" onclick="loadShops(true)">Найти</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Магазин</th>
+                <th>Владелец</th>
+                <th>Статус</th>
+                <th>Товаров</th>
+                <th>Заказов</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="shopsBody"></tbody>
+          </table>
+          <div class="pagination">
+            <button type="button" class="btn-sm outline" id="shopsPrev" disabled>← Назад</button>
+            <span id="shopsInfo"></span>
+            <button type="button" class="btn-sm outline" id="shopsNext">Вперёд →</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-orders" class="section">
+        <h2 style="margin-bottom:16px;">Orders</h2>
+        <div class="filters">
+          <input type="search" id="orderSearch" placeholder="Номер / email…">
+          <select id="orderStatus">
+            <option value="">Все статусы</option>
+            <option value="PENDING_PAYMENT">Pending payment</option>
+            <option value="PAID">Paid</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="SHIPPED">Shipped</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+            <option value="DISPUTED">Disputed</option>
+            <option value="REFUNDED">Refunded</option>
+            <option value="PARTIALLY_REFUNDED">Partially refunded</option>
+          </select>
+          <button type="button" class="btn-sm" onclick="loadOrders(true)">Найти</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Номер</th>
+                <th>Покупатель</th>
+                <th>Магазин</th>
+                <th>Сумма</th>
+                <th>Статус</th>
+                <th>Дата</th>
+              </tr>
+            </thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+          <div class="pagination">
+            <button type="button" class="btn-sm outline" id="ordersPrev" disabled>← Назад</button>
+            <span id="ordersInfo"></span>
+            <button type="button" class="btn-sm outline" id="ordersNext">Вперёд →</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="section-disputes" class="section">
+        <h2 style="margin-bottom:16px;">Disputes</h2>
+        <div class="filters">
+          <select id="disputeStatus">
+            <option value="">Все статусы</option>
+            <option value="OPEN">Open</option>
+            <option value="APPEALED">Appealed</option>
+            <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+          <button type="button" class="btn-sm" onclick="loadDisputes(true)">Найти</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Заказ</th>
+                <th>Причина</th>
+                <th>Статус</th>
+                <th>Дата</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody id="disputesBody"></tbody>
+          </table>
+          <div class="pagination">
+            <button type="button" class="btn-sm outline" id="disputesPrev" disabled>← Назад</button>
+            <span id="disputesInfo"></span>
+            <button type="button" class="btn-sm outline" id="disputesNext">Вперёд →</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
   <script src="/assets/js/i18n.js"></script>
   <script src="/assets/js/api.js"></script>
-
   <script>
     const I = window.MplaceI18n;
+    let cursors = { users: null, shops: null, orders: null, disputes: null };
+    let historyStack = { users: [], shops: [], orders: [], disputes: [] };
 
-    // Theme
     const themeToggle = document.getElementById('themeToggle');
     function setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
       localStorage.setItem('mplace_theme', theme);
       themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
     }
-    themeToggle.onclick = () => {
+    themeToggle.addEventListener('click', () => {
       const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       setTheme(next);
-    };
+    });
     setTheme(localStorage.getItem('mplace_theme') || 'dark');
-    I.mountSwitcher('#localeMount');
+    if (I && I.mountSwitcher) I.mountSwitcher('#localeMount');
 
-    function getStatusText(status) {
-      const map = {
-        PENDING_PAYMENT: 'Ожидает оплаты',
-        PAID: 'Оплачена',
-        PROCESSING: 'В обработке',
-        SHIPPED: 'Отправлена',
-        COMPLETED: 'Завершена',
-        CANCELLED: 'Отменена'
-      };
-      return map[status] || status;
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        const section = btn.dataset.section;
+        document.getElementById('section-' + section).classList.add('active');
+        document.getElementById('sidebar').classList.remove('open');
+        if (section === 'dashboard') loadDashboard();
+        if (section === 'users') loadUsers(true);
+        if (section === 'shops') loadShops(true);
+        if (section === 'orders') loadOrders(true);
+        if (section === 'disputes') loadDisputes(true);
+      });
+    });
+
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    function getToken() {
+      return (window.MplaceApi && MplaceApi.getToken && MplaceApi.getToken())
+        || sessionStorage.getItem('mplace_token')
+        || localStorage.getItem('mplace_token')
+        || '';
+    }
+
+    async function adminFetch(path, opts = {}) {
+      const token = getToken();
+      const base = (window.MplaceApi && MplaceApi.getBase && MplaceApi.getBase()) || (location.origin + '/api');
+      const res = await fetch(base + '/admin' + path, {
+        ...opts,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token,
+          ...(opts.headers || {}),
+        },
+      });
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('forbidden');
+      }
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || ('HTTP ' + res.status));
+      }
+      return res.json();
+    }
+
+    function money(cents) {
+      if (I && I.formatMoney) return I.formatMoney(cents || 0);
+      return '$' + ((cents || 0) / 100).toFixed(2);
+    }
+
+    async function loadDashboard() {
+      try {
+        const data = await adminFetch('/dashboard').catch(() => adminFetch('/stats'));
+        const grid = document.getElementById('statsGrid');
+        grid.innerHTML = `
+          <div class="stat-card"><div class="label">Customers</div><div class="value">${data.customers || 0}</div></div>
+          <div class="stat-card"><div class="label">Merchants</div><div class="value">${data.merchants || 0}</div></div>
+          <div class="stat-card"><div class="label">Products</div><div class="value">${data.products || 0}</div></div>
+          <div class="stat-card"><div class="label">Orders</div><div class="value">${data.orders || 0}</div></div>
+          <div class="stat-card"><div class="label">Pending Shops</div><div class="value">${data.pendingShops || data.pendingVerifications || 0}</div></div>
+          <div class="stat-card"><div class="label">Open Disputes</div><div class="value">${data.openDisputes || data.appealedDisputes || 0}</div></div>
+          <div class="stat-card"><div class="label">Today GMV</div><div class="value">${money(data.today?.gmvCents || data.todayTotalCents || 0)}</div></div>
+          <div class="stat-card"><div class="label">Total GMV</div><div class="value">${money(data.gmvCents || 0)}</div></div>
+        `;
+      } catch (e) {
+        console.error(e);
+        document.getElementById('statsGrid').innerHTML = '<div class="stat-card"><div class="label">Ошибка загрузки</div></div>';
+      }
+    }
+
+    async function loadUsers(reset) {
+      if (reset) {
+        cursors.users = null;
+        historyStack.users = [];
+      }
+      const search = document.getElementById('userSearch').value;
+      const role = document.getElementById('userRole').value;
+      const status = document.getElementById('userStatus').value;
+      const q = new URLSearchParams({ limit: '20' });
+      if (cursors.users) q.set('cursor', cursors.users);
+      if (search) q.set('search', search);
+      if (role) q.set('role', role);
+      if (status) q.set('status', status);
+
+      const data = await adminFetch('/users?' + q);
+      const items = data.items || [];
+      document.getElementById('usersBody').innerHTML = items.map(u => `
+        <tr>
+          <td>${esc(u.email)}</td>
+          <td>${esc(u.name || '—')}</td>
+          <td>${esc(u.role)}</td>
+          <td><span class="badge badge-${esc(u.status)}">${esc(u.status)}</span></td>
+          <td>${u._count?.orders || 0}</td>
+          <td>
+            ${u.status !== 'SUSPENDED' && u.status !== 'INACTIVE'
+              ? `<button type="button" class="btn-sm danger" onclick="setUserStatus('${u.id}','SUSPENDED')">Suspend</button>`
+              : `<button type="button" class="btn-sm" onclick="setUserStatus('${u.id}','ACTIVE')">Activate</button>`}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:0.6">Нет данных</td></tr>';
+
+      document.getElementById('usersNext').disabled = !data.hasMore;
+      document.getElementById('usersPrev').disabled = historyStack.users.length === 0;
+      document.getElementById('usersInfo').textContent = items.length + ' на странице' + (data.hasMore ? ' · есть ещё' : '');
+      window.__usersPage = data;
+    }
+
+    document.getElementById('usersNext').onclick = () => {
+      const d = window.__usersPage;
+      if (!d?.nextCursor) return;
+      historyStack.users.push(cursors.users);
+      cursors.users = d.nextCursor;
+      loadUsers(false);
+    };
+    document.getElementById('usersPrev').onclick = () => {
+      cursors.users = historyStack.users.pop() || null;
+      loadUsers(false);
+    };
+
+    async function setUserStatus(id, status) {
+      if (!confirm('Изменить статус на ' + status + '?')) return;
+      await adminFetch('/users/' + id + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      loadUsers(true);
+    }
+
+    async function loadShops(reset) {
+      if (reset) {
+        cursors.shops = null;
+        historyStack.shops = [];
+      }
+      const search = document.getElementById('shopSearch').value;
+      const status = document.getElementById('shopStatus').value;
+      const q = new URLSearchParams({ limit: '20' });
+      if (cursors.shops) q.set('cursor', cursors.shops);
+      if (search) q.set('search', search);
+      if (status) q.set('status', status);
+
+      const data = await adminFetch('/shops?' + q);
+      const items = data.items || [];
+      document.getElementById('shopsBody').innerHTML = items.map(s => `
+        <tr>
+          <td><strong>${esc(s.name)}</strong><br><small style="opacity:0.6">${esc(s.slug)}</small></td>
+          <td>${esc(s.owner?.email || '—')}</td>
+          <td><span class="badge badge-${esc(s.status)}">${esc(s.status)}</span></td>
+          <td>${s._count?.products || 0}</td>
+          <td>${s._count?.orders || 0}</td>
+          <td>
+            ${s.status === 'PENDING' ? `<button type="button" class="btn-sm" onclick="setShopStatus('${s.id}','ACTIVE')">Approve</button>` : ''}
+            ${s.status === 'ACTIVE' ? `<button type="button" class="btn-sm danger" onclick="setShopStatus('${s.id}','SUSPENDED')">Suspend</button>` : ''}
+            ${s.status === 'SUSPENDED' || s.status === 'REJECTED' ? `<button type="button" class="btn-sm" onclick="setShopStatus('${s.id}','ACTIVE')">Activate</button>` : ''}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:0.6">Нет данных</td></tr>';
+
+      document.getElementById('shopsNext').disabled = !data.hasMore;
+      document.getElementById('shopsPrev').disabled = historyStack.shops.length === 0;
+      document.getElementById('shopsInfo').textContent = items.length + ' на странице';
+      window.__shopsPage = data;
+    }
+
+    document.getElementById('shopsNext').onclick = () => {
+      const d = window.__shopsPage;
+      if (!d?.nextCursor) return;
+      historyStack.shops.push(cursors.shops);
+      cursors.shops = d.nextCursor;
+      loadShops(false);
+    };
+    document.getElementById('shopsPrev').onclick = () => {
+      cursors.shops = historyStack.shops.pop() || null;
+      loadShops(false);
+    };
+
+    async function setShopStatus(id, status) {
+      if (!confirm('Изменить статус магазина на ' + status + '?')) return;
+      await adminFetch('/shops/' + id + '/status', {
+        method: 'PATCH',
+        body: JSON.stringify({ status }),
+      });
+      loadShops(true);
+    }
+
+    async function loadOrders(reset) {
+      if (reset) {
+        cursors.orders = null;
+        historyStack.orders = [];
+      }
+      const search = document.getElementById('orderSearch').value;
+      const status = document.getElementById('orderStatus').value;
+      const q = new URLSearchParams({ limit: '20' });
+      if (cursors.orders) q.set('cursor', cursors.orders);
+      if (search) q.set('search', search);
+      if (status) q.set('status', status);
+
+      const data = await adminFetch('/orders?' + q);
+      const items = data.items || [];
+      document.getElementById('ordersBody').innerHTML = items.map(o => `
+        <tr>
+          <td><a href="/order.html?id=${o.id}" style="color:var(--primary)">${esc(o.orderNumber || o.id.slice(0, 8))}</a></td>
+          <td>${esc(o.customer?.email || o.customerEmail || '—')}</td>
+          <td>${esc(o.shop?.name || '—')}</td>
+          <td>${money(o.totalCents)}</td>
+          <td><span class="badge badge-${esc(o.status)}">${esc(o.status)}</span></td>
+          <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:0.6">Нет данных</td></tr>';
+
+      document.getElementById('ordersNext').disabled = !data.hasMore;
+      document.getElementById('ordersPrev').disabled = historyStack.orders.length === 0;
+      document.getElementById('ordersInfo').textContent = items.length + ' на странице';
+      window.__ordersPage = data;
+    }
+
+    document.getElementById('ordersNext').onclick = () => {
+      const d = window.__ordersPage;
+      if (!d?.nextCursor) return;
+      historyStack.orders.push(cursors.orders);
+      cursors.orders = d.nextCursor;
+      loadOrders(false);
+    };
+    document.getElementById('ordersPrev').onclick = () => {
+      cursors.orders = historyStack.orders.pop() || null;
+      loadOrders(false);
+    };
+
+    async function loadDisputes(reset) {
+      if (reset) {
+        cursors.disputes = null;
+        historyStack.disputes = [];
+      }
+      const status = document.getElementById('disputeStatus').value;
+      const q = new URLSearchParams({ limit: '20' });
+      if (cursors.disputes) q.set('cursor', cursors.disputes);
+      if (status) q.set('status', status);
+
+      const data = await adminFetch('/disputes?' + q);
+      const items = data.items || [];
+      document.getElementById('disputesBody').innerHTML = items.map(d => `
+        <tr>
+          <td>${esc(d.id.slice(0, 8))}</td>
+          <td>${esc(d.order?.orderNumber || d.order?.id?.slice(0, 8) || '—')}</td>
+          <td>${esc((d.reason || '—').slice(0, 40))}</td>
+          <td><span class="badge badge-${esc(d.status)}">${esc(d.status)}</span></td>
+          <td>${new Date(d.createdAt).toLocaleDateString()}</td>
+          <td>
+            ${['OPEN', 'APPEALED'].includes(d.status) ? `
+              <button type="button" class="btn-sm" onclick="resolveDispute('${d.id}','RESOLVED_BUYER')">Buyer</button>
+              <button type="button" class="btn-sm" onclick="resolveDispute('${d.id}','RESOLVED_SELLER')">Seller</button>
+              <button type="button" class="btn-sm outline" onclick="resolveDispute('${d.id}','CLOSED')">Close</button>
+            ` : '—'}
+          </td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:0.6">Нет данных</td></tr>';
+
+      document.getElementById('disputesNext').disabled = !data.hasMore;
+      document.getElementById('disputesPrev').disabled = historyStack.disputes.length === 0;
+      document.getElementById('disputesInfo').textContent = items.length + ' на странице';
+      window.__disputesPage = data;
+    }
+
+    document.getElementById('disputesNext').onclick = () => {
+      const d = window.__disputesPage;
+      if (!d?.nextCursor) return;
+      historyStack.disputes.push(cursors.disputes);
+      cursors.disputes = d.nextCursor;
+      loadDisputes(false);
+    };
+    document.getElementById('disputesPrev').onclick = () => {
+      cursors.disputes = historyStack.disputes.pop() || null;
+      loadDisputes(false);
+    };
+
+    async function resolveDispute(id, resolution) {
+      const note = prompt('Комментарий (необязательно):') || '';
+      await adminFetch('/disputes/' + id + '/resolve', {
+        method: 'PATCH',
+        body: JSON.stringify({ resolution, note }),
+      });
+      loadDisputes(true);
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/"/g, '&quot;');
     }
 
     async function init() {
-      const token = MplaceApi.getToken?.() || sessionStorage.getItem('mplace_token');
-      const user = MplaceApi.getUser?.() || JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
-
-      if (!token || !user) {
-        showAccessDenied('Требуется вход');
+      const token = getToken();
+      if (!token) {
+        location.href = '/login.html?email=superadmin@demo.com&next=/admin/';
         return;
       }
-
-      const role = (user.role || '').toUpperCase();
-      if (!['ADMIN', 'SUPER_ADMIN'].includes(role)) {
-        showAccessDenied('Доступ только для администраторов');
-        return;
-      }
-
-      await renderDashboard(user);
-    }
-
-    function showAccessDenied(message) {
-      document.getElementById('adminContent').innerHTML = `
-        <div class="state-block">
-          <div style="font-size:4rem; margin-bottom:20px; opacity:0.5;">🚫</div>
-          <h2 style="margin-bottom:12px;">${message}</h2>
-          <a href="/account.html" class="btn-primary" style="display:inline-block; margin-top:20px; text-decoration:none; padding:14px 28px;">В личный кабинет</a>
-        </div>
-      `;
-    }
-
-    async function renderDashboard(user) {
-      let orders = [];
-      let products = [];
-
       try {
-        const [ordRes, prodRes] = await Promise.all([
-          MplaceApi.orders().catch(() => []),
-          MplaceApi.products().catch(() => [])
-        ]);
-
-        orders = Array.isArray(ordRes) ? ordRes : (ordRes.items || []);
-        products = Array.isArray(prodRes) ? prodRes : (prodRes.items || []);
+        const me = window.MplaceApi && MplaceApi.me ? await MplaceApi.me() : null;
+        const role = String(me?.role || me?.user?.role || '').toUpperCase();
+        if (me && role && !['ADMIN', 'SUPER_ADMIN'].includes(role)) {
+          document.body.innerHTML = '<div style="padding:80px;text-align:center"><h2>Доступ запрещён</h2><p>Только для ADMIN</p><p><a href="/">На главную</a></p></div>';
+          return;
+        }
+        await adminFetch('/dashboard').catch(() => adminFetch('/stats'));
       } catch (e) {
-        console.error(e);
+        if (String(e.message).includes('forbidden')) {
+          document.body.innerHTML = '<div style="padding:80px;text-align:center"><h2>Доступ запрещён</h2><p>Только для ADMIN</p><p><a href="/login.html">Войти</a></p></div>';
+          return;
+        }
       }
-
-      const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || o.subtotalCents || 0), 0);
-      const pendingOrders = orders.filter(o => ['PENDING_PAYMENT', 'PROCESSING', 'PAID'].includes(o.status)).length;
-      const recentOrders = orders.slice(0, 6);
-
-      document.getElementById('adminContent').innerHTML = `
-        <div class="admin-header">
-          <div>
-            <h1>Админ-панель</h1>
-            <div style="color:var(--text-muted); margin-top:6px;">
-              ${user.name || user.email} · ${user.role}
-            </div>
-          </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value">${orders.length}</div>
-            <div class="stat-label">Всего заявок</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${pendingOrders}</div>
-            <div class="stat-label">Активных заявок</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${products.length}</div>
-            <div class="stat-label">Товаров в каталоге</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value">${I.formatMoney(totalRevenue)}</div>
-            <div class="stat-label">Общий оборот</div>
-          </div>
-        </div>
-
-        <div class="content-grid">
-          <!-- Последние заявки -->
-          <div class="card">
-            <h2>
-              Последние заявки
-              <a href="/orders.html">Все →</a>
-            </h2>
-
-            ${recentOrders.length === 0 ? `
-              <div style="text-align:center; padding:30px 0; color:var(--text-muted);">Заявок пока нет</div>
-            ` : recentOrders.map(order => `
-              <a href="/order.html?id=${order.id}" class="list-item">
-                <div>
-                  <div style="font-weight:600;">${order.orderNumber || order.id}</div>
-                  <div class="meta">${new Date(order.createdAt).toLocaleDateString('ru-RU')} · ${getStatusText(order.status)}</div>
-                </div>
-                <div style="font-weight:700;">${I.formatMoney(order.totalCents || 0)}</div>
-              </a>
-            `).join('')}
-          </div>
-
-          <!-- Быстрые ссылки -->
-          <div class="card">
-            <h2>Управление</h2>
-            <div class="quick-links">
-              <a href="/orders.html" class="quick-link">📋 Все заявки</a>
-              <a href="/merchant-products.html" class="quick-link">📦 Товары</a>
-              <a href="/merchant.html" class="quick-link">🏪 Поставщики</a>
-              <a href="/account.html" class="quick-link">👤 Пользователи</a>
-            </div>
-
-            <div style="margin-top:28px; padding-top:20px; border-top:1px solid var(--border);">
-              <div style="font-size:0.9rem; color:var(--text-muted); margin-bottom:10px;">Система</div>
-              <div style="font-size:0.95rem;">
-                Версия: MVP 0.9<br>
-                Режим: ${window.location.hostname.includes('localhost') ? 'Development' : 'Production'}
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
+      loadDashboard();
     }
 
     init();
