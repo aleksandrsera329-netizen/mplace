@@ -277,6 +277,12 @@
         <input type="text" id="newSku" placeholder="Необязательно">
       </div>
 
+      <div class="form-group">
+        <label>Изображение</label>
+        <input type="file" id="newImage" accept="image/*">
+        <div id="newImagePreview" style="margin-top:8px;font-size:12px;opacity:.8"></div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn-secondary" onclick="closeCreateModal()">Отмена</button>
         <button class="btn-primary" onclick="createProduct()">Создать</button>
@@ -399,6 +405,7 @@
       const priceCents = parseInt(document.getElementById('newPrice').value);
       const stock = parseInt(document.getElementById('newStock').value);
       const sku = document.getElementById('newSku').value.trim();
+      const fileInput = document.getElementById('newImage');
 
       if (!name || !priceCents || priceCents <= 0) {
         alert('Заполните название и корректную цену');
@@ -406,12 +413,27 @@
       }
 
       try {
+        let imageUrl;
+        if (fileInput.files && fileInput.files[0]) {
+          document.getElementById('newImagePreview').textContent = 'Загрузка изображения…';
+          try {
+            const up = await MplaceApi.uploadProductImage(fileInput.files[0]);
+            imageUrl = up.url;
+            document.getElementById('newImagePreview').textContent = '✓ ' + imageUrl;
+          } catch (upErr) {
+            console.error(upErr);
+            alert('Не удалось загрузить изображение (проверьте STORAGE_* в .env). Товар создадим без фото.');
+            document.getElementById('newImagePreview').textContent = '';
+          }
+        }
+
         await MplaceApi.createProduct({
           name,
           description: description || undefined,
           priceCents: priceCents,
           stock: isNaN(stock) ? 0 : stock,
           sku: sku || undefined,
+          imageUrl: imageUrl || undefined,
           status: 'ACTIVE'
         });
 
@@ -422,6 +444,8 @@
         document.getElementById('newPrice').value = '';
         document.getElementById('newStock').value = '10';
         document.getElementById('newSku').value = '';
+        document.getElementById('newImage').value = '';
+        document.getElementById('newImagePreview').textContent = '';
 
         await loadProducts();
         alert('Товар успешно создан');

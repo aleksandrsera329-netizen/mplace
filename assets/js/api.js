@@ -200,6 +200,33 @@
       request('/products/' + id, { method: 'PATCH', body }),
     deleteProduct: (id) =>
       request('/products/' + id, { method: 'DELETE' }),
+    /**
+     * Upload image → { url }
+     * @param {File|Blob} file
+     */
+    uploadProductImage: async (file) => {
+      const form = new FormData();
+      form.append('file', file);
+      var base = getBase();
+      var headers = {};
+      var token = getToken();
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      var res = await fetch(base + '/products/upload-image', {
+        method: 'POST',
+        headers: headers,
+        body: form,
+      });
+      var data = await res.json().catch(function () {
+        return {};
+      });
+      if (!res.ok) {
+        var msg =
+          (data && (data.message || data.error)) ||
+          'Upload failed ' + res.status;
+        throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      }
+      return data;
+    },
     categories: () => request('/categories'),
     createCategory: (body) =>
       request('/categories', { method: 'POST', body }),

@@ -9,6 +9,7 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService } from '../search/search.service';
+import { StorageService } from '../storage/storage.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsDto } from './dto/list-products.dto';
@@ -30,6 +31,7 @@ export class CatalogService {
     private readonly audit: AuditService,
     private readonly cache: CacheService,
     private readonly search: SearchService,
+    private readonly storage: StorageService,
   ) {}
 
   private async invalidateCatalogCache() {
@@ -218,6 +220,7 @@ export class CatalogService {
         currency: dto.currency ?? 'USD',
         stock: Math.max(0, dto.stock ?? 0),
         categoryId: dto.categoryId || null,
+        imageUrl: dto.imageUrl?.trim() || null,
         status,
       },
       include: {
@@ -236,6 +239,7 @@ export class CatalogService {
         priceCents: product.priceCents,
         shopId: product.shopId,
         status: product.status,
+        imageUrl: product.imageUrl,
       },
     });
     await this.invalidateCatalogCache();
@@ -265,6 +269,13 @@ export class CatalogService {
     if (dto.status !== undefined) data.status = dto.status;
     if (dto.price !== undefined || dto.priceCents !== undefined) {
       data.priceCents = this.resolvePriceCents(dto as CreateProductDto);
+    }
+    if (dto.imageUrl !== undefined) {
+      const newUrl = dto.imageUrl?.trim() || null;
+      data.imageUrl = newUrl;
+      if (existing.imageUrl && existing.imageUrl !== newUrl) {
+        await this.storage.deleteImage(existing.imageUrl);
+      }
     }
 
     const product = await this.prisma.product.update({
@@ -318,8 +329,16 @@ export class CatalogService {
     });
     await this.invalidateCatalogCache();
     await this.search.removeProduct(id);
+    if (existing.imageUrl) {
+      await this.storage.deleteImage(existing.imageUrl);
+    }
 
     return { archived: true, id };
+  }
+
+  async uploadProductImage(file: Express.Multer.File) {
+    const url = await this.storage.uploadImage(file, 'products');
+    return { url };
   }
 
   /** Full reindex ACTIVE products into Meilisearch */
