@@ -19,6 +19,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RfqModule } from './rfq/rfq.module';
 import { SearchModule } from './search/search.module';
 import { ShopsModule } from './shops/shops.module';
+import { StorageModule } from './storage/storage.module';
 import { SupportModule } from './support/support.module';
 
 @Module({
@@ -67,6 +68,7 @@ import { SupportModule } from './support/support.module';
     PrismaModule,
     CacheModule,
     SearchModule,
+    StorageModule,
     AuditModule,
     NotificationModule,
     HealthModule,
