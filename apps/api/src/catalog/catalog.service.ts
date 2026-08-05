@@ -10,6 +10,7 @@ import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ListProductsDto } from './dto/list-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 function slugify(input: string): string {
@@ -68,8 +69,12 @@ export class CatalogService {
 
   // ── Products ───────────────────────────────────────────
 
-  async listProducts(user: JwtPayload | null, opts?: { status?: string }) {
-    // Cache only public catalog (anonymous / customer ACTIVE list)
+  /**
+   * Cursor pagination: { items, nextCursor, hasMore }
+   */
+  async listProducts(user: JwtPayload | null, dto: ListProductsDto = {}) {
+    const limit = dto.limit ?? 20;
+
     const isPublic =
       !user ||
       user.role === UserRole.CUSTOMER ||
@@ -77,37 +82,69 @@ export class CatalogService {
         user.role !== UserRole.ADMIN &&
         user.role !== UserRole.SUPER_ADMIN);
 
+    // Cache first page of public catalog only (no cursor / search / category)
     const publicKey =
-      isPublic && !opts?.status
-        ? 'products:public:active'
+      isPublic &&
+      !dto.cursor &&
+      !dto.search &&
+      !dto.categoryId &&
+      !dto.status
+        ? `products:public:active:l${limit}`
         : null;
 
     if (publicKey) {
-      const cached = await this.cache.get<unknown[]>(publicKey);
+      const cached = await this.cache.get<{
+        items: unknown[];
+        nextCursor: string | null;
+        hasMore: boolean;
+      }>(publicKey);
       if (cached) return cached;
     }
 
-    const where: {
-      shopId?: string;
-      status?: ProductStatus;
-    } = {};
+    const where: Record<string, unknown> = {};
 
     if (user?.role === UserRole.MERCHANT) {
       if (!user.shopId) {
-        return [];
+        return { items: [], nextCursor: null, hasMore: false };
       }
       where.shopId = user.shopId;
     }
 
-    if (opts?.status && opts.status in ProductStatus) {
-      where.status = opts.status as ProductStatus;
-    } else if (!user || user.role === UserRole.CUSTOMER) {
+    if (dto.status && dto.status in ProductStatus) {
+      where.status = dto.status as ProductStatus;
+    } else if (isPublic) {
       where.status = ProductStatus.ACTIVE;
     }
 
-    const products = await this.prisma.product.findMany({
+    if (dto.categoryId) {
+      where.categoryId = dto.categoryId;
+    }
+
+    if (dto.search?.trim()) {
+      const q = dto.search.trim();
+      // SQLite/Postgres: contains; mode insensitive only on Postgres
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' as const } },
+        { description: { contains: q, mode: 'insensitive' as const } },
+        { sku: { contains: q, mode: 'insensitive' as const } },
+      ];
+    }
+
+    // Public: only ACTIVE shops
+    if (isPublic) {
+      where.shop = { status: 'ACTIVE' };
+    }
+
+    const items = await this.prisma.product.findMany({
       where,
-      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      ...(dto.cursor
+        ? {
+            skip: 1,
+            cursor: { id: dto.cursor },
+          }
+        : {}),
+      orderBy: { id: 'asc' },
       include: {
         shop: {
           select: { id: true, name: true, slug: true, status: true },
@@ -116,15 +153,19 @@ export class CatalogService {
       },
     });
 
-    // Public catalog: only ACTIVE shops
-    if (!user || user.role === UserRole.CUSTOMER) {
-      const filtered = products.filter((p) => p.shop.status === 'ACTIVE');
-      if (publicKey) {
-        await this.cache.set(publicKey, filtered, 300); // 5 min
-      }
-      return filtered;
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].id : null;
+    const result = {
+      items,
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
+
+    if (publicKey) {
+      await this.cache.set(publicKey, result, 300);
     }
-    return products;
+
+    return result;
   }
 
   async getProduct(id: string, user: JwtPayload | null) {

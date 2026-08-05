@@ -19,20 +19,21 @@ import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CatalogService } from './catalog.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ListProductsDto } from './dto/list-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
 @Controller()
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
 
-  // Public + role-aware product listing
+  // Public + role-aware product listing (cursor pagination)
   @UseGuards(OptionalJwtAuthGuard)
   @Get('products')
   listProducts(
     @CurrentUser() user: JwtPayload | undefined,
-    @Query('status') status?: string,
+    @Query() dto: ListProductsDto,
   ) {
-    return this.catalog.listProducts(user ?? null, { status });
+    return this.catalog.listProducts(user ?? null, dto);
   }
 
   @UseGuards(OptionalJwtAuthGuard)

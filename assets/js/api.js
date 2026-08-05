@@ -143,10 +143,43 @@
     adminStats: () => request('/admin/stats'),
     adminCustomers: () => request('/admin/customers'),
     adminMerchants: () => request('/admin/merchants'),
-    products: (status) =>
-      request(
-        '/products' + (status ? '?status=' + encodeURIComponent(status) : ''),
-      ),
+    /**
+     * Cursor page: { items, nextCursor, hasMore }
+     * @param {string|object} [opts] status string or { status, cursor, limit, search, categoryId }
+     */
+    productsPage: (opts) => {
+      const q = new URLSearchParams();
+      if (typeof opts === 'string') {
+        if (opts) q.set('status', opts);
+        q.set('limit', '100');
+      } else if (opts && typeof opts === 'object') {
+        if (opts.status) q.set('status', opts.status);
+        if (opts.cursor) q.set('cursor', opts.cursor);
+        if (opts.limit != null) q.set('limit', String(opts.limit));
+        else q.set('limit', '100');
+        if (opts.categoryId) q.set('categoryId', opts.categoryId);
+        if (opts.search) q.set('search', opts.search);
+      } else {
+        q.set('limit', '100');
+      }
+      const qs = q.toString();
+      return request('/products' + (qs ? '?' + qs : '')).then(function (data) {
+        if (Array.isArray(data)) {
+          return { items: data, nextCursor: null, hasMore: false };
+        }
+        return {
+          items: data.items || [],
+          nextCursor: data.nextCursor || null,
+          hasMore: !!data.hasMore,
+        };
+      });
+    },
+    /** List products as array (backward compatible wrapper) */
+    products: function (opts) {
+      return window.MplaceApi.productsPage(opts).then(function (page) {
+        return page.items || [];
+      });
+    },
     product: (id) => request('/products/' + id),
     createProduct: (body) =>
       request('/products', { method: 'POST', body }),
