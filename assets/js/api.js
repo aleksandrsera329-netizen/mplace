@@ -180,6 +180,19 @@
         return page.items || [];
       });
     },
+    /**
+     * Meilisearch: GET /products/search?q=
+     * @returns { hits, query, estimatedTotalHits }
+     */
+    searchProducts: (q, opts) => {
+      const params = new URLSearchParams();
+      params.set('q', q || '');
+      if (opts && opts.limit != null) params.set('limit', String(opts.limit));
+      if (opts && opts.categoryId) params.set('categoryId', opts.categoryId);
+      return request('/products/search?' + params.toString());
+    },
+    reindexProducts: () =>
+      request('/products/reindex', { method: 'POST' }),
     product: (id) => request('/products/' + id),
     createProduct: (body) =>
       request('/products', { method: 'POST', body }),

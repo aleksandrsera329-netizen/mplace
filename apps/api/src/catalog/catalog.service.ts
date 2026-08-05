@@ -8,6 +8,7 @@ import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { SearchService } from '../search/search.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsDto } from './dto/list-products.dto';
@@ -28,6 +29,7 @@ export class CatalogService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly cache: CacheService,
+    private readonly search: SearchService,
   ) {}
 
   private async invalidateCatalogCache() {
@@ -237,6 +239,9 @@ export class CatalogService {
       },
     });
     await this.invalidateCatalogCache();
+    if (product.status === ProductStatus.ACTIVE) {
+      await this.search.indexProduct(product);
+    }
 
     return product;
   }
@@ -283,6 +288,11 @@ export class CatalogService {
       },
     });
     await this.invalidateCatalogCache();
+    if (product.status === ProductStatus.ACTIVE) {
+      await this.search.indexProduct(product);
+    } else {
+      await this.search.removeProduct(product.id);
+    }
 
     return product;
   }
@@ -307,8 +317,52 @@ export class CatalogService {
       meta: { soft: true, previousStatus: existing.status, name: existing.name },
     });
     await this.invalidateCatalogCache();
+    await this.search.removeProduct(id);
 
     return { archived: true, id };
+  }
+
+  /** Full reindex ACTIVE products into Meilisearch */
+  async reindexAllProducts() {
+    const products = await this.prisma.product.findMany({
+      where: { status: ProductStatus.ACTIVE },
+      include: {
+        category: { select: { id: true, name: true } },
+        shop: { select: { id: true, name: true } },
+      },
+    });
+
+    for (const product of products) {
+      await this.search.indexProduct(product);
+    }
+
+    return {
+      indexed: products.length,
+      searchEnabled: this.search.enabled,
+    };
+  }
+
+  /** Meilisearch product search */
+  async searchProducts(
+    query: string,
+    opts?: { limit?: number; categoryId?: string },
+  ) {
+    if (!query || query.trim().length < 2) {
+      return { hits: [], query: query || '', estimatedTotalHits: 0 };
+    }
+
+    let filter = 'status = ACTIVE';
+    if (opts?.categoryId) {
+      // string id must be quoted for Meilisearch
+      filter += ` AND categoryId = "${opts.categoryId}"`;
+    }
+
+    const result = await this.search.searchProducts(query.trim(), {
+      limit: Math.min(Number(opts?.limit) || 20, 50),
+      filter,
+    });
+
+    return result;
   }
 
   // ── helpers ────────────────────────────────────────────

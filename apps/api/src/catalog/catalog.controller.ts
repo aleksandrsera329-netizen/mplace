@@ -9,7 +9,10 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -22,9 +25,46 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsDto } from './dto/list-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 
+class SearchQueryDto {
+  @IsString()
+  q!: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number = 20;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+}
+
+@ApiTags('Catalog')
 @Controller()
 export class CatalogController {
   constructor(private readonly catalog: CatalogService) {}
+
+  /**
+   * Full-text search via Meilisearch.
+   * Must be registered BEFORE products/:id
+   */
+  @Get('products/search')
+  @ApiOperation({ summary: 'Search products via Meilisearch' })
+  @ApiQuery({ name: 'q', required: true })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'categoryId', required: false })
+  searchProducts(
+    @Query('q') q: string,
+    @Query('limit') limit?: string,
+    @Query('categoryId') categoryId?: string,
+  ) {
+    return this.catalog.searchProducts(q || '', {
+      limit: limit ? Number(limit) : 20,
+      categoryId,
+    });
+  }
 
   // Public + role-aware product listing (cursor pagination)
   @UseGuards(OptionalJwtAuthGuard)
@@ -80,5 +120,14 @@ export class CatalogController {
   @Post('categories')
   createCategory(@Body() dto: CreateCategoryDto) {
     return this.catalog.createCategory(dto);
+  }
+
+  /** Reindex all ACTIVE products into Meilisearch */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post('products/reindex')
+  @ApiOperation({ summary: 'Reindex all ACTIVE products into Meilisearch' })
+  reindexProducts() {
+    return this.catalog.reindexAllProducts();
   }
 }
