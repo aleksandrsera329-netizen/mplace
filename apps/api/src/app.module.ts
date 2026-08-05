@@ -7,6 +7,7 @@ import { AdminModule } from './admin/admin.module';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { BuyerModule } from './buyer/buyer.module';
+import { CacheModule } from './cache/cache.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { HealthModule } from './health/health.module';
 import { FinanceModule } from './finance/finance.module';
@@ -63,6 +64,7 @@ import { SupportModule } from './support/support.module';
       },
     ]),
     PrismaModule,
+    CacheModule,
     AuditModule,
     NotificationModule,
     HealthModule,

@@ -6,6 +6,7 @@ import {
 import { ProductStatus, UserRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
+import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -25,34 +26,67 @@ export class CatalogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly cache: CacheService,
   ) {}
+
+  private async invalidateCatalogCache() {
+    await this.cache.delByPattern('categories:*');
+    await this.cache.delByPattern('products:*');
+  }
 
   // ── Categories ─────────────────────────────────────────
 
-  listCategories() {
-    return this.prisma.category.findMany({
+  async listCategories() {
+    const cacheKey = 'categories:all';
+    const cached = await this.cache.get<unknown[]>(cacheKey);
+    if (cached) return cached;
+
+    const categories = await this.prisma.category.findMany({
       orderBy: { name: 'asc' },
       include: {
         _count: { select: { products: true } },
         parent: { select: { id: true, name: true } },
       },
     });
+
+    await this.cache.set(cacheKey, categories, 600); // 10 min
+    return categories;
   }
 
   async createCategory(dto: CreateCategoryDto) {
     const slug = dto.slug?.trim() || slugify(dto.name);
-    return this.prisma.category.create({
+    const category = await this.prisma.category.create({
       data: {
         name: dto.name.trim(),
         slug,
         parentId: dto.parentId || null,
       },
     });
+    await this.invalidateCatalogCache();
+    return category;
   }
 
   // ── Products ───────────────────────────────────────────
 
   async listProducts(user: JwtPayload | null, opts?: { status?: string }) {
+    // Cache only public catalog (anonymous / customer ACTIVE list)
+    const isPublic =
+      !user ||
+      user.role === UserRole.CUSTOMER ||
+      (user.role !== UserRole.MERCHANT &&
+        user.role !== UserRole.ADMIN &&
+        user.role !== UserRole.SUPER_ADMIN);
+
+    const publicKey =
+      isPublic && !opts?.status
+        ? 'products:public:active'
+        : null;
+
+    if (publicKey) {
+      const cached = await this.cache.get<unknown[]>(publicKey);
+      if (cached) return cached;
+    }
+
     const where: {
       shopId?: string;
       status?: ProductStatus;
@@ -84,7 +118,11 @@ export class CatalogService {
 
     // Public catalog: only ACTIVE shops
     if (!user || user.role === UserRole.CUSTOMER) {
-      return products.filter((p) => p.shop.status === 'ACTIVE');
+      const filtered = products.filter((p) => p.shop.status === 'ACTIVE');
+      if (publicKey) {
+        await this.cache.set(publicKey, filtered, 300); // 5 min
+      }
+      return filtered;
     }
     return products;
   }
@@ -157,6 +195,7 @@ export class CatalogService {
         status: product.status,
       },
     });
+    await this.invalidateCatalogCache();
 
     return product;
   }
@@ -202,6 +241,7 @@ export class CatalogService {
         priceCents: product.priceCents,
       },
     });
+    await this.invalidateCatalogCache();
 
     return product;
   }
@@ -225,6 +265,7 @@ export class CatalogService {
       entityId: id,
       meta: { soft: true, previousStatus: existing.status, name: existing.name },
     });
+    await this.invalidateCatalogCache();
 
     return { archived: true, id };
   }
