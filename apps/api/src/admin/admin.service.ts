@@ -6,6 +6,7 @@ import {
 import {
   DisputeStatus,
   OrderStatus,
+  PayoutStatus,
   ProductStatus,
   ShopStatus,
   UserRole,
@@ -13,6 +14,12 @@ import {
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+/** UI may send BLOCKED; Prisma uses SUSPENDED */
+function normalizeUserStatus(status: string): string {
+  if (status === 'BLOCKED') return UserStatus.SUSPENDED;
+  return status;
+}
 
 @Injectable()
 export class AdminService {
@@ -91,8 +98,11 @@ export class AdminService {
     if (params.role && params.role in UserRole) {
       where.role = params.role as UserRole;
     }
-    if (params.status && params.status in UserStatus) {
-      where.status = params.status as UserStatus;
+    if (params.status) {
+      const st = normalizeUserStatus(params.status);
+      if (st in UserStatus) {
+        where.status = st as UserStatus;
+      }
     }
     if (params.search?.trim()) {
       const q = params.search.trim();
@@ -132,7 +142,8 @@ export class AdminService {
   }
 
   async updateUserStatus(userId: string, status: string, actorId: string) {
-    if (!(status in UserStatus)) {
+    const normalized = normalizeUserStatus(status);
+    if (!(normalized in UserStatus)) {
       throw new BadRequestException('Invalid status');
     }
     const existing = await this.prisma.user.findUnique({
@@ -142,7 +153,7 @@ export class AdminService {
 
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { status: status as UserStatus },
+      data: { status: normalized as UserStatus },
       select: {
         id: true,
         email: true,
@@ -157,7 +168,7 @@ export class AdminService {
       action: 'USER_STATUS_CHANGE',
       entityType: 'User',
       entityId: userId,
-      meta: { from: existing.status, newStatus: status },
+      meta: { from: existing.status, newStatus: normalized },
     });
 
     return user;
@@ -401,5 +412,186 @@ export class AdminService {
     });
 
     return dispute;
+  }
+
+  async listPayouts(params: {
+    status?: string;
+    cursor?: string;
+    limit?: number;
+  }) {
+    const limit = Math.min(params.limit || 20, 100);
+    const where: Record<string, unknown> = {};
+    if (params.status && params.status in PayoutStatus) {
+      where.status = params.status as PayoutStatus;
+    }
+
+    const items = await this.prisma.payoutRequest.findMany({
+      where,
+      take: limit,
+      ...(params.cursor
+        ? { skip: 1, cursor: { id: params.cursor } }
+        : {}),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: {
+        shop: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            owner: { select: { id: true, email: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].id : null;
+
+    return {
+      items,
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
+  }
+
+  async processPayout(
+    payoutId: string,
+    status: string,
+    adminNote: string,
+    actorId: string,
+  ) {
+    if (!(status in PayoutStatus)) {
+      throw new BadRequestException('Invalid payout status');
+    }
+    const row = await this.prisma.payoutRequest.findUnique({
+      where: { id: payoutId },
+    });
+    if (!row) throw new NotFoundException('Payout not found');
+
+    const next = status as PayoutStatus;
+
+    if (next === PayoutStatus.PAID) {
+      if (
+        row.status !== PayoutStatus.APPROVED &&
+        row.status !== PayoutStatus.PENDING
+      ) {
+        throw new BadRequestException('Payout must be APPROVED (or PENDING) to mark PAID');
+      }
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const payout = await tx.payoutRequest.update({
+          where: { id: payoutId },
+          data: {
+            status: PayoutStatus.PAID,
+            adminNote: adminNote || row.adminNote,
+            processedAt: new Date(),
+          },
+          include: {
+            shop: {
+              select: {
+                id: true,
+                name: true,
+                owner: { select: { email: true } },
+              },
+            },
+          },
+        });
+        await tx.ledgerEntry.create({
+          data: {
+            shopId: row.shopId,
+            account: 'VENDOR',
+            entryType: 'PAYOUT',
+            amountCents: -row.amountCents,
+            description: `Payout ${payoutId}`,
+          },
+        });
+        return payout;
+      });
+
+      await this.audit.log({
+        actorId,
+        action: 'PAYOUT_PAID',
+        entityType: 'PayoutRequest',
+        entityId: payoutId,
+        meta: { amountCents: row.amountCents, adminNote },
+      });
+
+      return updated;
+    }
+
+    if (next === PayoutStatus.APPROVED || next === PayoutStatus.REJECTED) {
+      if (row.status !== PayoutStatus.PENDING && row.status !== PayoutStatus.APPROVED) {
+        throw new BadRequestException('Only PENDING (or APPROVED) payouts can be decided');
+      }
+      const updated = await this.prisma.payoutRequest.update({
+        where: { id: payoutId },
+        data: {
+          status: next,
+          adminNote: adminNote || null,
+          ...(next === PayoutStatus.REJECTED ? { processedAt: new Date() } : {}),
+        },
+        include: {
+          shop: {
+            select: {
+              id: true,
+              name: true,
+              owner: { select: { email: true } },
+            },
+          },
+        },
+      });
+
+      await this.audit.log({
+        actorId,
+        action: next === PayoutStatus.APPROVED ? 'PAYOUT_APPROVED' : 'PAYOUT_REJECTED',
+        entityType: 'PayoutRequest',
+        entityId: payoutId,
+        meta: { adminNote },
+      });
+
+      return updated;
+    }
+
+    throw new BadRequestException('Unsupported payout status transition');
+  }
+
+  async listAudit(params: {
+    action?: string;
+    entityType?: string;
+    cursor?: string;
+    limit?: number;
+  }) {
+    const limit = Math.min(params.limit || 30, 100);
+    const where: Record<string, unknown> = {};
+
+    if (params.action?.trim()) {
+      where.action = {
+        contains: params.action.trim(),
+        mode: 'insensitive',
+      };
+    }
+    if (params.entityType?.trim()) {
+      where.entityType = params.entityType.trim();
+    }
+
+    const items = await this.prisma.auditLog.findMany({
+      where,
+      take: limit,
+      ...(params.cursor
+        ? { skip: 1, cursor: { id: params.cursor } }
+        : {}),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      include: {
+        actor: { select: { id: true, email: true, name: true, role: true } },
+      },
+    });
+
+    const nextCursor =
+      items.length === limit ? items[items.length - 1].id : null;
+
+    return {
+      items,
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
   }
 }

@@ -72,6 +72,37 @@ class ResolveDisputeBody {
   note?: string;
 }
 
+class AuditListQuery {
+  @IsOptional()
+  @IsString()
+  cursor?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @IsOptional()
+  @IsString()
+  action?: string;
+
+  @IsOptional()
+  @IsString()
+  entityType?: string;
+}
+
+class ProcessPayoutBody {
+  @IsString()
+  @MinLength(1)
+  status!: string;
+
+  @IsOptional()
+  @IsString()
+  adminNote?: string;
+}
+
 @ApiTags('Admin')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -196,5 +227,41 @@ export class AdminController {
       body.note || '',
       user.sub,
     );
+  }
+
+  @Get('payouts')
+  @ApiOperation({ summary: 'List payout requests (cursor)' })
+  listPayouts(@Query() query: CursorListQuery) {
+    return this.admin.listPayouts({
+      status: query.status,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+  }
+
+  @Patch('payouts/:id/process')
+  @ApiOperation({ summary: 'Approve / reject / mark paid a payout' })
+  processPayout(
+    @Param('id') id: string,
+    @Body() body: ProcessPayoutBody,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.admin.processPayout(
+      id,
+      body.status,
+      body.adminNote || '',
+      user.sub,
+    );
+  }
+
+  @Get('audit')
+  @ApiOperation({ summary: 'Audit log (cursor)' })
+  listAudit(@Query() query: AuditListQuery) {
+    return this.admin.listAudit({
+      action: query.action,
+      entityType: query.entityType,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
   }
 }
