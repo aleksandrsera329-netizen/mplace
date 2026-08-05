@@ -44,6 +44,9 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-mplace}:${POSTGRES_PASSWORD:-mplace}@postgres:5432/${POSTGRES_DB:-mplace}?schema=public
       REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_API_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
     # Host 3001 if 3000 is taken (e.g. other Docker apps). Container still listens on 3000.
     ports:
       - "3001:3000"
@@ -52,12 +55,33 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      meilisearch:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 40s
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: mplace-meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - mplace_meili_data:/meili_data
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--spider", "http://127.0.0.1:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   nginx:
     image: nginx:1.27-alpine
@@ -75,3 +99,4 @@ services:
 volumes:
   mplace_pg_data:
   mplace_redis_data:
+  mplace_meili_data:

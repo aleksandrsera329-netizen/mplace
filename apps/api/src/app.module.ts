@@ -17,6 +17,7 @@ import { OrdersModule } from './orders/orders.module';
 import { PaymentsModule } from './payments/payments.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RfqModule } from './rfq/rfq.module';
+import { SearchModule } from './search/search.module';
 import { ShopsModule } from './shops/shops.module';
 import { SupportModule } from './support/support.module';
 
@@ -65,6 +66,7 @@ import { SupportModule } from './support/support.module';
     ]),
     PrismaModule,
     CacheModule,
+    SearchModule,
     AuditModule,
     NotificationModule,
     HealthModule,
