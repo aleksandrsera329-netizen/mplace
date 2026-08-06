@@ -31,3 +31,6 @@ bore.log
 bore-err.log
 server.log
 apps/api/start-tunnel-server.ps1
+
+uploads/
+

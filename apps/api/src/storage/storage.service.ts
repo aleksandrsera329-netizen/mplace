@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { mkdir, unlink, writeFile } from 'fs/promises';
+import { extname, join } from 'path';
 import sharp from 'sharp';
 
 @Injectable()
@@ -21,11 +23,16 @@ export class StorageService {
   private bucket = '';
   private publicUrl = '';
   private readonly provider: string;
+  /** Local disk root for STORAGE_PROVIDER=local */
+  private readonly localRoot: string;
 
   constructor(private readonly config: ConfigService) {
     this.provider = (
       this.config.get<string>('STORAGE_PROVIDER') || 'local'
     ).toLowerCase();
+    this.localRoot =
+      this.config.get<string>('STORAGE_LOCAL_PATH') ||
+      join(process.cwd(), 'uploads');
 
     if (this.provider === 'r2' || this.provider === 's3') {
       const accessKeyId = this.config.get<string>('STORAGE_ACCESS_KEY_ID');
@@ -40,7 +47,7 @@ export class StorageService {
 
       if (!accessKeyId || !secretAccessKey || !endpoint || !this.bucket) {
         this.logger.warn(
-          'STORAGE_PROVIDER is r2/s3 but credentials incomplete — storage disabled',
+          'STORAGE_PROVIDER is r2/s3 but credentials incomplete — falling back to local disk',
         );
       } else {
         this.s3 = new S3Client({
@@ -55,27 +62,38 @@ export class StorageService {
         this.logger.log(`Storage enabled: ${this.provider} bucket=${this.bucket}`);
       }
     } else {
-      this.logger.warn(
-        'STORAGE_PROVIDER=local — remote upload disabled (configure r2|s3 for media)',
+      this.logger.log(
+        `STORAGE_PROVIDER=local — files under ${this.localRoot} (URL /uploads/...)`,
       );
     }
   }
 
   get enabled() {
-    return !!this.s3;
+    // Always available: S3/R2 when configured, otherwise local disk
+    return true;
+  }
+
+  private async putLocal(
+    key: string,
+    body: Buffer,
+    contentType: string,
+  ): Promise<string> {
+    const full = join(this.localRoot, key);
+    await mkdir(join(full, '..'), { recursive: true });
+    await writeFile(full, body);
+    this.logger.log(`Local upload ${key} (${body.length} bytes, ${contentType})`);
+    // Served by nginx from monorepo /uploads or API static
+    return `/uploads/${key.replace(/\\/g, '/')}`;
   }
 
   /**
-   * Upload image: resize (max 1200), convert to WebP, put to S3/R2.
+   * Upload image: resize (max 1200), convert to WebP, put to S3/R2 or local.
    * @returns public URL
    */
   async uploadImage(
     file: Express.Multer.File,
     folder = 'products',
   ): Promise<string> {
-    if (!this.s3) {
-      throw new ServiceUnavailableException('Storage is not configured');
-    }
     if (!file?.buffer?.length) {
       throw new BadRequestException('Empty file');
     }
@@ -86,6 +104,10 @@ export class StorageService {
       .resize(1200, 1200, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer();
+
+    if (!this.s3) {
+      return this.putLocal(key, buffer, 'image/webp');
+    }
 
     await this.s3.send(
       new PutObjectCommand({
@@ -103,6 +125,41 @@ export class StorageService {
 
     this.logger.log(`Uploaded ${key} (${buffer.length} bytes)`);
     return url;
+  }
+
+  /**
+   * Upload non-image document (PDF, DOC, etc.) as-is.
+   */
+  async uploadFile(
+    file: Express.Multer.File,
+    folder = 'documents',
+  ): Promise<string> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Empty file');
+    }
+    const ext =
+      extname(file.originalname || '').toLowerCase().replace(/[^\w.]/g, '') ||
+      '';
+    const key = `${folder.replace(/\/$/, '')}/${randomUUID()}${ext}`;
+    const contentType = file.mimetype || 'application/octet-stream';
+
+    if (!this.s3) {
+      return this.putLocal(key, file.buffer, contentType);
+    }
+
+    await this.s3.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: file.buffer,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000',
+      }),
+    );
+
+    return this.publicUrl
+      ? `${this.publicUrl}/${key}`
+      : `${this.config.get('STORAGE_ENDPOINT')}/${this.bucket}/${key}`;
   }
 
   /**
@@ -141,7 +198,7 @@ export class StorageService {
    * Delete object by public URL or raw key
    */
   async deleteImage(urlOrKey: string): Promise<void> {
-    if (!this.s3 || !urlOrKey) return;
+    if (!urlOrKey) return;
 
     let key = urlOrKey;
     if (urlOrKey.startsWith('http')) {
@@ -149,13 +206,25 @@ export class StorageService {
         const u = new URL(urlOrKey);
         key = u.pathname.replace(/^\//, '');
         // path-style: /bucket/key
-        if (key.startsWith(`${this.bucket}/`)) {
+        if (this.bucket && key.startsWith(`${this.bucket}/`)) {
           key = key.slice(this.bucket.length + 1);
         }
       } catch {
         this.logger.warn(`deleteImage: invalid URL ${urlOrKey}`);
         return;
       }
+    } else if (key.startsWith('/uploads/')) {
+      key = key.slice('/uploads/'.length);
+    }
+
+    if (!this.s3) {
+      try {
+        await unlink(join(this.localRoot, key));
+        this.logger.log(`Local deleted ${key}`);
+      } catch (e) {
+        this.logger.warn(`Local delete failed ${key}: ${String(e)}`);
+      }
+      return;
     }
 
     try {
@@ -180,7 +249,13 @@ export class StorageService {
     expiresIn = 600,
   ): Promise<{ url: string; key: string; publicUrl: string }> {
     if (!this.s3) {
-      throw new ServiceUnavailableException('Storage is not configured');
+      // Local: client still posts to /api/media/upload
+      const key = `${folder.replace(/\/$/, '')}/${randomUUID()}.webp`;
+      return {
+        url: `/api/media/upload`,
+        key,
+        publicUrl: `/uploads/${key}`,
+      };
     }
     const key = `${folder.replace(/\/$/, '')}/${randomUUID()}.webp`;
     const command = new PutObjectCommand({

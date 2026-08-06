@@ -22,6 +22,7 @@ import { ShopsModule } from './shops/shops.module';
 import { StorageModule } from './storage/storage.module';
 import { SupportModule } from './support/support.module';
 import { WishlistModule } from './wishlist/wishlist.module';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -84,6 +85,7 @@ import { WishlistModule } from './wishlist/wishlist.module';
     RfqModule,
     BuyerModule,
     WishlistModule,
+    MediaModule,
     KycModule,
   ],
   providers: [

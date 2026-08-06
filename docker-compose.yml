@@ -47,9 +47,13 @@ services:
       MEILISEARCH_URL: http://meilisearch:7700
       MEILISEARCH_API_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
     # Host 3001 if 3000 is taken (e.g. other Docker apps). Container still listens on 3000.
     ports:
       - "3001:3000"
+    volumes:
+      # Local media files (URL /uploads/... via nginx)
+      - ./uploads:/app/apps/api/uploads
     depends_on:
       postgres:
         condition: service_healthy
