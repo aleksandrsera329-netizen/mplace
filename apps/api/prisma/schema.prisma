@@ -147,6 +147,7 @@ model User {
   phone                String?    @unique
   passwordHash         String
   name                 String
+  company              String?
   role                 UserRole
   status               UserStatus @default(ACTIVE)
   emailVerifiedAt      DateTime?

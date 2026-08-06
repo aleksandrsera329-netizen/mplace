@@ -200,6 +200,9 @@
       <div class="user-name" id="userName">Загрузка…</div>
       <div class="user-email" id="userEmail"></div>
       <div class="user-role" id="userRole"></div>
+      <button type="button" class="btn outline" style="width:100%;margin-top:12px;font-size:0.85rem;" onclick="openProfileModal()">
+        Редактировать профиль
+      </button>
     </div>
 
     <nav>
@@ -265,10 +268,36 @@
   </main>
 </div>
 
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:100;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:min(440px,95%);padding:24px;">
+    <h3 style="margin:0 0 18px;">Редактировать профиль</h3>
+    <form id="profileForm" onsubmit="saveProfile(event)">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Имя</label>
+        <input type="text" id="profileName" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Телефон</label>
+        <input type="tel" id="profilePhone" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Компания</label>
+        <input type="text" id="profileCompany" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="btn outline" onclick="closeProfileModal()">Отмена</button>
+        <button type="submit" class="btn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="/assets/js/i18n.js"></script>
 <script src="/assets/js/api.js"></script>
 <script>
   const I = window.MplaceI18n;
+  let currentUser = null;
 
   // Theme
   const themeToggle = document.getElementById('themeToggle');
@@ -336,6 +365,46 @@
     location.href = '/login.html';
   }
 
+  function openProfileModal() {
+    if (!currentUser) return;
+    document.getElementById('profileName').value = currentUser.name || '';
+    document.getElementById('profilePhone').value = currentUser.phone || '';
+    document.getElementById('profileCompany').value = currentUser.company || '';
+    document.getElementById('profileModal').style.display = 'flex';
+  }
+
+  function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+  }
+
+  document.getElementById('profileModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'profileModal') closeProfileModal();
+  });
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById('profileName').value.trim(),
+      phone: document.getElementById('profilePhone').value.trim() || undefined,
+      company: document.getElementById('profileCompany').value.trim() || undefined,
+    };
+    if (!payload.name) {
+      alert('Имя обязательно');
+      return;
+    }
+    try {
+      await api('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      closeProfileModal();
+      await loadDashboard();
+      alert('Профиль обновлён');
+    } catch (err) {
+      alert('Ошибка: ' + err.message);
+    }
+  }
+
   async function loadDashboard() {
     try {
       const [me, ordersData, rfqsData] = await Promise.all([
@@ -345,14 +414,10 @@
       ]);
 
       const user = me.user || me;
+      currentUser = user;
       const name = user.name || (user.email ? user.email.split('@')[0] : '') || 'Пользователь';
       const email = user.email || '';
       const role = user.role || 'CUSTOMER';
-
-      // Redirect merchants to merchant cabinet (optional convenience)
-      if (role === 'MERCHANT') {
-        // keep account page usable, but show merchant role
-      }
 
       document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
       document.getElementById('userName').textContent = name;

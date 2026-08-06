@@ -513,6 +513,7 @@ export class AuthService {
         email: true,
         phone: true,
         name: true,
+        company: true,
         role: true,
         shopId: true,
         status: true,
@@ -532,5 +533,62 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
     return user;
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: { name?: string; phone?: string; company?: string },
+  ) {
+    const data: {
+      name?: string;
+      phone?: string | null;
+      company?: string | null;
+    } = {};
+
+    if (dto.name !== undefined && dto.name !== null) {
+      const name = String(dto.name).trim();
+      if (!name) throw new BadRequestException('Name cannot be empty');
+      data.name = name;
+    }
+
+    if (dto.phone !== undefined) {
+      const phone =
+        dto.phone == null || dto.phone === ''
+          ? null
+          : String(dto.phone).trim() || null;
+      if (phone) {
+        const taken = await this.prisma.user.findFirst({
+          where: { phone, NOT: { id: userId } },
+          select: { id: true },
+        });
+        if (taken) throw new ConflictException('Phone already in use');
+      }
+      data.phone = phone;
+    }
+
+    if (dto.company !== undefined) {
+      data.company =
+        dto.company == null || dto.company === ''
+          ? null
+          : String(dto.company).trim() || null;
+    }
+
+    if (!Object.keys(data).length) {
+      throw new BadRequestException('No profile fields to update');
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    await this.audit('PROFILE_UPDATE', {
+      actorId: userId,
+      entityType: 'User',
+      entityId: userId,
+      meta: data,
+    });
+
+    return this.me(userId);
   }
 }
