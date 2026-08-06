@@ -15,6 +15,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { PrismaService } from '../prisma/prisma.service';
+import { WishlistService } from '../wishlist/wishlist.service';
 
 class SavedSearchDto {
   @IsString()
@@ -30,48 +31,33 @@ class SavedSearchDto {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
 export class BuyerController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly wishlist: WishlistService,
+  ) {}
 
+  /** @deprecated prefer GET /api/wishlist */
   @Get('wishlist')
-  wishlist(@CurrentUser() user: JwtPayload) {
-    return this.prisma.wishlistItem.findMany({
-      where: { userId: user.sub },
-      orderBy: { createdAt: 'desc' },
-      include: {
-        product: {
-          include: {
-            shop: { select: { id: true, name: true, slug: true } },
-            category: true,
-          },
-        },
-      },
-    });
+  listWish(@CurrentUser() user: JwtPayload) {
+    return this.wishlist.getWishlist(user.sub);
   }
 
+  /** @deprecated prefer POST /api/wishlist */
   @Post('wishlist/:productId')
-  async addWish(
+  addWish(
     @CurrentUser() user: JwtPayload,
     @Param('productId') productId: string,
   ) {
-    return this.prisma.wishlistItem.upsert({
-      where: {
-        userId_productId: { userId: user.sub, productId },
-      },
-      create: { userId: user.sub, productId },
-      update: {},
-      include: { product: true },
-    });
+    return this.wishlist.addToWishlist(user.sub, productId);
   }
 
+  /** @deprecated prefer DELETE /api/wishlist/:productId */
   @Delete('wishlist/:productId')
-  async removeWish(
+  removeWish(
     @CurrentUser() user: JwtPayload,
     @Param('productId') productId: string,
   ) {
-    await this.prisma.wishlistItem.deleteMany({
-      where: { userId: user.sub, productId },
-    });
-    return { ok: true };
+    return this.wishlist.removeFromWishlist(user.sub, productId);
   }
 
   @Get('saved-searches')

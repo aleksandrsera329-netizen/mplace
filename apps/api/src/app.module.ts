@@ -21,6 +21,7 @@ import { SearchModule } from './search/search.module';
 import { ShopsModule } from './shops/shops.module';
 import { StorageModule } from './storage/storage.module';
 import { SupportModule } from './support/support.module';
+import { WishlistModule } from './wishlist/wishlist.module';
 
 @Module({
   imports: [
@@ -82,6 +83,7 @@ import { SupportModule } from './support/support.module';
     SupportModule,
     RfqModule,
     BuyerModule,
+    WishlistModule,
     KycModule,
   ],
   providers: [
