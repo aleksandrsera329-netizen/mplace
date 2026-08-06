@@ -159,17 +159,15 @@ describe('Security (e2e)', () => {
       .get('/api/orders')
       .set('Authorization', 'Bearer ' + tokenA)
       .expect(200);
-    expect(listA.body.some((o: { id: string }) => o.id === order.id)).toBe(
-      true,
-    );
+    const itemsA: { id: string }[] = listA.body.items || listA.body;
+    expect(itemsA.some((o) => o.id === order.id)).toBe(true);
 
     const listB = await request(app.getHttpServer())
       .get('/api/orders')
       .set('Authorization', 'Bearer ' + tokenB)
       .expect(200);
-    expect(listB.body.some((o: { id: string }) => o.id === order.id)).toBe(
-      false,
-    );
+    const itemsB: { id: string }[] = listB.body.items || listB.body;
+    expect(itemsB.some((o) => o.id === order.id)).toBe(false);
 
     await request(app.getHttpServer())
       .get('/api/orders/' + order.id)
