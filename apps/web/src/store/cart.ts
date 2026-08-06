@@ -12,6 +12,7 @@ interface CartState {
   toggle: () => void
   refresh: () => Promise<void>
   addItem: (productId: string, quantity?: number) => Promise<void>
+  clear: () => Promise<void>
 }
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -52,5 +53,14 @@ export const useCartStore = create<CartState>((set, get) => ({
       const msg = e instanceof Error ? e.message : "Не удалось добавить в корзину"
       alert(msg)
     }
+  },
+
+  clear: async () => {
+    try {
+      await api.clearCart()
+    } catch {
+      /* cart may already be empty after checkout */
+    }
+    set({ items: [], itemCount: 0, subtotalCents: 0 })
   },
 }))

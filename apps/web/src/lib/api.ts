@@ -53,6 +53,10 @@ async function request<T>(
   if (typeof window !== "undefined") {
     const sk = getSessionKey()
     if (sk) headers["X-Session-Key"] = sk
+    const token = sessionStorage.getItem("mplace_access_token")
+    if (token && !headers.Authorization) {
+      headers.Authorization = `Bearer ${token}`
+    }
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -122,6 +126,58 @@ export const api = {
     request<CartResponse>("/cart", {
       method: "DELETE",
     }),
+
+  /** POST /api/checkout — creates order(s) from guest/user cart (X-Session-Key) */
+  checkout: (body: {
+    customerName?: string
+    customerEmail?: string
+    comment?: string
+  }) =>
+    request<{
+      orders: Array<{
+        id: string
+        orderNumber: string
+        totalCents: number
+        currency: string
+        status: string
+        shop: { id: string; name: string } | null
+        paymentToken?: string
+      }>
+      message?: string
+    }>("/checkout", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  login: (email: string, password: string) =>
+    request<{
+      accessToken: string
+      refreshToken?: string
+      user?: { id: string; email: string; role: string; name?: string }
+    }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+}
+
+const TOKEN_KEY = "mplace_access_token"
+const REFRESH_KEY = "mplace_refresh_token"
+
+export function saveAuthTokens(accessToken: string, refreshToken?: string) {
+  if (typeof window === "undefined") return
+  sessionStorage.setItem(TOKEN_KEY, accessToken)
+  if (refreshToken) sessionStorage.setItem(REFRESH_KEY, refreshToken)
+}
+
+export function getAccessToken(): string | null {
+  if (typeof window === "undefined") return null
+  return sessionStorage.getItem(TOKEN_KEY)
+}
+
+export function clearAuthTokens() {
+  if (typeof window === "undefined") return
+  sessionStorage.removeItem(TOKEN_KEY)
+  sessionStorage.removeItem(REFRESH_KEY)
 }
 
 export { API_BASE }
