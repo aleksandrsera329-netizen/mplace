@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -339,6 +340,95 @@ export class CatalogService {
   async uploadProductImage(file: Express.Multer.File) {
     const url = await this.storage.uploadImage(file, 'products');
     return { url };
+  }
+
+  // ── Product documents (certificates, datasheets, …) ────
+
+  async addProductDocument(
+    productId: string,
+    user: JwtPayload,
+    file: Express.Multer.File,
+    name?: string,
+    docType = 'certificate',
+  ) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    this.assertCanWriteShop(user, product.shopId);
+
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('File is required');
+    }
+
+    const isImage = file.mimetype?.startsWith('image/');
+    const filePath = isImage
+      ? await this.storage.uploadImage(file, 'documents')
+      : await this.storage.uploadFile(file, 'documents');
+
+    const doc = await this.prisma.productDocument.create({
+      data: {
+        productId,
+        name: (name?.trim() || file.originalname || 'document').slice(0, 200),
+        filePath,
+        docType: (docType || 'certificate').slice(0, 80),
+      },
+    });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'CREATE',
+      entityType: 'ProductDocument',
+      entityId: doc.id,
+      meta: { productId, name: doc.name, docType: doc.docType, filePath },
+    });
+
+    return doc;
+  }
+
+  async getProductDocuments(productId: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    return this.prisma.productDocument.findMany({
+      where: { productId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async deleteProductDocument(
+    productId: string,
+    docId: string,
+    user: JwtPayload,
+  ) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+    this.assertCanWriteShop(user, product.shopId);
+
+    const doc = await this.prisma.productDocument.findFirst({
+      where: { id: docId, productId },
+    });
+    if (!doc) throw new NotFoundException('Document not found');
+
+    if (doc.filePath) {
+      await this.storage.deleteImage(doc.filePath);
+    }
+    await this.prisma.productDocument.delete({ where: { id: docId } });
+
+    await this.audit.log({
+      actorId: user.sub,
+      action: 'DELETE',
+      entityType: 'ProductDocument',
+      entityId: docId,
+      meta: { productId, name: doc.name, filePath: doc.filePath },
+    });
+
+    return { success: true };
   }
 
   /** Full reindex ACTIVE products into Meilisearch */

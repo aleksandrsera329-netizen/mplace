@@ -128,6 +128,67 @@ export class CatalogController {
     return this.catalog.deleteProduct(user, id);
   }
 
+  /** List product documents (public) */
+  @Get('products/:id/documents')
+  @ApiOperation({ summary: 'List product documents (certificates, PDFs, …)' })
+  getProductDocuments(@Param('id') productId: string) {
+    return this.catalog.getProductDocuments(productId);
+  }
+
+  /** Upload product document */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MERCHANT, UserRole.SUPER_ADMIN)
+  @Post('products/:id/documents')
+  @ApiOperation({ summary: 'Upload product document' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        name: { type: 'string' },
+        docType: { type: 'string', example: 'certificate' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  uploadProductDocument(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') productId: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('name') name?: string,
+    @Body('docType') docType?: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.catalog.addProductDocument(
+      productId,
+      user,
+      file,
+      name,
+      docType || 'certificate',
+    );
+  }
+
+  /** Delete product document */
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.MERCHANT, UserRole.SUPER_ADMIN)
+  @Delete('products/:id/documents/:docId')
+  @ApiOperation({ summary: 'Delete product document' })
+  deleteProductDocument(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') productId: string,
+    @Param('docId') docId: string,
+  ) {
+    return this.catalog.deleteProductDocument(productId, docId, user);
+  }
+
   @Get('categories')
   listCategories() {
     return this.catalog.listCategories();
