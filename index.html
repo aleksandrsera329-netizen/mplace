@@ -319,7 +319,10 @@
               </div>
               <div class="product-footer">
                 <div class="product-price">${I.formatMoney(p.priceCents)}</div>
-                <button type="button" class="btn-add" data-id="${p.id}" onclick="event.stopPropagation()">${I.t('product.addToCart') || 'В заявку'}</button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <button type="button" class="btn-add btn-wish" data-id="${p.id}" title="В избранное" onclick="event.stopPropagation(); toggleWishlist(this)" style="min-width:40px;padding:8px 10px;">♡</button>
+                  <button type="button" class="btn-add" data-id="${p.id}" onclick="event.stopPropagation()">${I.t('product.addToCart') || 'В заявку'}</button>
+                </div>
               </div>
             </div>
           </article>
@@ -366,6 +369,7 @@
 
       renderProducts(filtered);
       updateUrlParams({ search, category, vendor, inStockOnly, sort });
+      refreshWishSet();
 
       if (window.innerWidth <= 900) {
         openSidebar(false);
@@ -438,10 +442,62 @@
       searchTimeout = setTimeout(() => applyFilters(), 350);
     });
 
+    // ===== Wishlist toggle (catalog cards) =====
+    const wishSet = new Set();
+    async function refreshWishSet() {
+      try {
+        if (!MplaceApi.getToken || !MplaceApi.getToken()) return;
+        const data = await MplaceApi.request('/wishlist');
+        const items = Array.isArray(data) ? data : (data.items || []);
+        wishSet.clear();
+        items.forEach((it) => {
+          const id = it.productId || it.product?.id;
+          if (id) wishSet.add(id);
+        });
+        document.querySelectorAll('.btn-wish').forEach((btn) => {
+          const on = wishSet.has(btn.dataset.id);
+          btn.textContent = on ? '♥' : '♡';
+          btn.style.color = on ? '#ef4444' : '';
+        });
+      } catch (_) { /* guest / offline */ }
+    }
+
+    async function toggleWishlist(btn) {
+      const productId = btn?.dataset?.id;
+      if (!productId) return;
+      if (!MplaceApi.getToken || !MplaceApi.getToken()) {
+        location.href = '/login.html?email=customer@demo.com&next=/';
+        return;
+      }
+      btn.disabled = true;
+      try {
+        if (wishSet.has(productId)) {
+          await MplaceApi.request('/wishlist/' + productId, { method: 'DELETE' });
+          wishSet.delete(productId);
+          btn.textContent = '♡';
+          btn.style.color = '';
+        } else {
+          await MplaceApi.request('/wishlist', {
+            method: 'POST',
+            body: { productId },
+          });
+          wishSet.add(productId);
+          btn.textContent = '♥';
+          btn.style.color = '#ef4444';
+        }
+      } catch (ex) {
+        alert(ex.message || 'Ошибка избранного');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+    window.toggleWishlist = toggleWishlist;
+
     // ===== Add to cart =====
     document.getElementById('productsGrid').addEventListener('click', async (e) => {
-      const btn = e.target.closest('[data-id]');
-      if (!btn) return;
+      if (e.target.closest('.btn-wish')) return;
+      const btn = e.target.closest('.btn-add:not(.btn-wish)');
+      if (!btn || !btn.dataset.id) return;
       btn.disabled = true;
       try {
         await MplaceApi.addToCart(btn.dataset.id, 1);
@@ -490,6 +546,7 @@
         allProducts = Array.isArray(products) ? products : (products.items || []);
         allCategories = Array.isArray(categories) ? categories : [];
         allShops = Array.isArray(shops) ? shops : [];
+        // wishlist hearts hydrate after first paint
 
         const catContainer = document.getElementById('categoryFilters');
         allCategories.forEach((c) => {

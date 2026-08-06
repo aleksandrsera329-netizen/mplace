@@ -132,6 +132,7 @@
     getSessionKey,
     setSession,
     clearSession,
+    request,
     health: () => request('/health'),
     login: (email, password) =>
       request('/auth/login', { method: 'POST', body: { email, password } }),
