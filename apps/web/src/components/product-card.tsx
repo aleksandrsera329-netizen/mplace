@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/store/cart"
 
@@ -30,18 +31,23 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg">
       <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-secondary to-background">
-        {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="max-h-28 max-w-full object-contain"
-          />
-        ) : (
-          <span className="text-5xl opacity-40" aria-hidden>
-            ⚙️
-          </span>
-        )}
+        <Link
+          href={`/product/${product.id}`}
+          className="flex h-full w-full items-center justify-center"
+        >
+          {product.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="max-h-28 max-w-full object-contain"
+            />
+          ) : (
+            <span className="text-5xl opacity-40" aria-hidden>
+              ⚙️
+            </span>
+          )}
+        </Link>
         {product.stock > 0 && product.stock < 8 && (
           <span className="absolute left-3 top-3 rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
             Мало
@@ -53,9 +59,11 @@ export function ProductCard({ product }: { product: Product }) {
         <div className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
           {product.category?.name || "—"}
         </div>
-        <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-snug">
-          {product.name}
-        </h3>
+        <Link href={`/product/${product.id}`}>
+          <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-snug hover:text-primary">
+            {product.name}
+          </h3>
+        </Link>
         <div className="mb-4 text-sm text-muted-foreground">
           {product.shop?.name || "—"} ·{" "}
           <span className={stockClass}>{stockText}</span>

@@ -87,7 +87,18 @@ export const api = {
   },
   categories: () => request<unknown[]>("/categories"),
   shops: () => request<unknown[]>("/shops"),
-  product: (id: string) => request<unknown>(`/products/${id}`),
+  product: (id: string) =>
+    request<{
+      id: string
+      name: string
+      description?: string | null
+      sku?: string | null
+      priceCents: number
+      stock: number
+      imageUrl?: string | null
+      category?: { id?: string; name: string }
+      shop?: { id?: string; name: string }
+    }>(`/products/${id}`),
 
   // Cart / order draft
   cart: () => request<CartResponse>("/cart"),

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { SlidersHorizontal, X } from "lucide-react"
 import { Header } from "@/components/header"
 import { CatalogSidebar } from "@/components/catalog-sidebar"
 import { ProductCard } from "@/components/product-card"
@@ -30,6 +31,7 @@ function asList(data: unknown): { id: string; name: string }[] {
 }
 
 export default function HomePage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [filters, setFilters] = useState({
     search: "",
     categoryId: "",
@@ -58,7 +60,6 @@ export default function HomePage() {
 
   let products: ProductRow[] = (productsData?.items || []) as ProductRow[]
 
-  // Client-side filters (until API accepts all query params)
   if (filters.search) {
     const q = filters.search.toLowerCase()
     products = products.filter(
@@ -98,11 +99,48 @@ export default function HomePage() {
       <Header />
 
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row">
-        <CatalogSidebar
-          categories={categories}
-          shops={shops}
-          onFilterChange={setFilters}
-        />
+        <button
+          type="button"
+          className="mb-0 flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground lg:hidden"
+          onClick={() => setSidebarOpen(true)}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Фильтры
+        </button>
+
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+            aria-hidden
+          />
+        )}
+
+        <div
+          className={`fixed inset-y-0 left-0 z-50 w-80 transform overflow-y-auto border-r border-border bg-card p-5 transition-transform lg:static lg:z-auto lg:w-auto lg:translate-x-0 lg:overflow-visible lg:border-0 lg:bg-transparent lg:p-0 ${
+            sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
+        >
+          <div className="mb-4 flex items-center justify-between lg:hidden">
+            <span className="font-semibold">Фильтры</span>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              aria-label="Закрыть"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <CatalogSidebar
+            categories={categories}
+            shops={shops}
+            onFilterChange={(f) => {
+              setFilters(f)
+              setSidebarOpen(false)
+            }}
+          />
+        </div>
 
         <main className="flex-1">
           <div className="mb-6 flex items-center justify-between">
