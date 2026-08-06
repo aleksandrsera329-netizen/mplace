@@ -20,4 +20,9 @@ export class ListOrdersDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({ description: 'Search orderNumber / id / customerEmail' })
+  @IsOptional()
+  @IsString()
+  search?: string;
 }

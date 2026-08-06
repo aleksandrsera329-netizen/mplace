@@ -309,7 +309,12 @@ export class OrdersService {
 
   async listOrders(
     user: JwtPayload,
-    opts?: { cursor?: string; limit?: number; status?: string },
+    opts?: {
+      cursor?: string;
+      limit?: number;
+      status?: string;
+      search?: string;
+    },
   ) {
     const limit = opts?.limit ?? 20;
     const where: Record<string, unknown> =
@@ -319,8 +324,21 @@ export class OrdersService {
           ? { shopId: user.shopId ?? '__none__' }
           : { customerId: user.sub };
 
-    if (opts?.status && opts.status in OrderStatus) {
-      where.status = opts.status as OrderStatus;
+    // Map UI aliases onto real OrderStatus
+    let statusFilter = opts?.status;
+    if (statusFilter === 'NEW') statusFilter = OrderStatus.PENDING_PAYMENT;
+
+    if (statusFilter && statusFilter in OrderStatus) {
+      where.status = statusFilter as OrderStatus;
+    }
+
+    if (opts?.search?.trim()) {
+      const q = opts.search.trim();
+      where.OR = [
+        { orderNumber: { contains: q, mode: 'insensitive' as const } },
+        { id: { contains: q } },
+        { customerEmail: { contains: q, mode: 'insensitive' as const } },
+      ];
     }
 
     const items = await this.prisma.order.findMany({

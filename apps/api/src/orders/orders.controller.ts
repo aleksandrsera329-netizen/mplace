@@ -97,6 +97,7 @@ export class OrdersController {
       cursor: dto.cursor,
       limit: dto.limit,
       status: dto.status,
+      search: dto.search,
     });
   }
 
