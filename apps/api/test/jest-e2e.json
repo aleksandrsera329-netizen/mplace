@@ -6,6 +6,9 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
+  "transformIgnorePatterns": [
+    "node_modules/(?!(meilisearch)/)"
+  ],
   "setupFiles": ["<rootDir>/setup-e2e-env.ts"],
   "globalSetup": "<rootDir>/global-setup.ts",
   "testTimeout": 60000

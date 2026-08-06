@@ -1,17 +1,34 @@
-import { join } from 'path';
-
 /**
  * Runs before any e2e test file loads AppModule.
- * Isolates e2e from development dev.db.
+ * Uses PostgreSQL (matches prisma schema). Prefer E2E_DATABASE_URL,
+ * then local docker default mplace_e2e DB.
  */
-const testDb = join(__dirname, '..', 'prisma', 'test.e2e.db');
+// Host port 5433 → docker postgres (see docker-compose.yml)
+const defaultE2eUrl =
+  'postgresql://mplace:mplace@127.0.0.1:5433/mplace_e2e?schema=public';
 
 process.env.DATABASE_URL =
-  process.env.E2E_DATABASE_URL || `file:${testDb.replace(/\\/g, '/')}`;
+  process.env.E2E_DATABASE_URL ||
+  process.env.DATABASE_URL ||
+  defaultE2eUrl;
+
+// Force isolated e2e URL when still pointing at sqlite leftovers
+if (
+  process.env.DATABASE_URL.startsWith('file:') ||
+  process.env.DATABASE_URL.includes('sqlite')
+) {
+  process.env.DATABASE_URL = defaultE2eUrl;
+}
+
+process.env.E2E_DATABASE_URL = process.env.DATABASE_URL;
 process.env.JWT_SECRET =
   process.env.JWT_SECRET || 'e2e_jwt_secret_32_chars_minimum_xx';
-process.env.PAYMENT_PROVIDER = 'dev';
+process.env.PAYMENT_PROVIDER = process.env.PAYMENT_PROVIDER || 'dev';
 process.env.ALLOW_DEV_PAYMENTS = 'true';
-process.env.NODE_ENV = 'development';
-process.env.DEV_PAYMENT_SECRET = 'e2e_dev_secret';
+process.env.NODE_ENV = process.env.NODE_ENV || 'development';
+process.env.DEV_PAYMENT_SECRET =
+  process.env.DEV_PAYMENT_SECRET || 'e2e_dev_secret';
 process.env.LOCAL_DEV_CONFIRM_LOOPBACK = 'false';
+process.env.STORAGE_PROVIDER = process.env.STORAGE_PROVIDER || 'local';
+process.env.MEILISEARCH_URL =
+  process.env.MEILISEARCH_URL || 'http://127.0.0.1:7700';

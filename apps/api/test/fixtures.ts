@@ -25,10 +25,11 @@ const PASSWORD = 'TestPass123!';
 export async function resetAndSeedFixtures(
   prisma: PrismaService,
 ): Promise<E2EFixtures> {
-  await prisma.ticketMessage.deleteMany();
-  await prisma.ticket.deleteMany();
-  await prisma.refund.deleteMany();
-  await prisma.dispute.deleteMany();
+  // Delete in FK-safe order
+  await prisma.ticketMessage.deleteMany().catch(() => undefined);
+  await prisma.ticket.deleteMany().catch(() => undefined);
+  await prisma.refund.deleteMany().catch(() => undefined);
+  await prisma.dispute.deleteMany().catch(() => undefined);
   await prisma.orderStatusHistory.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.orderItem.deleteMany();
@@ -37,10 +38,23 @@ export async function resetAndSeedFixtures(
   await prisma.cart.deleteMany();
   await prisma.ledgerEntry.deleteMany();
   await prisma.payoutRequest.deleteMany();
+  await prisma.wishlistItem.deleteMany().catch(() => undefined);
+  await prisma.savedSearch.deleteMany().catch(() => undefined);
+  await prisma.productDocument.deleteMany().catch(() => undefined);
+  await prisma.kycDocument.deleteMany().catch(() => undefined);
+  await prisma.rfqMessage.deleteMany().catch(() => undefined);
+  await prisma.rfqOfferItem.deleteMany().catch(() => undefined);
+  await prisma.rfqOffer.deleteMany().catch(() => undefined);
+  await prisma.rfqMatch.deleteMany().catch(() => undefined);
+  await prisma.rfqAttachment.deleteMany().catch(() => undefined);
+  await prisma.rfqItem.deleteMany().catch(() => undefined);
+  await prisma.rfqRequest.deleteMany().catch(() => undefined);
+  await prisma.refreshToken.deleteMany().catch(() => undefined);
   await prisma.auditLog.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.stripeConnectedAccount.deleteMany().catch(() => undefined);
   await prisma.shop.deleteMany();
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);

@@ -8,7 +8,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mplace}
       POSTGRES_DB: ${POSTGRES_DB:-mplace}
     ports:
-      - "5432:5432"
+      # 5433 avoids conflict with local Windows PostgreSQL on 5432
+      - "5433:5432"
     volumes:
       - mplace_pg_data:/var/lib/postgresql/data
     healthcheck:

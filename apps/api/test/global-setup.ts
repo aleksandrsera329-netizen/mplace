@@ -1,31 +1,40 @@
 import { execSync } from 'child_process';
-import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 
 /**
- * Prepare isolated SQLite DB + apply migrations before the e2e suite.
+ * Ensure e2e Postgres DB exists and schema is applied.
  */
 export default async function globalSetup() {
-  const testDb = join(__dirname, '..', 'prisma', 'test.e2e.db');
-  const journal = `${testDb}-journal`;
+  const defaultE2eUrl =
+    'postgresql://mplace:mplace@127.0.0.1:5433/mplace_e2e?schema=public';
 
-  for (const f of [testDb, journal]) {
-    if (existsSync(f)) {
-      try {
-        unlinkSync(f);
-      } catch {
-        /* ignore locked */
-      }
-    }
+  let databaseUrl =
+    process.env.E2E_DATABASE_URL || process.env.DATABASE_URL || defaultE2eUrl;
+
+  if (databaseUrl.startsWith('file:') || databaseUrl.includes('sqlite')) {
+    databaseUrl = defaultE2eUrl;
   }
 
-  const databaseUrl = `file:${testDb.replace(/\\/g, '/')}`;
   process.env.DATABASE_URL = databaseUrl;
   process.env.E2E_DATABASE_URL = databaseUrl;
 
-  execSync('npx prisma migrate deploy', {
-    cwd: join(__dirname, '..'),
-    env: { ...process.env, DATABASE_URL: databaseUrl },
+  // Create database if missing (ignore errors if already exists / docker offline)
+  try {
+    execSync(
+      'docker exec mplace-postgres psql -U mplace -d postgres -c "CREATE DATABASE mplace_e2e;"',
+      { stdio: 'pipe' },
+    );
+  } catch {
+    /* already exists or docker not running */
+  }
+
+  const cwd = join(__dirname, '..');
+  const env = { ...process.env, DATABASE_URL: databaseUrl };
+
+  // Migrations history is still sqlite-era; use db push for postgres e2e
+  execSync('npx prisma db push --skip-generate --accept-data-loss', {
+    cwd,
+    env,
     stdio: 'inherit',
   });
 }
