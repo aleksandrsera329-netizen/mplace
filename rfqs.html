@@ -1,72 +1,39 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Мои RFQ — Mplace Energy</title>
-  <base href="/" />
+  <title>Mplace — RFQ</title>
 
-  <link rel="stylesheet" href="/assets/css/store.css" />
+  <link rel="stylesheet" href="/assets/css/store-modern.css" />
   <link rel="stylesheet" href="/assets/css/locale.css" />
 
   <style>
-    .page {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 40px 24px 80px;
-    }
+    .page { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
 
     .page-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 36px;
+      margin-bottom: 24px;
       flex-wrap: wrap;
-      gap: 16px;
+      gap: 12px;
     }
 
-    .page-header h1 {
-      font-size: 1.9rem;
-      font-weight: 800;
-    }
-
-    .btn-create {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: #000;
-      border: none;
-      padding: 12px 22px;
-      border-radius: 12px;
-      font-weight: 700;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      transition: all 0.2s;
-    }
-    .btn-create:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 18px rgba(245, 158, 11, 0.35);
-    }
-
-    .rfq-list {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    .rfq-list { display: flex; flex-direction: column; gap: 14px; }
 
     .rfq-card {
       background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 22px;
-      transition: all 0.25s;
-      cursor: pointer;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: all 0.2s;
       text-decoration: none;
       color: var(--text);
       display: block;
     }
     .rfq-card:hover {
-      border-color: rgba(245, 158, 11, 0.5);
+      border-color: var(--primary);
       background: var(--card-hover);
       transform: translateY(-2px);
     }
@@ -75,178 +42,245 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 10px;
     }
-
     .rfq-title {
-      font-size: 1.15rem;
-      font-weight: 700;
-    }
-
-    .rfq-number {
-      font-size: 0.9rem;
-      color: var(--text-muted);
-      margin-top: 4px;
-    }
-
-    .status-badge {
-      display: inline-flex;
-      padding: 5px 12px;
-      border-radius: 99px;
-      font-size: 0.8rem;
       font-weight: 600;
+      font-size: 1.05rem;
+    }
+    .rfq-number {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
-    .status-OPEN { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
-    .status-MATCHED { background: rgba(139, 92, 246, 0.15); color: #a78bfa; }
-    .status-QUOTED { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
-    .status-AWARDED { background: rgba(16, 185, 129, 0.15); color: #34d399; }
-    .status-CLOSED { background: rgba(156, 163, 175, 0.15); color: #9ca3af; }
-    .status-CANCELLED { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-OPEN, .badge-MATCHED { background: #3b82f633; color: #3b82f6; }
+    .badge-QUOTED { background: #8b5cf633; color: #8b5cf6; }
+    .badge-AWARDED { background: #10b98133; color: #10b981; }
+    .badge-CLOSED, .badge-CANCELLED { background: #6b728033; color: #9ca3af; }
 
     .rfq-meta {
       display: flex;
-      gap: 20px;
+      gap: 16px;
       flex-wrap: wrap;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: var(--text-muted);
+    }
+
+    .btn {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 0.9rem;
+    }
+    .btn.outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
     }
 
     .state-block {
       text-align: center;
-      padding: 80px 20px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
+      padding: 60px 20px;
+      color: var(--text-muted);
     }
   </style>
 </head>
 <body>
 
-  <header class="store-header">
-    <div class="header-top">
-      <a class="logo" href="/">M<span>place</span> Energy</a>
-      <div class="header-actions">
-        <button class="theme-btn" id="themeToggle">🌙</button>
-        <div id="localeMount"></div>
-        <a href="/account.html" class="icon-btn">👤</a>
-      </div>
-    </div>
-  </header>
-
-  <div class="page">
-    <div class="page-header">
-      <h1>Мои RFQ</h1>
-      <a href="/rfq-create.html" class="btn-create">+ Создать RFQ</a>
-    </div>
-
-    <div id="rfqsContent">
-      <div style="text-align:center; padding:60px 0; opacity:0.6;">Загрузка...</div>
+<header class="store-header">
+  <div class="header-top">
+    <a class="logo" href="/">M<span>place</span> Energy</a>
+    <div class="header-actions">
+      <button class="theme-btn" id="themeToggle">🌙</button>
+      <div id="localeMount"></div>
+      <a class="icon-btn" href="/account.html">👤</a>
     </div>
   </div>
+</header>
 
-  <script src="/assets/js/i18n.js"></script>
-  <script src="/assets/js/api.js"></script>
+<div class="page">
+  <div class="page-header">
+    <div>
+      <h1 id="pageTitle" style="margin:0;font-size:1.5rem;">RFQ</h1>
+      <div id="pageSubtitle" style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;"></div>
+    </div>
+    <div id="headerActions"></div>
+  </div>
 
-  <script>
-    const I = window.MplaceI18n;
+  <div id="rfqsContent">
+    <div class="state-block">Загрузка…</div>
+  </div>
+</div>
 
-    // Theme
-    const themeToggle = document.getElementById('themeToggle');
-    function setTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      localStorage.setItem('mplace_theme', theme);
-      themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/api.js"></script>
+<script>
+  const I = window.MplaceI18n;
+  let isMerchant = false;
+
+  // Theme
+  const themeToggle = document.getElementById('themeToggle');
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('mplace_theme', t);
+    themeToggle.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  themeToggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  setTheme(localStorage.getItem('mplace_theme') || 'dark');
+  if (I && I.mountSwitcher) I.mountSwitcher('#localeMount');
+
+  function getToken() {
+    return (window.MplaceApi && MplaceApi.getToken && MplaceApi.getToken())
+      || sessionStorage.getItem('mplace_token')
+      || localStorage.getItem('mplace_token')
+      || '';
+  }
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  async function api(path, opts = {}) {
+    const token = getToken();
+    const base = (window.MplaceApi && MplaceApi.getBase && MplaceApi.getBase()) || (location.origin + '/api');
+    const res = await fetch(base + path, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+        ...(opts.headers || {})
+      }
+    });
+    if (res.status === 401) {
+      location.href = '/login.html?next=/rfqs.html';
+      throw new Error('Unauthorized');
     }
-    themeToggle.onclick = () => {
-      const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      setTheme(next);
+    if (!res.ok) {
+      let err = await res.text();
+      try {
+        const j = JSON.parse(err);
+        err = Array.isArray(j.message) ? j.message.join(', ') : (j.message || err);
+      } catch (_) {}
+      throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
+    }
+    return res.json();
+  }
+
+  function getStatusText(status) {
+    const map = {
+      DRAFT: 'Черновик',
+      OPEN: 'Открыт',
+      MATCHED: 'Поиск поставщиков',
+      QUOTED: 'Есть предложения',
+      AWARDED: 'Выбран поставщик',
+      CLOSED: 'Закрыт',
+      CANCELLED: 'Отменён'
     };
-    setTheme(localStorage.getItem('mplace_theme') || 'dark');
-    I.mountSwitcher('#localeMount');
+    return map[status] || status;
+  }
 
-    function getStatusText(status) {
-      const map = {
-        OPEN: 'Открыт',
-        MATCHED: 'Поиск поставщиков',
-        QUOTED: 'Есть предложения',
-        AWARDED: 'Выбран победитель',
-        CLOSED: 'Закрыт',
-        CANCELLED: 'Отменён'
-      };
-      return map[status] || status;
+  function canAnswer(status) {
+    return ['OPEN', 'MATCHED', 'QUOTED'].includes(status);
+  }
+
+  async function loadRfqs() {
+    const content = document.getElementById('rfqsContent');
+    if (!getToken()) {
+      content.innerHTML = `
+        <div class="state-block">
+          <div style="font-size:2rem;margin-bottom:12px;">🔒</div>
+          <div>Требуется вход</div>
+          <a class="btn" href="/login.html?next=/rfqs.html" style="margin-top:16px;">Войти</a>
+        </div>`;
+      return;
     }
 
-    async function loadRfqs() {
-      const content = document.getElementById('rfqsContent');
-      const token = MplaceApi.getToken?.() || sessionStorage.getItem('mplace_token');
+    try {
+      const me = await api('/auth/me').catch(() => null);
+      const role = String(me?.role || me?.user?.role || '').toUpperCase();
+      // Force merchant view via ?role=merchant or auto-detect MERCHANT
+      const qs = new URLSearchParams(location.search);
+      isMerchant = qs.get('role') === 'merchant' || role === 'MERCHANT';
 
-      if (!token) {
+      if (isMerchant) {
+        document.getElementById('pageTitle').textContent = 'Входящие RFQ';
+        document.getElementById('pageSubtitle').textContent = 'Заявки, на которые вы можете ответить';
+        document.getElementById('headerActions').innerHTML =
+          '<a class="btn outline" href="/merchant.html">← В кабинет</a>';
+      } else {
+        document.getElementById('pageTitle').textContent = 'Мои RFQ';
+        document.getElementById('pageSubtitle').textContent = 'Ваши запросы коммерческих предложений';
+        document.getElementById('headerActions').innerHTML =
+          '<a class="btn" href="/rfq-create.html">+ Создать RFQ</a>';
+      }
+
+      // Merchant: ?incoming=1; buyer: own list (API filters by role)
+      const data = await api('/rfq' + (isMerchant ? '?incoming=1' : ''));
+      const items = data.items || data || [];
+
+      if (!items.length) {
         content.innerHTML = `
           <div class="state-block">
-            <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">🔒</div>
-            <h2>Требуется вход</h2>
-            <p style="color:var(--text-muted); margin:12px 0 28px;">Войдите, чтобы видеть свои RFQ</p>
-            <a href="/login.html" class="btn-create">Войти</a>
-          </div>
-        `;
+            <div style="font-size:2rem;margin-bottom:12px;">📭</div>
+            <div>${isMerchant ? 'Нет входящих RFQ' : 'У вас пока нет RFQ'}</div>
+            ${!isMerchant ? '<a class="btn" href="/rfq-create.html" style="margin-top:16px;">Создать первый RFQ</a>' : ''}
+          </div>`;
         return;
       }
 
-      try {
-        const res = await MplaceApi.rfqs();
-        const list = Array.isArray(res) ? res : (res.items || res.data || []);
-
-        if (list.length === 0) {
-          content.innerHTML = `
-            <div class="state-block">
-              <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">📋</div>
-              <h2>RFQ пока нет</h2>
-              <p style="color:var(--text-muted); margin:12px 0 28px;">Создайте первый запрос предложений</p>
-              <a href="/rfq-create.html" class="btn-create">+ Создать RFQ</a>
-            </div>
-          `;
-          return;
-        }
-
-        content.innerHTML = `
-          <div class="rfq-list">
-            ${list.map(rfq => `
-              <a href="/rfq.html?id=${rfq.id}" class="rfq-card">
-                <div class="rfq-top">
-                  <div>
-                    <div class="rfq-title">${rfq.title || 'Без названия'}</div>
-                    <div class="rfq-number">${rfq.number || rfq.id}</div>
-                  </div>
-                  <div class="status-badge status-${rfq.status || 'OPEN'}">
-                    ${getStatusText(rfq.status)}
-                  </div>
+      content.innerHTML = `
+        <div class="rfq-list">
+          ${items.map(rfq => `
+            <a class="rfq-card" href="/rfq.html?id=${esc(rfq.id)}">
+              <div class="rfq-top">
+                <div>
+                  <div class="rfq-title">${esc(rfq.title || 'RFQ без названия')}</div>
+                  <div class="rfq-number">${esc(rfq.number || String(rfq.id).slice(0, 8))}</div>
                 </div>
-                <div class="rfq-meta">
-                  <span>Позиций: ${rfq.items?.length || rfq.itemsCount || '—'}</span>
-                  <span>Создан: ${rfq.createdAt ? new Date(rfq.createdAt).toLocaleDateString('ru-RU') : '—'}</span>
-                  ${rfq.deadline ? `<span>До: ${new Date(rfq.deadline).toLocaleDateString('ru-RU')}</span>` : ''}
-                </div>
-              </a>
-            `).join('')}
-          </div>
-        `;
-      } catch (err) {
-        console.error(err);
-        content.innerHTML = `
-          <div class="state-block">
-            <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">⚠️</div>
-            <h2>Ошибка загрузки</h2>
-            <p style="color:var(--text-muted); margin:12px 0 28px;">Не удалось получить список RFQ</p>
-            <button class="btn-create" onclick="loadRfqs()">Попробовать снова</button>
-          </div>
-        `;
-      }
+                <span class="badge badge-${esc(rfq.status)}">${esc(getStatusText(rfq.status))}</span>
+              </div>
+              <div class="rfq-meta">
+                <span>📦 ${rfq.itemsCount || rfq.items?.length || rfq._count?.offers || 0} позиций</span>
+                <span>📅 ${new Date(rfq.createdAt).toLocaleDateString('ru-RU')}</span>
+                ${rfq.deadline ? `<span>⏰ до ${new Date(rfq.deadline).toLocaleDateString('ru-RU')}</span>` : ''}
+                ${isMerchant && canAnswer(rfq.status)
+                  ? '<span style="color:var(--primary);font-weight:600;">→ Можно ответить</span>'
+                  : ''}
+              </div>
+            </a>
+          `).join('')}
+        </div>`;
+    } catch (e) {
+      content.innerHTML = `
+        <div class="state-block">
+          <div style="font-size:2rem;margin-bottom:12px;">⚠️</div>
+          <div>Ошибка загрузки</div>
+          <div style="font-size:0.85rem;margin-top:8px;opacity:0.7;">${esc(e.message)}</div>
+          <button type="button" class="btn outline" style="margin-top:16px;" onclick="loadRfqs()">Попробовать снова</button>
+        </div>`;
     }
+  }
 
-    loadRfqs();
-  </script>
+  loadRfqs();
+</script>
 </body>
 </html>

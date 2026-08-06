@@ -39,6 +39,7 @@ export class RfqController {
       cursor: dto.cursor,
       limit: dto.limit,
       status: dto.status,
+      incoming: dto.incoming,
     });
   }
 

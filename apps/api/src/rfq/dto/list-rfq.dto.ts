@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class ListRfqDto {
   @ApiPropertyOptional()
@@ -20,4 +27,19 @@ export class ListRfqDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  /** Merchant: list RFQs matched to this shop (default for MERCHANT role) */
+  @ApiPropertyOptional({ description: 'Merchant incoming RFQs (matched/offers)' })
+  @IsOptional()
+  @Transform(({ value }) => {
+    if (value === true || value === 'true' || value === '1' || value === 1) {
+      return true;
+    }
+    if (value === false || value === 'false' || value === '0' || value === 0) {
+      return false;
+    }
+    return undefined;
+  })
+  @IsBoolean()
+  incoming?: boolean;
 }

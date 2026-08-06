@@ -142,7 +142,13 @@ export class RfqService {
 
   async listForUser(
     user: JwtPayload,
-    opts?: { cursor?: string; limit?: number; status?: string },
+    opts?: {
+      cursor?: string;
+      limit?: number;
+      status?: string;
+      /** When true, force merchant "incoming" list (matched/offers for shop) */
+      incoming?: boolean;
+    },
   ) {
     const limit = opts?.limit ?? 20;
     const empty = { items: [] as unknown[], nextCursor: null, hasMore: false };
@@ -160,10 +166,7 @@ export class RfqService {
         ? (opts.status as RfqStatus)
         : undefined;
 
-    if (
-      user.role === UserRole.ADMIN ||
-      user.role === UserRole.SUPER_ADMIN
-    ) {
+    if (user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN) {
       const items = await this.prisma.rfqRequest.findMany({
         where: statusFilter ? { status: statusFilter } : undefined,
         ...pageOpts,
@@ -175,9 +178,14 @@ export class RfqService {
       });
       const nextCursor =
         items.length === limit ? items[items.length - 1].id : null;
-      return { items, nextCursor, hasMore: !!nextCursor };
+      return {
+        items: items.map((r) => ({ ...r, itemsCount: r.items?.length ?? 0 })),
+        nextCursor,
+        hasMore: !!nextCursor,
+      };
     }
 
+    // MERCHANT (and ?incoming=1): RFQs matched to shop or with offers from shop
     if (user.role === UserRole.MERCHANT) {
       if (!user.shopId) return empty;
       const items = await this.prisma.rfqRequest.findMany({
@@ -194,15 +202,19 @@ export class RfqService {
         include: {
           items: true,
           offers: { where: { shopId: user.shopId } },
-          _count: { select: { offers: true, messages: true } },
+          _count: { select: { offers: true, messages: true, matches: true } },
         },
       });
       const nextCursor =
         items.length === limit ? items[items.length - 1].id : null;
-      return { items, nextCursor, hasMore: !!nextCursor };
+      return {
+        items: items.map((r) => ({ ...r, itemsCount: r.items?.length ?? 0 })),
+        nextCursor,
+        hasMore: !!nextCursor,
+      };
     }
 
-    // buyer
+    // CUSTOMER: own RFQs
     const items = await this.prisma.rfqRequest.findMany({
       where: {
         buyerId: user.sub,
@@ -222,7 +234,11 @@ export class RfqService {
     });
     const nextCursor =
       items.length === limit ? items[items.length - 1].id : null;
-    return { items, nextCursor, hasMore: !!nextCursor };
+    return {
+      items: items.map((r) => ({ ...r, itemsCount: r.items?.length ?? 0 })),
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
   }
 
   async get(id: string, user: JwtPayload) {
