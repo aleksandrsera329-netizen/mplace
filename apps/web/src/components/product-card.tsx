@@ -1,6 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { useCartStore } from "@/store/cart"
 
 interface Product {
   id: string
@@ -21,6 +22,7 @@ function formatMoney(cents: number) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
+  const addItem = useCartStore((s) => s.addItem)
   const stockClass = product.stock > 10 ? "text-success" : "text-danger"
   const stockText =
     product.stock > 0 ? `В наличии: ${product.stock}` : "Нет в наличии"
@@ -63,7 +65,11 @@ export function ProductCard({ product }: { product: Product }) {
           <div className="text-lg font-bold text-accent">
             {formatMoney(product.priceCents)}
           </div>
-          <Button size="sm" disabled={product.stock <= 0}>
+          <Button
+            size="sm"
+            disabled={product.stock <= 0}
+            onClick={() => void addItem(product.id)}
+          >
             В корзину
           </Button>
         </div>

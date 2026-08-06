@@ -4,12 +4,14 @@ import Link from "next/link"
 import { useTheme } from "next-themes"
 import { Moon, Sun, ShoppingCart, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useCartStore } from "@/store/cart"
 
 export function Header() {
   const { theme, setTheme } = useTheme()
+  const { itemCount, open } = useCartStore()
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="text-xl font-extrabold tracking-tight">
           M<span className="text-primary">place</span> Energy
@@ -33,12 +35,14 @@ export function Header() {
             </Link>
           </Button>
 
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={open}>
             <ShoppingCart className="h-4 w-4" />
             <span className="hidden sm:inline">Корзина</span>
-            <span className="rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold">
-              0
-            </span>
+            {itemCount > 0 && (
+              <span className="rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold">
+                {itemCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>
