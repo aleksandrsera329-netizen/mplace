@@ -1,34 +1,44 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
   Post,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { KycDocStatus, KycDocType, UserRole } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
+import { memoryStorage } from 'multer';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { NotificationService } from '../notification/notification.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { KycService } from './kyc.service';
 
-class UploadKycDto {
+class UploadKycMetaDto {
+  @IsOptional()
   @IsEnum(KycDocType)
-  docType!: KycDocType;
+  docType?: KycDocType;
 
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  fileName!: string;
+  fileName?: string;
 
-  /** Path or data-url placeholder until real storage */
+  /** Legacy JSON body path (pre-uploaded via /media/upload) */
+  @IsOptional()
   @IsString()
   @MinLength(1)
-  filePath!: string;
+  filePath?: string;
 }
 
 class ReviewKycDto {
@@ -40,43 +50,117 @@ class ReviewKycDto {
   notes?: string;
 }
 
-@Controller('kyc')
+@ApiTags('KYC')
+@Controller()
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class KycController {
   constructor(
+    private readonly kyc: KycService,
     private readonly prisma: PrismaService,
-    private readonly notifications: NotificationService,
   ) {}
 
-  @Post('documents')
+  // ── Shop-scoped KYC (Этап 8) ───────────────────────────
+
+  @Post('shops/:id/kyc')
+  @Roles(UserRole.MERCHANT, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Upload KYC document for shop' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        docType: { type: 'string', example: 'PASSPORT' },
+      },
+    },
+  })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  uploadForShop(
+    @Param('id') shopId: string,
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('docType') docType?: string,
+  ) {
+    if (!file) throw new BadRequestException('File is required');
+    return this.kyc.uploadKycDocument(shopId, user, file, docType || 'OTHER');
+  }
+
+  @Get('shops/:id/kyc')
+  @Roles(UserRole.MERCHANT, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List KYC documents for shop' })
+  listForShop(
+    @Param('id') shopId: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.kyc.getShopKyc(shopId, user);
+  }
+
+  @Patch('kyc/:id/status')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Approve or reject KYC document' })
+  reviewStatus(
+    @Param('id') id: string,
+    @Body() body: ReviewKycDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.kyc.reviewKycDocument(
+      id,
+      body.status,
+      user.sub,
+      body.notes,
+    );
+  }
+
+  @Delete('kyc/:id')
+  @Roles(UserRole.MERCHANT, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Delete KYC document' })
+  remove(@Param('id') id: string, @CurrentUser() user: JwtPayload) {
+    return this.kyc.deleteKycDocument(id, user);
+  }
+
+  // ── Legacy aliases ─────────────────────────────────────
+
+  /** @deprecated prefer POST /shops/:id/kyc with multipart */
+  @Post('kyc/documents')
   @Roles(UserRole.MERCHANT)
-  async upload(@CurrentUser() user: JwtPayload, @Body() dto: UploadKycDto) {
+  async uploadLegacy(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UploadKycMetaDto,
+  ) {
     if (!user.shopId) {
-      return { error: 'No shop linked' };
+      throw new BadRequestException('No shop linked');
+    }
+    if (!dto.filePath) {
+      throw new BadRequestException(
+        'Use multipart POST /shops/:id/kyc or provide filePath',
+      );
     }
     return this.prisma.kycDocument.create({
       data: {
         shopId: user.shopId,
         uploadedById: user.sub,
-        docType: dto.docType,
-        fileName: dto.fileName,
+        docType: dto.docType || KycDocType.OTHER,
+        fileName: dto.fileName || 'document',
         filePath: dto.filePath,
         status: KycDocStatus.PENDING,
       },
     });
   }
 
-  @Get('me')
+  /** @deprecated prefer GET /shops/:id/kyc */
+  @Get('kyc/me')
   @Roles(UserRole.MERCHANT)
   myDocs(@CurrentUser() user: JwtPayload) {
     if (!user.shopId) return [];
-    return this.prisma.kycDocument.findMany({
-      where: { shopId: user.shopId },
-      orderBy: { createdAt: 'desc' },
-    });
+    return this.kyc.getShopKyc(user.shopId, user);
   }
 
-  @Get('pending')
+  @Get('kyc/pending')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   pending() {
     return this.prisma.kycDocument.findMany({
@@ -89,109 +173,14 @@ export class KycController {
     });
   }
 
-  @Patch('documents/:id')
+  /** @deprecated prefer PATCH /kyc/:id/status */
+  @Patch('kyc/documents/:id')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
-  async review(
+  reviewLegacy(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: ReviewKycDto,
   ) {
-    const doc = await this.prisma.kycDocument.update({
-      where: { id },
-      data: {
-        status: dto.status,
-        notes: dto.notes,
-        reviewedById: user.sub,
-        reviewedAt: new Date(),
-      },
-      include: {
-        shop: true,
-        uploadedBy: { select: { id: true, name: true, email: true } },
-      },
-    });
-
-    if (dto.status === KycDocStatus.APPROVED) {
-      const pending = await this.prisma.kycDocument.count({
-        where: { shopId: doc.shopId, status: KycDocStatus.PENDING },
-      });
-      if (pending === 0) {
-        await this.prisma.shop.update({
-          where: { id: doc.shopId },
-          data: {
-            verified: true,
-            status: 'ACTIVE',
-            kycNotes: dto.notes || 'KYC approved',
-          },
-        });
-      }
-    }
-
-    if (dto.status === KycDocStatus.REJECTED) {
-      await this.prisma.shop.update({
-        where: { id: doc.shopId },
-        data: {
-          verified: false,
-          rejectionReason: dto.notes || 'KYC document rejected',
-        },
-      });
-    }
-
-    await this.prisma.auditLog.create({
-      data: {
-        actorId: user.sub,
-        action: `KYC_${dto.status}`,
-        entityType: 'KycDocument',
-        entityId: id,
-        meta: JSON.stringify({ shopId: doc.shopId, notes: dto.notes }),
-      },
-    });
-
-    // Notify merchant (uploader or first shop merchant)
-    let notifyEmail = doc.uploadedBy?.email;
-    let notifyName = doc.uploadedBy?.name;
-    if (!notifyEmail) {
-      const merchant = await this.prisma.user.findFirst({
-        where: {
-          shopId: doc.shopId,
-          role: { in: [UserRole.MERCHANT] },
-        },
-        select: { email: true, name: true },
-      });
-      notifyEmail = merchant?.email;
-      notifyName = merchant?.name;
-    }
-
-    let notification: {
-      success: boolean;
-      channel: string;
-      sentTo?: string;
-      status?: string;
-      skipped?: string;
-    } | null = null;
-
-    if (
-      notifyEmail &&
-      (dto.status === KycDocStatus.APPROVED ||
-        dto.status === KycDocStatus.REJECTED)
-    ) {
-      notification = await this.notifications.sendKycStatus({
-        email: notifyEmail,
-        name: notifyName,
-        status: dto.status === KycDocStatus.APPROVED ? 'APPROVED' : 'REJECTED',
-        reason: dto.notes,
-        shopName: doc.shop.name,
-      });
-    } else if (!notifyEmail) {
-      notification = {
-        success: false,
-        channel: 'log',
-        skipped: 'no merchant email for shop',
-      };
-    }
-
-    return {
-      document: doc,
-      notification,
-    };
+    return this.kyc.reviewKycDocument(id, dto.status, user.sub, dto.notes);
   }
 }
