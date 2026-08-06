@@ -91,9 +91,9 @@
       font-size: 0.75rem;
       font-weight: 600;
     }
-    .badge-ACTIVE, .badge-PAID, .badge-COMPLETED { background: #10b98133; color: #10b981; }
+    .badge-ACTIVE, .badge-PAID, .badge-COMPLETED, .badge-APPROVED { background: #10b98133; color: #10b981; }
     .badge-PENDING, .badge-NEW { background: #f59e0b33; color: #f59e0b; }
-    .badge-SUSPENDED, .badge-CANCELLED { background: #ef444433; color: #ef4444; }
+    .badge-SUSPENDED, .badge-CANCELLED, .badge-REJECTED { background: #ef444433; color: #ef4444; }
     .badge-SHIPPED { background: #3b82f633; color: #3b82f6; }
 
     .quick-actions {
@@ -244,15 +244,20 @@
     <!-- Balance & Payout -->
     <div class="card" style="margin-bottom:28px;">
       <h3>Баланс и выплаты</h3>
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
         <div>
           <div style="font-size:0.85rem;color:var(--text-muted);">Доступно к выводу</div>
           <div id="availableBalance" style="font-size:1.8rem;font-weight:700;color:var(--accent);">—</div>
         </div>
-        <button class="btn" id="requestPayoutBtn" onclick="requestPayout()">Запросить выплату</button>
+        <button type="button" class="btn" id="requestPayoutBtn" onclick="requestPayout()">Запросить выплату</button>
       </div>
-      <div id="payoutHistory" style="margin-top:20px;font-size:0.9rem;color:var(--text-muted);">
-        История выплат появится здесь
+
+      <div style="border-top:1px solid var(--border);padding-top:16px;">
+        <div style="font-weight:600;margin-bottom:12px;font-size:0.95rem;">История заявок на вывод</div>
+        <div id="payoutHistory">
+          <div style="opacity:0.6;font-size:0.9rem;">Загрузка…</div>
+        </div>
       </div>
     </div>
   </div>
@@ -407,28 +412,43 @@
 
         renderStripe(connectStatus);
 
-        const available = balance?.availableCents != null
-          ? balance.availableCents
-          : Math.round(gmv * 0.9);
-        document.getElementById('availableBalance').textContent = money(available);
-        if (balance) {
-          document.getElementById('availableBalance').title =
-            `earned ${money(balance.earnedCents)} · paid ${money(balance.paidOutCents)} · pending ${money(balance.pendingPayoutCents)}`;
+        // Баланс
+        try {
+          const bal = balance || await api('/merchant/balance').catch(() => ({ availableCents: 0 }));
+          const available = bal.availableCents != null ? bal.availableCents : (bal.available || 0);
+          document.getElementById('availableBalance').textContent = money(available);
+          if (bal.earnedCents != null) {
+            document.getElementById('availableBalance').title =
+              `earned ${money(bal.earnedCents)} · paid ${money(bal.paidOutCents)} · pending ${money(bal.pendingPayoutCents)}`;
+          }
+        } catch {
+          document.getElementById('availableBalance').textContent = money(0);
         }
 
-        const payoutList = Array.isArray(payouts) ? payouts : (payouts.items || []);
-        if (payoutList.length) {
-          document.getElementById('payoutHistory').innerHTML = payoutList.slice(0, 8).map(p => `
-            <div class="list-item">
-              <div>
+        // История выплат
+        try {
+          const hist = payouts != null ? payouts : await api('/payouts?limit=10');
+          const items = Array.isArray(hist) ? hist : (hist.items || []);
+          const historyEl = document.getElementById('payoutHistory');
+          if (!items.length) {
+            historyEl.innerHTML = '<div style="opacity:0.6;font-size:0.9rem;">Заявок на вывод пока нет</div>';
+          } else {
+            historyEl.innerHTML = items.slice(0, 10).map(p => `
+              <div class="list-item" style="padding:10px 0;">
+                <div>
+                  <div style="font-weight:500;">${money(p.amountCents)}</div>
+                  <div style="font-size:0.8rem;opacity:0.7;">
+                    ${new Date(p.createdAt).toLocaleDateString('ru-RU')}
+                    ${p.note ? ' · ' + esc(p.note) : ''}
+                  </div>
+                </div>
                 <span class="badge badge-${esc(p.status)}">${esc(p.status)}</span>
-                <span style="margin-left:8px;opacity:0.7;">${new Date(p.createdAt).toLocaleDateString()}</span>
               </div>
-              <div style="font-weight:600;">${money(p.amountCents)}</div>
-            </div>
-          `).join('');
-        } else {
-          document.getElementById('payoutHistory').textContent = 'История выплат пуста';
+            `).join('');
+          }
+        } catch (e) {
+          document.getElementById('payoutHistory').innerHTML =
+            '<div style="opacity:0.6;font-size:0.9rem;">Не удалось загрузить историю</div>';
         }
       } catch (e) {
         console.error(e);
@@ -481,7 +501,7 @@
     }
 
     async function requestPayout() {
-      const amount = prompt('Сумма к выводу (в основных единицах валюты, например 10.50):');
+      const amount = prompt('Сумма к выводу (например 1500.00):');
       if (!amount) return;
 
       const amountCents = Math.round(parseFloat(String(amount).replace(',', '.')) * 100);
@@ -499,7 +519,7 @@
           })
         });
         alert('Заявка на выплату создана. Ожидайте одобрения администратора.');
-        loadDashboard();
+        loadDashboard(); // обновит историю
       } catch (e) {
         alert('Ошибка: ' + e.message);
       }
