@@ -44,7 +44,8 @@ jobs:
       NODE_ENV: test
       PAYMENT_PROVIDER: dev
       ALLOW_DEV_PAYMENTS: 'true'
-      DEV_PAYMENT_SECRET: ci_dev_payment_secret
+      # Must match e2e tests (security.e2e-spec hardcodes this header)
+      DEV_PAYMENT_SECRET: e2e_dev_secret
       LOCAL_DEV_CONFIRM_LOOPBACK: 'false'
       STORAGE_PROVIDER: local
       NOTIFICATION_CHANNEL: log
