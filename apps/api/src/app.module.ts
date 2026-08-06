@@ -50,24 +50,27 @@ import { MediaModule } from './media/media.module';
       },
     }),
     // Differentiated rate limits (all apply unless overridden per-route)
-    // In test/e2e raise limits so suites don't hit 429 mid-run
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000, // 1s
-        limit: process.env.NODE_ENV === 'test' ? 10_000 : 5,
-      },
-      {
-        name: 'medium',
-        ttl: 10_000, // 10s
-        limit: process.env.NODE_ENV === 'test' ? 10_000 : 20,
-      },
-      {
-        name: 'long',
-        ttl: 60_000, // 1 min
-        limit: process.env.NODE_ENV === 'test' ? 10_000 : 100,
-      },
-    ]),
+    // skipIf: full disable in jest/e2e so per-route @Throttle never 429 mid-suite
+    ThrottlerModule.forRoot({
+      skipIf: () => process.env.NODE_ENV === 'test',
+      throttlers: [
+        {
+          name: 'short',
+          ttl: 1000, // 1s
+          limit: 5,
+        },
+        {
+          name: 'medium',
+          ttl: 10_000, // 10s
+          limit: 20,
+        },
+        {
+          name: 'long',
+          ttl: 60_000, // 1 min
+          limit: 100,
+        },
+      ],
+    }),
     PrismaModule,
     CacheModule,
     SearchModule,
