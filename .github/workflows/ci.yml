@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mplace
+          POSTGRES_PASSWORD: mplace
+          POSTGRES_DB: mplace_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://mplace:mplace@localhost:5432/mplace_test?schema=public
+      E2E_DATABASE_URL: postgresql://mplace:mplace@localhost:5432/mplace_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: test-secret-for-ci-at-least-32-chars
+      JWT_EXPIRES_IN: 15m
+      NODE_ENV: test
+      PAYMENT_PROVIDER: dev
+      ALLOW_DEV_PAYMENTS: 'true'
+      DEV_PAYMENT_SECRET: ci_dev_payment_secret
+      LOCAL_DEV_CONFIRM_LOOPBACK: 'false'
+      STORAGE_PROVIDER: local
+      NOTIFICATION_CHANNEL: log
+      APP_PUBLIC_URL: http://127.0.0.1:3000
+      # Meili optional in CI — SearchService degrades to empty hits
+      # MEILISEARCH_URL left unset on purpose
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/api
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: apps/api
+        run: npx prisma generate
+
+      # Migrations lock is still sqlite-era; schema provider is PostgreSQL → db push
+      - name: Apply schema (db push)
+        working-directory: apps/api
+        run: npx prisma db push --skip-generate --accept-data-loss
+
+      - name: Run Unit Tests
+        working-directory: apps/api
+        run: npm test -- --coverage --passWithNoTests
+
+      - name: Run E2E Tests
+        working-directory: apps/api
+        run: npm run test:e2e -- --passWithNoTests
+        env:
+          DATABASE_URL: postgresql://mplace:mplace@localhost:5432/mplace_test?schema=public
+          E2E_DATABASE_URL: postgresql://mplace:mplace@localhost:5432/mplace_test?schema=public
+
+      - name: Build
+        working-directory: apps/api
+        run: npm run build
+
