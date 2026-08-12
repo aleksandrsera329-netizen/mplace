@@ -1,0 +1,418 @@
+================================================================================
+  MPLACE ENERGY — СТАТУС ПО ТЗ (живой журнал)
+  Обновлено: 2026-08-06 (checkout + login)
+  ТЗ: C:\zCart\2222\ТЗ.txt
+  Задания: C:\zCart\2222\1.txt  (выполняются по одному, этот файл дополняется)
+  Код: C:\Users\sasha\mplace
+  GitHub: https://github.com/aleksandrsera329-netizen/mplace
+  Demo (Render free): https://mplace-vu4o.onrender.com/
+  Docker local: http://127.0.0.1:8088/  | API :3001 | Meili :7700
+================================================================================
+
+ПРАВИЛО: после каждого задания из 1.txt — обновлять этот файл
+  (что сделано / что ещё нет / % по этапу).
+
+Файл отвечает:
+  1) ЧТО УЖЕ СДЕЛАНО
+  2) ЧТО ПРЕДСТОИТ
+
+
+================================================================================
+ЖУРНАЛ ЗАДАНИЙ (из 1.txt и связанных шагов)
+================================================================================
+
+Дата / коммит     | Что сделано
+------------------|------------------------------------------------------------
+2026-08-04 ebdc5c2| Docker full stack, Swagger, Pino, Health, ConfigModule
+2026-08-04 46fa253| NotificationService (KYC + auth verify/reset, channel=log)
+2026-08-04 fd91906| process.env → ConfigService; Redis в health (ioredis)
+2026-08-04 23510f9| AuditService global + Product CREATE/UPDATE/DELETE
+2026-08-04 3afa294| Audit: RFQ create/offer/award + Order checkout/status
+2026-08-04 82d59d7| Throttler short/medium/long + жёсткие лимиты auth/checkout/RFQ
+2026-08-04 20437d2| Prisma: Stripe Connect fields + StripeConnectedAccount
+2026-08-04 fc7ad6f| StripeConnectService + /connect/onboard + /connect/status
+2026-08-04 f89dfe6| Destination Charges + application_fee + PLATFORM_COMMISSION
+2026-08-04 f3f5e33| Webhook account.updated + Connect-related events
+2026-08-04 3bdd002| refundPayment + refund/dispute webhooks + admin refund API
+2026-08-04 9a94053| CacheService (Redis) + кэш categories/products public
+2026-08-04 6cb84d8| Cursor pagination GET /api/products
+2026-08-04 47fdc69| Cursor pagination GET /api/orders + GET /api/rfq
+2026-08-05 64113c6| Meilisearch docker + SearchService module
+2026-08-05 81b0913| fix Meilisearch client class name
+2026-08-05 2bfa4bf| indexProduct/removeProduct на CRUD; GET /products/search; reindex
+2026-08-05 127d05a| StorageService S3/R2 + sharp WebP (upload/thumb/delete/presign)
+2026-08-05 a337ca5| POST /products/upload-image + imageUrl CRUD + merchant UI file
+2026-08-05 5b40f37| AdminService: dashboard, users, shops, orders, disputes API
+2026-08-05 9d795f0| admin/index.html: sidebar + tables + live Admin API (1.txt)
+2026-08-05 verify  | Docker rebuild + smoke: dashboard/users/shops/orders/disputes OK
+2026-08-05 c5f4dad| Admin: Audit Log + Payouts API/UI, bulk actions, CSV export
+2026-08-06 78df451| merchant.html: кабинет + Stripe Connect + payouts + balance
+2026-08-06 d168af2| merchant-products: search/filter/cursor/bulk/modal/stock
+2026-08-06 343951c| merchant-orders.html + shop-scoped list + status actions
+2026-08-06 b666b9c| rfqs.html dual-role + /rfq?incoming=1
+2026-08-06 9590506| merchant.html: история выплат + balance block
+2026-08-06 6f52f08| account.html: кабинет покупателя (sidebar+stats+RFQ)
+2026-08-06 df50de4| account profile edit + PATCH /auth/me + User.company
+2026-08-06 aa496d9| WishlistModule: GET/POST/DELETE /api/wishlist
+2026-08-06 cdef0b5| wishlist.html + account link + catalog ♥
+2026-08-06 a0b7f9f| MediaModule: upload/delete/presign + local disk
+2026-08-06 3ae4891| ProductDocument: products/:id/documents
+2026-08-06 6cd6998| KYC: shops/:id/kyc + kyc/:id/status + delete
+2026-08-06 9564513| unit: auth.service.spec.ts (10 tests PASS)
+2026-08-06 f9e9751| unit: catalog.service.spec.ts (10 tests PASS)
+2026-08-06 c076162| unit: orders.service.spec.ts (9 tests PASS)
+2026-08-06 8dff04a| unit: wishlist.service.spec.ts (7 tests PASS)
+2026-08-06         | e2e: critical-flows (6 tests PASS, PG :5433)
+2026-08-06 8633c1f| CI: .github/workflows/ci.yml + green run #31085552196
+2026-08-06         | apps/web: Next.js 16 Customer App scaffold + theme/API
+2026-08-06         | apps/web: Header + sidebar filters + ProductCard + live API
+2026-08-06         | apps/web: cart Zustand + drawer + X-Session-Key guest cart
+2026-08-06         | apps/web: /product/[id] + mobile filter drawer
+2026-08-06         | apps/web: /cart page qty±/remove + /checkout stub
+2026-08-06         | apps/web: checkout POST /api/checkout + login
+2026-08-06         | apps/web TZ2 Stage1 Customer: account, profile, orders,
+                     order detail + demo pay, wishlist, RFQ list/new/detail,
+                     header nav, auth store, ♥ on ProductCard; build OK
+2026-08-06         | apps/web TZ2 Stage1 Merchant: /merchant dashboard,
+                     products CRUD+upload, orders status, payouts, RFQ offers,
+                     Stripe Connect button; build OK (18 routes)
+2026-08-06         | apps/web TZ2 Stage1 Admin: /admin dashboard, users,
+                     shops, orders, disputes, payouts, audit; build 25 routes
+2026-08-06         | TZ2 Stage2: Dockerfile.web + compose web:3000, nginx /app,
+                     health Meili+Stripe, Sentry optional, Helm+Prometheus scaffold
+2026-08-06         | TZ2 Stage3: EventEmitter domain bus + emits on product/
+                     order/rfq/payout/merchant approve
+2026-08-06         | TZ2 Stage3: BullMQ queues (email/notify/search) +
+                     Socket.IO /ws realtime (order.status, rfq.event)
+
+
+================================================================================
+ЭТАП 1. Production MVP
+================================================================================
+
+--- СДЕЛАНО ---
+
+[2] Docker
+  - postgres, redis, api, nginx, meilisearch
+  - docker compose up -d --build
+  - порты host: 8088, 3001, 5432, 6379, 7700
+
+[3] ConfigModule + ENV
+  - секреты/порты/stripe/redis/meili через ConfigService
+  - .env.example актуален
+
+[4] Swagger /api/docs (базово + catalog tags)
+
+[5] Pino логи
+
+[6] Health: DB + Redis; Stripe health — нет
+
+[1] Заглушки: KYC/notification/audit — закрыты критичные; SMTP — log only
+
+--- ПРЕДСТОИТ ---
+  - Joi ENV validation
+  - Полный Swagger
+  - Health Stripe
+  - Реальный email
+  - Frontend demo-toasts
+
+Оценка: ~88%
+
+
+================================================================================
+ЭТАП 2. Безопасность
+================================================================================
+
+--- СДЕЛАНО ---
+  - JWT + Refresh + Logout + Rotation
+  - 2FA TOTP
+  - Throttler multi-tier
+  - Helmet, CORS
+  - ValidationPipe + DTO validators
+  - AuditService + покрытие Catalog/RFQ/Orders (+ auth/kyc/finance частично)
+
+--- ПРЕДСТОИТ ---
+  - CSRF (если cookies)
+  - 100% audit через AuditService
+  - Refresh reuse detection
+  - Полный DTO audit
+  - Policy MFA for admin
+
+Оценка: ~78%
+
+
+================================================================================
+ЭТАП 3. Stripe Connect
+================================================================================
+
+--- СДЕЛАНО ---
+  - Shop Connect fields + StripeConnectedAccount
+  - Express onboard API
+  - Destination Charges + application_fee
+  - Webhooks: account.updated, payment_intent.succeeded,
+    refund.*, dispute.*, payout.* (лог)
+  - refundPayment + POST /api/orders/:id/refund
+  - Внутренний PayoutRequest (не Stripe Payout API)
+
+--- ПРЕДСТОИТ ---
+  - UI Connect в merchant panel
+  - Авто-payout через Stripe после approve
+  - Уведомления при dispute
+  - Production webhook secrets
+
+Оценка: ~75%
+
+
+================================================================================
+ЭТАП 4. Производительность
+================================================================================
+
+--- СДЕЛАНО ---
+  - Redis CacheService (global)
+  - Кэш categories:all, products:public (первая страница)
+  - Invalidate cache на CRUD catalog
+  - Cursor pagination:
+      GET /api/products  → { items, nextCursor, hasMore }
+      GET /api/orders
+      GET /api/rfq
+  - Meilisearch v1.11 в docker
+  - SearchService: index/remove/search products
+  - CRUD → indexProduct / removeProduct
+  - GET /api/products/search?q=
+  - POST /api/products/reindex (admin)
+
+--- ПРЕДСТОИТ ---
+  - Cursor pagination: audit logs, shops
+  - Кэш shops list
+  - Подключить search в storefront UI (сейчас API готов)
+  - CDN R2/S3 для картинок
+  - Elasticsearch (не нужен, если Meili ок)
+
+Оценка: ~55%  (было ~15%)
+
+
+================================================================================
+ЭТАП 5–7. Admin / Merchant / Buyer panels
+================================================================================
+
+--- СДЕЛАНО ---
+  - admin/, merchant/, account, orders, RFQ UI, wishlist API
+  - Frontend helpers: productsPage, ordersPage, rfqsPage, searchProducts
+  - AdminService + endpoints:
+      GET  /api/admin/dashboard
+      GET  /api/admin/users (cursor) + PATCH status/role
+      GET  /api/admin/shops (cursor) + PATCH status
+      GET  /api/admin/orders (cursor)
+      GET  /api/admin/disputes + PATCH resolve
+      GET  /api/admin/payouts (cursor) + PATCH /payouts/:id/process
+      GET  /api/admin/audit (cursor, action/entityType filters)
+      legacy /stats /customers /merchants сохранены
+  - BLOCKED в UI → SUSPENDED в Prisma (alias)
+
+--- СДЕЛАНО (UI, 1.txt) ---
+  - admin/index.html: 7 разделов (Dashboard/Users/Shops/Orders/Disputes/Payouts/Audit)
+  - Bulk: checkboxes + Block/Unblock users, Approve/Suspend shops
+  - Export CSV в каждом табличном разделе
+  - Payouts: Approve / Reject / Mark Paid
+  - Audit Log: фильтры action + entityType, cursor
+  - Auth: sessionStorage token + ADMIN/SUPER_ADMIN
+  - Smoke 2026-08-05: audit/payouts/process OK, UI :8088/admin/
+
+--- ПРЕДСТОИТ ---
+  - Charts GMV
+  - Merchant: Connect button, tracking
+  - Buyer: reviews, addresses, refunds UX
+
+--- СДЕЛАНО (Merchant UI, 1.txt 2026-08-06) ---
+  - merchant.html: quick actions, stats, recent orders/products
+  - Stripe Connect box: status + onboard (POST /connect/onboard)
+  - Balance: GET /merchant/balance + POST /payouts + history
+  - Auth: sessionStorage token; me → shop name/status
+  - Smoke: /auth/me, /connect/status, /payouts, balance OK
+    (onboard 503 без STRIPE_SECRET_KEY — ожидаемо)
+  - merchant-products.html: поиск + status filter, cursor, bulk
+    Activate/Archive, modal create/edit, quick stock, upload-image
+  - Smoke: create → stock 42 → ARCHIVED → ACTIVE OK
+  - merchant-orders.html: фильтры, cursor, действия PAID→PROCESSING→SHIPPED
+  - merchant.html → /merchant-orders.html
+  - GET /orders search=; MERCHANT only shopId (foreignOrders=0)
+  - rfqs.html: buyer «Мои RFQ» / merchant «Входящие RFQ»
+  - GET /api/rfq + ?incoming=1 (MERCHANT: matches/offers by shop)
+  - rfq.html → «Отправить предложение» → rfq-offer.html
+  - merchant.html: блок «История заявок на вывод» + balance
+  - GET /merchant/balance + GET /payouts (MERCHANT) smoke OK
+  - account.html: sidebar, quick actions, stats, recent orders/RFQ
+  - Smoke buyer: /auth/me, /orders (2), /rfq OK
+  - account.html: «Редактировать профиль» modal (name/phone/company)
+  - PATCH /api/auth/me + User.company; smoke company=Oil Corp Demo
+  - Wishlist API (Этап 7 шаг 1):
+      GET    /api/wishlist
+      POST   /api/wishlist { productId }
+      DELETE /api/wishlist/:productId
+      (+ alias /api/buyer/wishlist*)
+  - Smoke: add→list=1→delete→list=0 OK
+  - wishlist.html: сетка товаров, удаление, ссылка из account
+  - index.html: кнопка ♥ на карточках (toggleWishlist)
+
+================================================================================
+ЭТАП 8. Медиа (доп.)
+================================================================================
+  - MediaModule: POST /api/media/upload (folder + file)
+  - DELETE /api/media?url=
+  - POST /api/media/presign
+  - StorageService: uploadFile + local disk fallback (./uploads)
+  - Smoke: upload WebP url, delete success
+  - ProductDocument API:
+      GET    /api/products/:id/documents
+      POST   /api/products/:id/documents (file + name + docType)
+      DELETE /api/products/:id/documents/:docId
+  - StorageService uploadFile/uploadImage; smoke list 1→0
+  - KYC API:
+      POST   /api/shops/:id/kyc (multipart file + docType)
+      GET    /api/shops/:id/kyc
+      PATCH  /api/kyc/:id/status (APPROVED|REJECTED)
+      DELETE /api/kyc/:id
+  - Smoke: upload PENDING → approve → delete OK
+
+Оценка: admin ~92% | merchant ~92% | buyer ~85% | media ~90% ↑
+
+
+================================================================================
+ЭТАП 8. Медиа
+================================================================================
+
+--- СДЕЛАНО ---
+  - imageUrl + SVG placeholders (ранее)
+  - StorageService (global): uploadImage (resize 1200 + WebP 80%),
+    uploadThumbnail (400), deleteImage, getPresignedUploadUrl
+  - ENV: STORAGE_PROVIDER=r2|s3|local, ENDPOINT, keys, bucket, PUBLIC_URL
+  - Пакеты: @aws-sdk/client-s3, s3-request-presigner, sharp
+
+--- СДЕЛАНО (доп.) ---
+  - POST /api/products/upload-image (multer memory, image/*)
+  - create/update Product.imageUrl
+  - delete старого image при update/archive
+  - merchant-products.html: выбор файла → upload → create
+
+--- ПРЕДСТОИТ ---
+  - Реальные ключи R2/S3 в .env (STORAGE_PROVIDER=r2)
+  - Редактирование товара с сменой фото в UI
+  - Local disk provider (опционально)
+  - Показ imageUrl на витрине storefront
+
+Оценка: ~65%  (было ~45%)
+
+
+================================================================================
+ЭТАП 9–10. Тесты / CI-CD
+================================================================================
+  - unit + e2e базовые
+  - auth.service.spec.ts: 10/10 PASS (login/me/updateProfile)
+  - catalog.service.spec.ts: 10/10 PASS (list/create/update/search)
+  - orders.service.spec.ts: 9/9 PASS (list/status/getOrder)
+  - wishlist.service.spec.ts: 7/7 PASS (get/add/remove)
+  - critical-flows.e2e-spec.ts: 6/6 PASS (auth/catalog/wishlist/merchant)
+  - e2e DB: postgres mplace_e2e @ 127.0.0.1:5433 (docker)
+  - GH Actions: .github/workflows/ci.yml
+      on: push/PR → master|main
+      services: postgres:16 + redis:7
+      steps: npm ci → prisma generate → db push → unit+cov → e2e → build
+      DEV_PAYMENT_SECRET=e2e_dev_secret; Throttler skipIf NODE_ENV=test
+  - Green run: https://github.com/aleksandrsera329-netizen/mplace/actions/runs/31085552196
+    (commit 8633c1f, ~1m23s: unit ✓ e2e ✓ build ✓)
+  - Нужно: 80% coverage target; deploy job; Node actions v20 deprecation note
+
+Оценка: tests ~58% | CI ~70% ↑
+
+
+================================================================================
+ЭТАП 11–16. Docs / UI / Monitor / Prod / Commerce / Users
+================================================================================
+  - docs/* частично; demo Render; seed data
+  - apps/web Customer App (Next.js 16 + React 19 + Tailwind 4):
+      ThemeProvider (dark default, light/dark), React Query Providers
+      lib/utils (cn), lib/api (products/categories/shops/cart)
+      industrial oklch theme; homepage http://localhost:3000
+      Header (logo, theme toggle, login, cart badge)
+      CatalogSidebar (search, category, shop, stock, sort)
+      ProductCard grid + hover; skeletons; client filters
+      Live API: products=10, categories=6, shops=3 (smoke)
+      CORS: localhost:3000 / 127.0.0.1:3000
+      Cart: api.addToCart + X-Session-Key (localStorage), Zustand store
+      CartDrawer (Providers), Header badge, ProductCard «В корзину»
+      Product page /product/[id] + add to cart; card links
+      Mobile sidebar: кнопка «Фильтры» + drawer (lg+ static)
+      /cart: qty ±, remove (PATCH 0), total, → /checkout
+      /checkout: form → POST /api/checkout (X-Session-Key)
+      /login: POST /api/auth/login → sessionStorage token
+      /account + /account/profile (PATCH /auth/me)
+      /orders + /orders/[id] + demo payment-intent/dev-confirm
+      /wishlist + ♥ toggle on ProductCard
+      /rfq + /rfq/new + /rfq/[id] (award, messages)
+      Header nav: Каталог / Заказы / RFQ / Избранное / Кабинет
+      Auth: zustand useAuthStore + RequireAuth shell
+      Merchant Next (/merchant/*): dashboard, products, orders, payouts, RFQ
+      Admin Next (/admin/*): dashboard, users, shops, orders, disputes,
+        payouts, audit
+  - TZ2 Stage2: docker web, Sentry optional, helm/monitoring scaffolds
+  - TZ2 Stage3: domain events bus (partial)
+  - Нужно дальше: BullMQ, WebSockets, Stripe Elements, multi-tenant SaaS
+
+(см. ТЗ 2.txt — приоритет Frontend apps)
+
+
+================================================================================
+СВОДКА % (обновлено 2026-08-05)
+================================================================================
+
+Этап                         | %
+-----------------------------|-----
+1. Production MVP            | ~88
+2. Безопасность              | ~78
+3. Stripe Connect            | ~75
+4. Производительность        | ~55  ↑
+5. Админ-панель              | ~90  ↑
+6. Merchant Panel            | ~88  ↑
+7. Покупатель                | ~85  ↑
+8. Медиа                     | ~90  ↑
+9. Тесты                     | ~58
+10. CI/CD                    | ~70  ↑
+11. Документация             | ~40
+12. UI/UX                    | ~95  ↑ (Customer+Merchant+Admin Next)
+13. Мониторинг               | ~35  ↑ (Sentry+Prometheus scaffold)
+14. Production infra         | ~55  ↑ (web docker + helm)
+15. Коммерция                | ~25
+16. Пользователи             | ~5
+
+
+================================================================================
+СЛЕДУЮЩИЕ ШАГИ (рекомендация) — по ТЗ 2
+================================================================================
+
+1. Stripe Elements real pay (Next order detail)
+2. Multi-tenant SaaS / White Label (TZ2 14–15)
+3. Full CQRS / inventory / multi-warehouse
+4. SMTP real email + Playwright e2e
+
+
+================================================================================
+URL / ЛОГИНЫ
+================================================================================
+
+Local Docker:
+  http://127.0.0.1:8088/
+  http://127.0.0.1:3001/api/docs
+  http://127.0.0.1:3001/api/health
+  http://127.0.0.1:3001/api/products/search?q=valve
+  Meilisearch: http://127.0.0.1:7700
+
+Demo: https://mplace-vu4o.onrender.com/
+
+  superadmin@demo.com / 123456
+  merchant@demo.com   / 123456
+  customer@demo.com   / 123456
+
+
+================================================================================
+Конец (дополнять после каждого 1.txt)
+================================================================================

@@ -55,8 +55,12 @@ export class PrismaService
         }
       }
       this.tenantExtended = true;
-    } catch {
-      // Extension optional — base client still works
+    } catch (error) {
+      // Tenant isolation is a security boundary: fail closed instead of
+      // silently falling back to an unscoped Prisma client.
+      throw new Error(
+        `Failed to initialize tenant isolation: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 }

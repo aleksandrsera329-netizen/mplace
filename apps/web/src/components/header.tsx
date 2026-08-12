@@ -24,13 +24,14 @@ import { useI18n } from "@/i18n/store"
 import { homePathForRole } from "@/lib/role-routes"
 
 export function Header() {
-  const { theme, setTheme } = useTheme()
+  const { resolvedTheme, setTheme } = useTheme()
   const { itemCount, open } = useCartStore()
-  const { user, hydrated, refresh, isAuthenticated } = useAuthStore()
+  const { user, hydrated, refresh, isAuthenticated, logout } = useAuthStore()
   const { locale, setLocale, t } = useI18n()
   const tenant = useTenantStore((s) => s.tenant)
   const router = useRouter()
   const [search, setSearch] = useState("")
+  const [mounted, setMounted] = useState(false)
 
   const languages = [
     { code: "ru" as Locale, label: "RU" },
@@ -39,11 +40,16 @@ export function Header() {
   ]
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
     if (!hydrated) void refresh()
   }, [hydrated, refresh])
 
   const loggedIn = Boolean(user) || isAuthenticated()
   const accountHref = loggedIn ? homePathForRole(user?.role) : "/login"
+  const isDark = mounted ? resolvedTheme === "dark" : true
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,11 +80,6 @@ export function Header() {
               M<span className="text-primary">place</span> Energy
             </>
           )}
-          {tenant?.name && !tenant.logoUrl && (
-            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">
-              {tenant.name}
-            </span>
-          )}
         </Link>
 
         <form
@@ -98,16 +99,25 @@ export function Header() {
         </form>
 
         <nav className="hidden items-center gap-1 lg:flex">
-          {user && (
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/">{t("nav.catalog")}</Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/rfq" className="gap-1.5" title={t("nav.rfq")}>
+              <FileText className="h-4 w-4" />
+              <span className="hidden xl:inline">{t("nav.rfq")}</span>
+            </Link>
+          </Button>
+          {loggedIn && (
             <>
-              {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
+              {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/admin">{t("nav.admin")}</Link>
                 </Button>
               )}
-              {(user.role === "MERCHANT" ||
-                user.role === "ADMIN" ||
-                user.role === "SUPER_ADMIN") && (
+              {(user?.role === "MERCHANT" ||
+                user?.role === "ADMIN" ||
+                user?.role === "SUPER_ADMIN") && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/merchant">{t("nav.merchant")}</Link>
                 </Button>
@@ -115,11 +125,7 @@ export function Header() {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/orders" className="gap-1.5" title={t("nav.orders")}>
                   <Package className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/rfq" className="gap-1.5" title={t("nav.rfq")}>
-                  <FileText className="h-4 w-4" />
+                  <span className="hidden xl:inline">{t("nav.orders")}</span>
                 </Link>
               </Button>
             </>
@@ -147,57 +153,66 @@ export function Header() {
           <Button
             variant="ghost"
             size="icon"
-            className="relative"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            type="button"
+            onClick={() => setTheme(isDark ? "light" : "dark")}
             title={t("header.theme")}
+            aria-label={t("header.theme")}
           >
-            <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </Button>
 
           <NotificationBell />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            title={t("header.wishlist")}
-          >
-            <Link href={loggedIn ? "/wishlist" : "/login"}>
+          <Button variant="ghost" size="icon" asChild title={t("header.wishlist")}>
+            <Link href={loggedIn ? "/wishlist" : "/login?next=/wishlist"}>
               <Heart className="h-5 w-5" />
             </Link>
           </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            title={loggedIn ? t("header.account") : t("header.login")}
-          >
-            <Link href={accountHref}>
-              <User className="h-5 w-5" />
-            </Link>
-          </Button>
+          {loggedIn ? (
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" asChild className="gap-1.5">
+                <Link href={accountHref}>
+                  <User className="h-4 w-4" />
+                  <span className="hidden max-w-[8rem] truncate sm:inline">
+                    {user?.name || user?.email || t("header.account")}
+                  </span>
+                </Link>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  logout()
+                  router.push("/")
+                }}
+              >
+                {t("common.logout")}
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" asChild className="gap-1.5">
+              <Link href="/login">
+                <User className="h-4 w-4" />
+                <span>{t("header.login")}</span>
+              </Link>
+            </Button>
+          )}
 
-          {/* Stage 20: primary path is /cart; drawer is quick peek */}
-          <Button className="gap-2" asChild>
-            <Link
-              href="/cart"
-              onClick={(e) => {
-                // Ctrl/Cmd or middle-click → full page; plain click opens drawer
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return
-                e.preventDefault()
-                open()
-              }}
-            >
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">{t("header.cart")}</span>
-              {itemCount > 0 && (
-                <span className="rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold">
-                  {itemCount}
-                </span>
-              )}
-            </Link>
+          <Button
+            className="gap-2"
+            type="button"
+            onClick={() => open()}
+            title={t("header.cart")}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">{t("header.cart")}</span>
+            {itemCount > 0 && (
+              <span className="rounded-full bg-black/20 px-2 py-0.5 text-xs font-bold">
+                {itemCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>

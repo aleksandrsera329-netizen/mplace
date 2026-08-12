@@ -31,8 +31,8 @@ export default async function globalSetup() {
   const cwd = join(__dirname, '..');
   const env = { ...process.env, DATABASE_URL: databaseUrl };
 
-  // Migrations history is still sqlite-era; use db push for postgres e2e
-  execSync('npx prisma db push --skip-generate --accept-data-loss', {
+  // E2E uses the same checked-in PostgreSQL migration history as production.
+  execSync('npx prisma migrate deploy', {
     cwd,
     env,
     stdio: 'inherit',

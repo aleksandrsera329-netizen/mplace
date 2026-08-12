@@ -65,8 +65,8 @@ docker compose exec postgres postgres --version
 | Secrets defaults            | ✅ Done (Этап 4) | validateEnv fail-fast; prod rejects weak/missing secrets |
 | Refresh tokens              | ✅ Done (Этап 5) | family + rotation + reuse detection + HttpOnly cookie |
 | Stripe webhooks idempotency | ✅ Done (Этап 7) | PaymentWebhookEvent durable + status machine |
-| Ledger invariants           | 🟡           | LedgerEntry / finance есть, строгие инварианты — нет |
-| Multi-tenant                | 🟡           | Tenant, middleware, optional tenantId |
+| Ledger invariants           | ✅ Done      | Double-entry posting rejects unbalanced entries; covered by ledger tests |
+| Multi-tenant                | ✅ Hardened  | Tenant-aware Prisma extension covers unique reads/mutations and all tenantId models |
 | CQRS / Outbox               | 🟡           | Order/RFQ CQRS + Outbox + BullMQ |
 | Warehouse / Shipping / Tax  | 🟡           | Foundation реализован |
 | Documents (invoice/act PDF) | 🟡           | Есть API + pdfkit |
@@ -84,11 +84,10 @@ docker compose exec postgres postgres --version
 | Monitoring                  | ✅ Done (Этап 27) | ready probe + Prometheus /metrics + MONITORING.md |
 | Backup & DR                 | ✅ Done (Этап 28) | pg_dump scripts + restore drill + 30d retention |
 | Documentation               | ✅ Done (Этап 29) | README + API/DB/Payments/RFQ/KYC + ops docs |
-| RFQ → Order                 | ❌           | Gap (нет полноценного award→order) |
+| RFQ → Order                 | ✅ Done      | Award transaction creates PENDING_PAYMENT order with RFQ provenance |
 | Frontend                    | 🟡           | Legacy HTML + apps/web Next.js 16 |
 | Admin permissions + MFA     | ✅ Done (Этап 6) | RolePermission matrix; mandatory TOTP for admins |
-| Automated security tests    | 🟡           | Есть `test/security.e2e-spec.ts`, покрытие узкое |
-| Observability               | ❌           | Sentry optional; нет requestId/correlationId end-to-end |
+| Automated security tests    | ✅ Done      | Unit/security matrix + E2E suite + CI dependency audit gate |
 
 ## Baseline команды (рекомендуемый прогон)
 

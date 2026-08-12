@@ -2,6 +2,8 @@ import {
   createTenantExtension,
   hasTenantField,
   withTenantCreateData,
+  withTenantUpdateData,
+  withTenantUniqueWhere,
   withTenantWhere,
 } from '../prisma-tenant.extension';
 import { runWithTenant } from '../tenant.context';
@@ -14,6 +16,15 @@ describe('Prisma Tenant Extension (isolation)', () => {
     expect(hasTenantField('Product')).toBe(true);
     expect(hasTenantField('Shop')).toBe(true);
     expect(hasTenantField('User')).toBe(true);
+    expect(hasTenantField('RefreshToken')).toBe(true);
+    expect(hasTenantField('Document')).toBe(true);
+    expect(hasTenantField('Notification')).toBe(true);
+    expect(hasTenantField('TaxRate')).toBe(true);
+    expect(hasTenantField('TenantInvite')).toBe(true);
+    expect(hasTenantField('Warehouse')).toBe(true);
+    expect(hasTenantField('ShippingMethod')).toBe(true);
+    expect(hasTenantField('ShippingZone')).toBe(true);
+    expect(hasTenantField('RfqRequest')).toBe(true);
     expect(hasTenantField('Order')).toBe(true);
     expect(hasTenantField('RfqRequest')).toBe(true);
     expect(hasTenantField('Outbox')).toBe(false);
@@ -38,6 +49,18 @@ describe('Prisma Tenant Extension (isolation)', () => {
     const where = withTenantWhere('Product', { status: 'ACTIVE' });
     expect(where).toEqual({ status: 'ACTIVE' });
     expect((where as { tenantId?: string }).tenantId).toBeUndefined();
+  });
+
+  it('should scope unique reads and mutations', () => {
+    runWithTenant({ tenantId: tenantA }, () => {
+      expect(withTenantUniqueWhere('Product', { id: 'p1' })).toEqual({
+        id: 'p1',
+        tenantId: tenantA,
+      });
+      expect(
+        withTenantUpdateData('Product', { name: 'changed', tenantId: tenantB }),
+      ).toEqual({ name: 'changed', tenantId: tenantA });
+    });
   });
 
   it('should inject tenantId on create', () => {

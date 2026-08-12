@@ -1,8 +1,8 @@
 /* Demo data for Mplace marketplace */
 window.MPLACE = {
   users: {
-    admin: { email: 'superadmin@demo.com', password: '123456', role: 'admin', name: 'SuperAdmin' },
-    merchant: { email: 'merchant@demo.com', password: '123456', role: 'merchant', name: 'Merchant Demo', shop: 'Big Shop' }
+    admin: { email: 'superadmin@demo.com', role: 'admin', name: 'SuperAdmin' },
+    merchant: { email: 'merchant@demo.com', role: 'merchant', name: 'Merchant Demo', shop: 'Big Shop' }
   },
   stats: {
     customers: 23,

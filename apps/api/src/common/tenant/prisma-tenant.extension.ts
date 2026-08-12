@@ -3,12 +3,19 @@ import { getCurrentTenantId } from './tenant.context';
 
 /** Models that have optional tenantId column */
 const MODELS_WITH_TENANT = new Set([
+  'Document',
+  'Notification',
+  'TaxRate',
+  'TenantInvite',
   'User',
   'Shop',
-  'Product',
-  'Order',
-  'RfqRequest',
+  'RefreshToken',
   'Warehouse',
+  'ShippingMethod',
+  'ShippingZone',
+  'Product',
+  'RfqRequest',
+  'Order',
 ]);
 
 export function hasTenantField(model: string): boolean {
@@ -27,7 +34,25 @@ export function withTenantWhere<T extends Record<string, unknown> | undefined>(
   return where as T;
 }
 
+export function withTenantUniqueWhere<T extends Record<string, unknown> | undefined>(
+  model: string,
+  where: T,
+): T | (T & { tenantId: string }) | { tenantId: string } {
+  return withTenantWhere(model, where);
+}
+
 export function withTenantCreateData<T extends Record<string, unknown>>(
+  model: string,
+  data: T,
+): T {
+  const tenantId = getCurrentTenantId();
+  if (tenantId && hasTenantField(model)) {
+    return { ...data, tenantId };
+  }
+  return data;
+}
+
+export function withTenantUpdateData<T extends Record<string, unknown>>(
   model: string,
   data: T,
 ): T {
@@ -55,6 +80,14 @@ export function createTenantExtension() {
           args.where = withTenantWhere(model, args.where as any) as any;
           return query(args);
         },
+        async findUnique({ args, query, model }) {
+          args.where = withTenantUniqueWhere(model, args.where as any) as any;
+          return query(args);
+        },
+        async findUniqueOrThrow({ args, query, model }) {
+          args.where = withTenantUniqueWhere(model, args.where as any) as any;
+          return query(args);
+        },
         async count({ args, query, model }) {
           args.where = withTenantWhere(model, args.where as any) as any;
           return query(args);
@@ -76,12 +109,40 @@ export function createTenantExtension() {
           }
           return query(args);
         },
+        async update({ args, query, model }) {
+          args.where = withTenantUniqueWhere(model, args.where as any) as any;
+          args.data = withTenantUpdateData(
+            model,
+            args.data as Record<string, unknown>,
+          ) as typeof args.data;
+          return query(args);
+        },
         async updateMany({ args, query, model }) {
           args.where = withTenantWhere(model, args.where as any) as any;
+          args.data = withTenantUpdateData(
+            model,
+            args.data as Record<string, unknown>,
+          ) as typeof args.data;
+          return query(args);
+        },
+        async delete({ args, query, model }) {
+          args.where = withTenantUniqueWhere(model, args.where as any) as any;
           return query(args);
         },
         async deleteMany({ args, query, model }) {
           args.where = withTenantWhere(model, args.where as any) as any;
+          return query(args);
+        },
+        async upsert({ args, query, model }) {
+          args.where = withTenantUniqueWhere(model, args.where as any) as any;
+          args.create = withTenantCreateData(
+            model,
+            args.create as Record<string, unknown>,
+          ) as typeof args.create;
+          args.update = withTenantUpdateData(
+            model,
+            args.update as Record<string, unknown>,
+          ) as typeof args.update;
           return query(args);
         },
       },

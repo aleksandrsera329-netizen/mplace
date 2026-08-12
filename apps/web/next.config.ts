@@ -30,9 +30,11 @@ const securityHeaders = [
       // Next.js needs 'unsafe-inline' for styles in many setups; tighten later with nonces
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
-      "img-src 'self' data: https: blob:",
+      // Local product images + API hosts over http in dev
+      "img-src 'self' data: https: http: blob:",
       "font-src 'self' data: https:",
-      "connect-src 'self' https: wss: ws:",
+      // Critical: browser → API on :3001 (not 'self')
+      "connect-src 'self' http://127.0.0.1:* http://localhost:* https: wss: ws:",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
     ].join("; "),
   },
@@ -40,6 +42,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Next 16: allow opening site via 127.0.0.1 while dev server is localhost
+  allowedDevOrigins: ["127.0.0.1", "localhost", "192.168.0.191"],
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "**" },
