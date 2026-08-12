@@ -1,11 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/store"
 
 interface CatalogSidebarProps {
   categories: { id: string; name: string }[]
   shops: { id: string; name: string }[]
+  /** Sync search from Header ?q= */
+  searchValue?: string
   onFilterChange: (filters: {
     search: string
     categoryId: string
@@ -18,13 +21,19 @@ interface CatalogSidebarProps {
 export function CatalogSidebar({
   categories,
   shops,
+  searchValue = "",
   onFilterChange,
 }: CatalogSidebarProps) {
-  const [search, setSearch] = useState("")
+  const [search, setSearch] = useState(searchValue)
   const [categoryId, setCategoryId] = useState("")
   const [shopId, setShopId] = useState("")
   const [inStockOnly, setInStockOnly] = useState(false)
   const [sort, setSort] = useState("default")
+  const { t } = useI18n()
+
+  useEffect(() => {
+    setSearch(searchValue)
+  }, [searchValue])
 
   const apply = () => {
     onFilterChange({ search, categoryId, shopId, inStockOnly, sort })
@@ -34,11 +43,11 @@ export function CatalogSidebar({
     <aside className="w-full shrink-0 space-y-6 rounded-xl border border-border bg-card p-5 lg:w-72">
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Поиск
+          {t("catalog.search")}
         </h3>
         <input
           type="search"
-          placeholder="Название, SKU..."
+          placeholder={t("catalog.search.placeholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
@@ -47,7 +56,7 @@ export function CatalogSidebar({
 
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Категории
+          {t("catalog.categories")}
         </h3>
         <div className="space-y-1">
           <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
@@ -57,7 +66,7 @@ export function CatalogSidebar({
               checked={categoryId === ""}
               onChange={() => setCategoryId("")}
             />
-            Все категории
+            {t("catalog.allCategories")}
           </label>
           {categories.map((c) => (
             <label
@@ -78,7 +87,7 @@ export function CatalogSidebar({
 
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Поставщики
+          {t("catalog.shops")}
         </h3>
         <div className="space-y-1">
           <label className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
@@ -88,7 +97,7 @@ export function CatalogSidebar({
               checked={shopId === ""}
               onChange={() => setShopId("")}
             />
-            Все поставщики
+            {t("catalog.allShops")}
           </label>
           {shops.map((s) => (
             <label
@@ -114,29 +123,29 @@ export function CatalogSidebar({
             checked={inStockOnly}
             onChange={(e) => setInStockOnly(e.target.checked)}
           />
-          Только в наличии
+          {t("catalog.inStockOnly")}
         </label>
       </div>
 
       <div>
         <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Сортировка
+          {t("catalog.sort")}
         </h3>
         <select
           value={sort}
           onChange={(e) => setSort(e.target.value)}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
         >
-          <option value="default">По умолчанию</option>
-          <option value="price-asc">Цена ↑</option>
-          <option value="price-desc">Цена ↓</option>
-          <option value="name">Название</option>
-          <option value="stock">Остаток</option>
+          <option value="default">{t("catalog.sort.default")}</option>
+          <option value="price-asc">{t("catalog.sort.priceAsc")}</option>
+          <option value="price-desc">{t("catalog.sort.priceDesc")}</option>
+          <option value="name">{t("catalog.sort.name")}</option>
+          <option value="stock">{t("catalog.sort.stock")}</option>
         </select>
       </div>
 
       <Button className="w-full" onClick={apply}>
-        Применить
+        {t("catalog.apply")}
       </Button>
     </aside>
   )

@@ -34,15 +34,18 @@ RUN npm ci --omit=dev \
 
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
-# Generate client for this image's OpenSSL (debian-openssl-3.0.x)
-RUN npx prisma generate
-
-RUN chown -R node:node /app
+# Optional entrypoint (migrate+start). Default CMD is app-only; compose uses migrate service.
+COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh \
+  && npx prisma generate \
+  && chown -R node:node /app
 
 USER node
 WORKDIR /app/apps/api
 
 EXPOSE 3000
 
-# db push for first-boot Postgres; seed optional
-CMD ["sh", "-c", "npx prisma db push && (npx prisma db seed || true) && node dist/src/main.js"]
+# Production: migrations run via compose service `migrate` (or CI job).
+# Never: prisma db push / prisma db seed on start.
+# Alternative one-shot: ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["node", "dist/src/main.js"]

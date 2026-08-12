@@ -8,7 +8,6 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mplace}
       POSTGRES_DB: ${POSTGRES_DB:-mplace}
     ports:
-      # 5433 avoids conflict with local Windows PostgreSQL on 5432
       - "5433:5432"
     volumes:
       - mplace_pg_data:/var/lib/postgresql/data
@@ -32,43 +31,6 @@ services:
       timeout: 3s
       retries: 10
 
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mplace-api
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      NODE_ENV: production
-      PORT: 3000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-mplace}:${POSTGRES_PASSWORD:-mplace}@postgres:5432/${POSTGRES_DB:-mplace}?schema=public
-      REDIS_URL: redis://redis:6379
-      MEILISEARCH_URL: http://meilisearch:7700
-      MEILISEARCH_API_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
-      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
-      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
-    # Host 3001 if 3000 is taken (e.g. other Docker apps). Container still listens on 3000.
-    ports:
-      - "3001:3000"
-    volumes:
-      # Local media files (URL /uploads/... via nginx)
-      - ./uploads:/app/apps/api/uploads
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      meilisearch:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 40s
-
   meilisearch:
     image: getmeili/meilisearch:v1.11
     container_name: mplace-meilisearch
@@ -88,18 +50,126 @@ services:
       retries: 5
       start_period: 10s
 
+  # One-shot: prisma migrate deploy only (no db push, no seed)
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mplace-migrate
+    env_file:
+      - .env
+    environment:
+      # migrate does not need production secrets; keep non-production
+      NODE_ENV: ${NODE_ENV:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mplace}:${POSTGRES_PASSWORD:-mplace}@postgres:5432/${POSTGRES_DB:-mplace}?schema=public
+    command: ["npx", "prisma", "migrate", "deploy"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mplace-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Use NODE_ENV=production only with strong secrets (Stage 4 fail-fast).
+      # Local stack default: development (compose postgres defaults are for local only).
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mplace}:${POSTGRES_PASSWORD:-mplace}@postgres:5432/${POSTGRES_DB:-mplace}?schema=public
+      REDIS_URL: redis://redis:6379
+      MEILISEARCH_URL: http://meilisearch:7700
+      MEILISEARCH_API_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-masterKeyChangeMe_at_least_16_chars}
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+    # App only — migrations via `migrate` service
+    command: ["node", "dist/src/main.js"]
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./uploads:/app/apps/api/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        # Browser on host calls published API :3001
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
+    container_name: mplace-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     container_name: mplace-nginx
     restart: unless-stopped
-    # Host 8088 if 80 is taken by Caddy/other stacks. Inside container: 80.
     ports:
       - "8088:80"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./:/var/www/html:ro
     depends_on:
       - api
+      - web
+
+  # Stage 28: optional daily logical backup (profile "backup")
+  # Usage: docker compose --profile backup run --rm db-backup
+  db-backup:
+    image: postgres:16-alpine
+    container_name: mplace-db-backup
+    profiles: ["backup"]
+    env_file:
+      - .env
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-mplace}
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:-mplace}
+      PGDATABASE: ${POSTGRES_DB:-mplace}
+      BACKUP_DIR: /backups
+      RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+    volumes:
+      - ./backups/postgres:/backups
+      - ./scripts/backup-db.sh:/backup-db.sh:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        apk add --no-cache bash gzip >/dev/null
+        export DATABASE_URL="postgresql://$${PGUSER}:$${PGPASSWORD}@$${PGHOST}:5432/$${PGDATABASE}"
+        export BACKUP_DIR=/backups
+        chmod +x /backup-db.sh
+        /backup-db.sh
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   mplace_pg_data:

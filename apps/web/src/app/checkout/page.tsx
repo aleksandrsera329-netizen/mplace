@@ -8,15 +8,19 @@ import { z } from "zod"
 import { ArrowLeft } from "lucide-react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
+import {
+  ShippingCalculator,
+  type ShippingRateOption,
+} from "@/components/shipping-calculator"
 import { useCartStore } from "@/store/cart"
+import { useAuthStore } from "@/store/auth"
 import { api } from "@/lib/api"
+import { toast } from "@/components/ui/toast"
 
 const schema = z.object({
-  company: z.string().min(2, "Укажите компанию"),
-  contactName: z.string().min(2, "Укажите контактное лицо"),
-  email: z.string().email("Некорректный email"),
-  phone: z.string().min(6, "Укажите телефон"),
-  comment: z.string().optional(),
+  customerName: z.string().min(2, "Укажите имя / контактное лицо"),
+  customerEmail: z.string().email("Некорректный email"),
+  comment: z.string().max(2000).optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -31,55 +35,137 @@ function formatMoney(cents: number) {
 
 export default function CheckoutPage() {
   const { items, itemCount, subtotalCents, refresh, clear } = useCartStore()
+  const user = useAuthStore((s) => s.user)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [orderNumbers, setOrderNumbers] = useState<string[]>([])
   const [ready, setReady] = useState(false)
+  const [shippingRate, setShippingRate] = useState<ShippingRateOption | null>(
+    null,
+  )
+  const [region, setRegion] = useState("Moscow")
+  const [taxCountry, setTaxCountry] = useState("RU")
+  const [taxData, setTaxData] = useState<{
+    subtotalCents: number
+    taxCents: number
+    totalCents: number
+  } | null>(null)
+
+  // Rough weight estimate: 10 kg per line unit (B2B equipment placeholder)
+  const weightKg = Math.max(
+    1,
+    items.reduce((s, i) => s + (i.quantity || 1) * 10, 0),
+  )
+  const shippingCents = shippingRate?.priceCents ?? 0
+  const taxCents = taxData?.taxCents ?? 0
+  const goodsSubtotal = taxData?.subtotalCents ?? subtotalCents
+  const grandTotal = goodsSubtotal + taxCents + shippingCents
 
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      customerName: "",
+      customerEmail: "",
+      comment: "",
+    },
   })
 
   useEffect(() => {
     void refresh().finally(() => setReady(true))
   }, [refresh])
 
+  // Prefill contact from auth (Stage 20)
+  useEffect(() => {
+    if (!user) return
+    reset({
+      customerName: user.name || "",
+      customerEmail: user.email || "",
+      comment: "",
+    })
+  }, [user, reset])
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setTaxData(null)
+      return
+    }
+    const lines = items
+      .map((item) => {
+        const productId = item.productId || item.product?.id
+        const priceCents =
+          item.product?.priceCents ?? item.priceCents ?? 0
+        if (!productId) return null
+        return {
+          productId,
+          quantity: item.quantity || 1,
+          priceCents,
+        }
+      })
+      .filter(Boolean) as Array<{
+      productId: string
+      quantity: number
+      priceCents: number
+    }>
+    if (lines.length === 0) return
+    void api.tax
+      .calculate({ items: lines, country: taxCountry })
+      .then(setTaxData)
+      .catch(() => setTaxData(null))
+  }, [items, taxCountry])
+
   const onSubmit = async (data: FormData) => {
     if (items.length === 0) return
 
     setIsSubmitting(true)
     try {
-      // Nest CheckoutDto: customerName, customerEmail, comment
-      // company/phone go into comment (no dedicated fields on API)
-      const commentParts = [
-        data.company ? `Компания: ${data.company}` : null,
-        data.phone ? `Тел: ${data.phone}` : null,
-        data.comment?.trim() || null,
-      ].filter(Boolean)
-
+      // Backend: POST /api/checkout + X-Session-Key (via api.request)
+      // Response: { orders: [{ id, orderNumber, ... }], message? }
+      const shippingNote = shippingRate
+        ? `Доставка: ${shippingRate.methodName} (${formatMoney(shippingRate.priceCents)})`
+        : undefined
+      const taxNote =
+        taxCents > 0 ? `НДС/VAT: ${formatMoney(taxCents)}` : undefined
       const result = await api.checkout({
-        customerName: data.contactName,
-        customerEmail: data.email,
-        comment: commentParts.join(" | ") || undefined,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        comment: [data.comment, shippingNote, taxNote]
+          .filter(Boolean)
+          .join("\n"),
+        taxCountry,
+        shipping: shippingRate
+          ? {
+              rateId: shippingRate.id,
+              methodId: shippingRate.methodId,
+              priceCents: shippingRate.priceCents,
+              daysMin: shippingRate.estimatedDaysMin ?? undefined,
+              daysMax: shippingRate.estimatedDaysMax ?? undefined,
+            }
+          : undefined,
       })
 
-      // Backend clears cart items inside checkout transaction
+      const numbers = (result.orders || [])
+        .map((o) => o.orderNumber)
+        .filter(Boolean)
+
+      // Backend clears cart in transaction; sync UI
       await clear()
-      setOrderNumbers(
-        (result.orders || []).map((o) => o.orderNumber).filter(Boolean),
-      )
+      await refresh()
+
+      setOrderNumbers(numbers)
       setSuccess(true)
     } catch (e) {
       console.error(e)
-      const msg =
-        e instanceof Error
-          ? e.message
-          : "Не удалось оформить заказ. Проверьте endpoint."
-      alert(msg)
+      toast({
+        title: "Ошибка",
+        description:
+          e instanceof Error ? e.message : "Не удалось оформить заявку",
+        type: "error",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -91,20 +177,20 @@ export default function CheckoutPage() {
         <Header />
         <div className="mx-auto max-w-lg px-4 py-20 text-center">
           <div className="mb-6 text-6xl" aria-hidden>
-            ✓
+            ✅
           </div>
           <h1 className="mb-4 text-3xl font-bold">Заявка отправлена</h1>
-          <p className="mb-4 text-muted-foreground">
-            Поставщики получили вашу заявку и свяжутся с вами.
-          </p>
           {orderNumbers.length > 0 && (
-            <p className="mb-8 text-sm text-muted-foreground">
+            <p className="mb-2 text-sm text-muted-foreground">
               Номер{orderNumbers.length > 1 ? "а" : ""}:{" "}
-              <span className="font-medium text-foreground">
+              <span className="font-mono font-medium text-foreground">
                 {orderNumbers.join(", ")}
               </span>
             </p>
           )}
+          <p className="mb-8 text-muted-foreground">
+            Поставщики получили вашу заявку и свяжутся с вами.
+          </p>
           <Button asChild>
             <Link href="/">Вернуться в каталог</Link>
           </Button>
@@ -129,7 +215,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-lg px-4 py-20 text-center">
-          <p className="mb-6 text-lg text-muted-foreground">Корзина пуста</p>
+          <p className="mb-6 text-lg text-muted-foreground">Заявка пуста</p>
           <Button asChild>
             <Link href="/">Перейти в каталог</Link>
           </Button>
@@ -148,10 +234,10 @@ export default function CheckoutPage() {
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад в корзину
+          Назад к заявке
         </Link>
 
-        <h1 className="mb-8 text-3xl font-bold">Оформление заказа</h1>
+        <h1 className="mb-8 text-3xl font-bold">Оформление заявки</h1>
 
         <div className="grid gap-8 lg:grid-cols-5">
           <form
@@ -160,69 +246,73 @@ export default function CheckoutPage() {
           >
             <div>
               <label className="mb-1.5 block text-sm font-medium">
-                Компания *
+                Контактное лицо *
               </label>
               <input
-                {...register("company")}
+                {...register("customerName")}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder='ООО "Энергетика"'
+                placeholder="Иван Иванов"
               />
-              {errors.company && (
+              {errors.customerName && (
                 <p className="mt-1 text-xs text-danger">
-                  {errors.company.message}
+                  {errors.customerName.message}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium">
-                Контактное лицо *
-              </label>
+              <label className="mb-1.5 block text-sm font-medium">Email *</label>
               <input
-                {...register("contactName")}
+                type="email"
+                {...register("customerEmail")}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="Иван Иванов"
+                placeholder="ivan@company.ru"
               />
-              {errors.contactName && (
+              {errors.customerEmail && (
                 <p className="mt-1 text-xs text-danger">
-                  {errors.contactName.message}
+                  {errors.customerEmail.message}
                 </p>
               )}
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                  Email *
+                  Регион доставки
                 </label>
-                <input
-                  type="email"
-                  {...register("email")}
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="ivan@company.ru"
-                />
-                {errors.email && (
-                  <p className="mt-1 text-xs text-danger">
-                    {errors.email.message}
-                  </p>
-                )}
+                >
+                  <option value="Moscow">Москва</option>
+                  <option value="Moscow Oblast">Московская область</option>
+                  <option value="Saint Petersburg">Санкт-Петербург</option>
+                  <option value="">Другой / вся РФ</option>
+                </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                  Телефон *
+                  Страна (НДС / VAT)
                 </label>
-                <input
-                  {...register("phone")}
+                <select
+                  value={taxCountry}
+                  onChange={(e) => setTaxCountry(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                  placeholder="+7 900 000-00-00"
-                />
-                {errors.phone && (
-                  <p className="mt-1 text-xs text-danger">
-                    {errors.phone.message}
-                  </p>
-                )}
+                >
+                  <option value="RU">Россия (RU)</option>
+                  <option value="AE">ОАЭ (AE)</option>
+                  <option value="KZ">Казахстан (KZ)</option>
+                </select>
               </div>
             </div>
+
+            <ShippingCalculator
+              weightKg={weightKg}
+              country="RU"
+              region={region || undefined}
+              onSelect={setShippingRate}
+            />
 
             <div>
               <label className="mb-1.5 block text-sm font-medium">
@@ -230,7 +320,7 @@ export default function CheckoutPage() {
               </label>
               <textarea
                 {...register("comment")}
-                rows={3}
+                rows={4}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
                 placeholder="Срок поставки, особые требования..."
               />
@@ -248,27 +338,29 @@ export default function CheckoutPage() {
 
           <div className="h-fit rounded-xl border border-border bg-card p-5 lg:col-span-2">
             <h2 className="mb-4 font-semibold">Ваша заявка</h2>
-            <ul className="mb-4 space-y-2 text-sm text-muted-foreground">
-              {items.slice(0, 5).map((item) => (
-                <li key={item.id} className="flex justify-between gap-2">
-                  <span className="line-clamp-1">
-                    {item.product?.name || "Товар"} × {item.quantity}
-                  </span>
-                </li>
-              ))}
-              {items.length > 5 && (
-                <li className="text-xs">и ещё {items.length - 5}…</li>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Позиций</span>
+                <span>{itemCount}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>Подытог</span>
+                <span>{formatMoney(goodsSubtotal)}</span>
+              </div>
+              <div className="flex justify-between text-muted-foreground">
+                <span>НДС / VAT</span>
+                <span>{formatMoney(taxCents)}</span>
+              </div>
+              {shippingCents > 0 && (
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Доставка</span>
+                  <span>{formatMoney(shippingCents)}</span>
+                </div>
               )}
-            </ul>
-            <div className="mb-2 flex justify-between text-sm text-muted-foreground">
-              <span>Позиций</span>
-              <span>{itemCount}</span>
-            </div>
-            <div className="flex justify-between text-lg font-bold">
-              <span>Сумма</span>
-              <span className="text-accent">
-                {formatMoney(subtotalCents)}
-              </span>
+              <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
+                <span>Итого</span>
+                <span className="text-accent">{formatMoney(grandTotal)}</span>
+              </div>
             </div>
           </div>
         </div>

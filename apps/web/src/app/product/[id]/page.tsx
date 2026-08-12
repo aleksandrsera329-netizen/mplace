@@ -1,13 +1,16 @@
 "use client"
 
 import { use } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useRouter } from "next/navigation"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Heart } from "lucide-react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { useCartStore } from "@/store/cart"
+import { useAuthStore } from "@/store/auth"
+import { cn } from "@/lib/utils"
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -23,7 +26,11 @@ export default function ProductPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
+  const { isAuthenticated, accessToken } = useAuthStore()
+  const qc = useQueryClient()
+  const loggedIn = isAuthenticated() || !!accessToken
 
   const {
     data: product,
@@ -32,6 +39,34 @@ export default function ProductPage({
   } = useQuery({
     queryKey: ["product", id],
     queryFn: () => api.product(id),
+  })
+
+  const { data: wishlist } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: () => api.wishlist(),
+    enabled: loggedIn,
+    staleTime: 30_000,
+  })
+
+  const inWishlist = Boolean(
+    wishlist?.some((w) => w.productId === id || w.product?.id === id),
+  )
+
+  const toggleWish = useMutation({
+    mutationFn: async () => {
+      if (!loggedIn) {
+        router.push("/login")
+        return
+      }
+      if (inWishlist) {
+        await api.removeFromWishlist(id)
+      } else {
+        await api.addToWishlist(id)
+      }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["wishlist"] })
+    },
   })
 
   if (isLoading) {
@@ -59,9 +94,16 @@ export default function ProductPage({
     )
   }
 
-  const stockClass = product.stock > 10 ? "text-success" : "text-danger"
+  const available =
+    product.availableStock ??
+    product.stocks?.reduce(
+      (sum, s) => sum + Math.max(0, (s.quantity || 0) - (s.reserved || 0)),
+      0,
+    ) ??
+    product.stock
+  const stockClass = available > 10 ? "text-success" : "text-danger"
   const stockText =
-    product.stock > 0 ? `В наличии: ${product.stock}` : "Нет в наличии"
+    available > 0 ? `В наличии: ${available}` : "Нет в наличии"
 
   return (
     <div className="min-h-screen">
@@ -124,11 +166,27 @@ export default function ProductPage({
               <div className="flex flex-wrap gap-3">
                 <Button
                   size="lg"
-                  disabled={product.stock <= 0}
+                  disabled={available <= 0}
                   onClick={() => void addItem(product.id)}
                   className="min-w-[180px]"
                 >
                   В корзину
+                </Button>
+
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="gap-2"
+                  disabled={toggleWish.isPending}
+                  onClick={() => toggleWish.mutate()}
+                >
+                  <Heart
+                    className={cn(
+                      "h-4 w-4",
+                      inWishlist && "fill-primary text-primary",
+                    )}
+                  />
+                  {inWishlist ? "В избранном" : "В избранное"}
                 </Button>
 
                 <Button size="lg" variant="outline" asChild>

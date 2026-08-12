@@ -1,0 +1,67 @@
+# Minimal Helm values — TZ2 Stage 2 Kubernetes scaffold
+replicaCount:
+  api: 2
+  web: 2
+
+image:
+  api:
+    repository: mplace-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  web:
+    repository: mplace-web
+    tag: latest
+    pullPolicy: IfNotPresent
+
+service:
+  api:
+    type: ClusterIP
+    port: 3000
+  web:
+    type: ClusterIP
+    port: 3000
+
+ingress:
+  enabled: true
+  className: nginx
+  host: mplace.local
+  tls: false
+
+env:
+  NODE_ENV: production
+  # Override via secrets in real clusters
+  DATABASE_URL: ""
+  REDIS_URL: ""
+  MEILISEARCH_URL: ""
+  STRIPE_SECRET_KEY: ""
+  SENTRY_DSN: ""
+  JWT_SECRET: ""
+
+resources:
+  api:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  web:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+postgres:
+  enabled: false # use external managed DB in prod
+redis:
+  enabled: false
+meilisearch:
+  enabled: false

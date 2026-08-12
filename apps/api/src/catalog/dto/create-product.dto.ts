@@ -67,6 +67,21 @@ export class CreateProductDto {
   imageUrl?: string;
 
   @IsOptional()
+  @IsString()
+  brand?: string;
+
+  /** Minimum order quantity */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  moq?: number;
+
+  /** Dynamic attributes for faceted search, e.g. { "color": "red" } */
+  @IsOptional()
+  attributes?: Record<string, unknown>;
+
+  @IsOptional()
   @IsEnum(ProductStatus)
   status?: ProductStatus;
 }

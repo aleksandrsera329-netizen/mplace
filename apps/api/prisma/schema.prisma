@@ -19,6 +19,26 @@ enum UserRole {
   CUSTOMER
 }
 
+/// Granular admin permissions (Stage 6)
+enum Permission {
+  users_read
+  users_write
+  shops_read
+  shops_verify
+  shops_suspend
+  orders_read
+  orders_refund
+  payments_read
+  payments_refund
+  payouts_read
+  payouts_approve
+  kyc_read
+  kyc_approve
+  disputes_read
+  disputes_resolve
+  audit_read
+}
+
 enum UserStatus {
   ACTIVE
   INACTIVE
@@ -59,11 +79,17 @@ enum PaymentStatus {
   CANCELLED
 }
 
+/// Stage 10: atomic reserve → process → complete
 enum PayoutStatus {
-  PENDING
-  APPROVED
+  PENDING // legacy open request
+  RESERVED // funds reserved in ledger
+  PROCESSING // sent to provider
+  APPROVED // legacy admin approval
   REJECTED
-  PAID
+  COMPLETED
+  PAID // legacy alias of COMPLETED
+  FAILED
+  CANCELLED
 }
 
 enum TicketPriority {
@@ -86,11 +112,15 @@ enum DisputeStatus {
   CLOSED
 }
 
+/// Refund 2.0 state machine (Stage 8). COMPLETED only via provider webhook.
 enum RefundStatus {
-  PENDING
+  REQUESTED
   APPROVED
-  REJECTED
+  PROVIDER_REQUESTED
+  PROVIDER_CONFIRMED
   COMPLETED
+  REJECTED
+  FAILED
 }
 
 enum LedgerAccount {
@@ -141,6 +171,212 @@ enum RfqOfferStatus {
   WITHDRAWN
 }
 
+/// Multi-tenant / white-label organization
+model Tenant {
+  id               String   @id @default(cuid())
+  name             String
+  slug             String   @unique // subdomain: acme.mplace.energy
+  domain           String?  @unique // custom domain (acme.com)
+  logoUrl          String?
+  faviconUrl       String?
+  primaryColor     String?  @default("#f59e0b")
+  secondaryColor   String?  @default("#0f172a")
+  accentColor      String?
+  emailFromName    String?
+  emailFromAddress String?
+  status           String   @default("ACTIVE") // ACTIVE | SUSPENDED | TRIAL
+  plan             String   @default("STARTER") // STARTER | BUSINESS | ENTERPRISE
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  users           User[]
+  shops           Shop[]
+  products        Product[]
+  orders          Order[]
+  rfqs            RfqRequest[]
+  invites         TenantInvite[]
+  warehouses      Warehouse[]
+  shippingMethods ShippingMethod[]
+  shippingZones   ShippingZone[]
+  taxRates        TaxRate[]
+  notifications   Notification[]
+  documents       Document[]
+
+  @@map("tenants")
+}
+
+enum DocumentType {
+  INVOICE // Счёт
+  ACT // Акт
+  UPD // УПД
+  OFFER // Коммерческое предложение
+}
+
+enum DocumentStatus {
+  DRAFT
+  ISSUED
+  PAID
+  CANCELLED
+}
+
+/// Business documents: invoice, act, UPD, commercial offer
+model Document {
+  id            String         @id @default(cuid())
+  tenantId      String?
+  orderId       String?
+  type          DocumentType
+  number        String // e.g. СЧ-2026-00045
+  status        DocumentStatus @default(DRAFT)
+  issuedAt      DateTime       @default(now())
+  dueDate       DateTime?
+  subtotalCents Int
+  taxCents      Int            @default(0)
+  totalCents    Int
+  currency      String         @default("RUB")
+  pdfUrl        String?
+  data          Json?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order  Order?  @relation(fields: [orderId], references: [id])
+
+  @@unique([tenantId, type, number])
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([type])
+  @@map("documents")
+}
+
+/// Stage 18: notification type catalog
+enum NotificationType {
+  ORDER_CREATED
+  ORDER_PAID
+  ORDER_SHIPPED
+  ORDER_CANCELLED
+  ORDER_STATUS // legacy alias
+  RFQ_CREATED
+  RFQ_OFFER_RECEIVED
+  RFQ_AWARDED
+  RFQ_NEW // legacy
+  RFQ_RESPONSE // legacy
+  PAYOUT_REQUESTED
+  PAYOUT_COMPLETED
+  PAYOUT // legacy
+  KYC_APPROVED
+  KYC_REJECTED
+  PASSWORD_CHANGED
+  INVITE
+  SYSTEM
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  // TELEGRAM later
+}
+
+/// In-app + channel notifications (Stage 18)
+model Notification {
+  id        String           @id @default(cuid())
+  tenantId  String?
+  userId    String
+  type      NotificationType
+  title     String
+  /// Body text (historically named `message`)
+  message   String
+  data      Json?
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+
+  tenant     Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, isRead])
+  @@index([userId, readAt])
+  @@index([userId, createdAt])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+/// Per-channel delivery attempt for a notification
+model NotificationDelivery {
+  id             String              @id @default(cuid())
+  notificationId String
+  channel        NotificationChannel
+  status         String // pending | sent | failed
+  sentAt         DateTime?
+  error          String?
+  createdAt      DateTime            @default(now())
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId])
+  @@index([status])
+  @@map("notification_deliveries")
+}
+
+/// VAT / НДС rates (per tenant + country)
+model TaxRate {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  name      String // "НДС 20%", "VAT 0%"
+  code      String? // "VAT20"
+  rate      Decimal  @db.Decimal(5, 4) // 0.20 = 20%
+  country   String // "RU", "AE"
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products ProductTax[]
+  orderItems OrderItem[]
+
+  @@index([tenantId])
+  @@index([country])
+  @@map("tax_rates")
+}
+
+model ProductTax {
+  id        String   @id @default(cuid())
+  productId String
+  taxRateId String
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  taxRate TaxRate @relation(fields: [taxRateId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, taxRateId])
+  @@map("product_taxes")
+}
+
+/// Invite a user into a tenant (email + token, 7 days)
+model TenantInvite {
+  id          String    @id @default(cuid())
+  tenantId    String
+  email       String
+  role        UserRole // CUSTOMER | MERCHANT | ADMIN
+  token       String    @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedBy User   @relation("InvitesSent", fields: [invitedById], references: [id])
+
+  @@unique([tenantId, email])
+  @@index([token])
+  @@index([tenantId])
+  @@map("tenant_invites")
+}
+
 model User {
   id                   String     @id @default(cuid())
   email                String     @unique
@@ -158,10 +394,15 @@ model User {
   passwordResetExpires DateTime?
   failedLoginAttempts  Int        @default(0)
   lockedUntil          DateTime?
+  /// TOTP MFA (also exposed as totpEnabled in API responses)
   twoFactorEnabled     Boolean    @default(false)
   twoFactorSecret      String?
+  /// When TOTP was successfully enabled/verified for admin MFA
+  totpVerifiedAt       DateTime?
   shopId               String?    @unique
   shop                 Shop?      @relation(fields: [shopId], references: [id])
+  tenantId             String?
+  tenant               Tenant?    @relation(fields: [tenantId], references: [id])
   orders               Order[]    @relation("CustomerOrders")
   tickets              Ticket[]   @relation("TicketAuthor")
   ticketMsgs           TicketMessage[]
@@ -175,26 +416,48 @@ model User {
   rfqRequests          RfqRequest[]  @relation("RfqBuyer")
   rfqOffers            RfqOffer[]    @relation("RfqOfferVendor")
   rfqMessages          RfqMessage[]
+  invitesSent          TenantInvite[] @relation("InvitesSent")
+  notifications        Notification[]
+  mediaAssets          MediaAsset[]
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 
   @@index([role])
   @@index([status])
   @@index([phone])
+  @@index([tenantId])
 }
 
+/// Role → permission matrix (ADMIN seeded; SUPER_ADMIN bypasses in guard)
+model RolePermission {
+  id         String     @id @default(uuid())
+  role       UserRole
+  permission Permission
+  createdAt  DateTime   @default(now())
+
+  @@unique([role, permission])
+  @@index([role])
+}
+
+/// Opaque refresh token (hashed). Family = one login session chain (rotation + reuse detection).
 model RefreshToken {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  expiresAt DateTime
-  revokedAt DateTime?
-  userAgent String?
-  ip        String?
-  createdAt DateTime @default(now())
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// One family = one login / device session; rotation keeps the same familyId
+  familyId   String
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  /// Next token id in the rotation chain
+  replacedBy String?
+  userAgent  String?
+  ip         String?
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
+  @@index([familyId])
+  @@index([tokenHash])
   @@index([expiresAt])
 }
 
@@ -208,7 +471,11 @@ model KycDocument {
   reviewedBy   User?        @relation("KycReviewer", fields: [reviewedById], references: [id])
   docType      KycDocType   @default(OTHER)
   fileName     String
-  filePath     String
+  /// Legacy public/path string — prefer mediaAsset for Stage 2 private KYC
+  filePath     String?
+  /// Owned private MediaAsset (visibility = KYC)
+  mediaAssetId String?      @unique
+  mediaAsset   MediaAsset?  @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
   status       KycDocStatus @default(PENDING)
   notes        String?
   reviewedAt   DateTime?
@@ -216,6 +483,7 @@ model KycDocument {
   updatedAt    DateTime     @updatedAt
 
   @@index([shopId, status])
+  @@index([status])
 }
 
 model Shop {
@@ -232,6 +500,8 @@ model Shop {
   payoutDetails   String?
   kycNotes        String?
   rejectionReason String?
+  tenantId        String?
+  tenant          Tenant?       @relation(fields: [tenantId], references: [id])
 
   // Stripe Connect (Express / Custom)
   stripeAccountId     String?   @unique
@@ -241,19 +511,162 @@ model Shop {
   payoutsEnabled      Boolean   @default(false)
   detailsSubmitted    Boolean   @default(false)
 
-  owner           User?
-  products        Product[]
-  orders          Order[]
-  payouts         PayoutRequest[]
-  ledger          LedgerEntry[]
-  kycDocuments    KycDocument[]
-  rfqMatches      RfqMatch[]
-  rfqOffers       RfqOffer[]
-  stripeConnected StripeConnectedAccount?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  owner             User?
+  products          Product[]
+  orders            Order[]
+  payouts           PayoutRequest[]
+  ledger            LedgerEntry[]
+  kycDocuments      KycDocument[]
+  rfqMatches        RfqMatch[]
+  rfqOffers         RfqOffer[]
+  stripeConnected   StripeConnectedAccount?
+  warehouses        Warehouse[]
+  shippingMethods   ShippingMethod[]
+  mediaAssets       MediaAsset[]
+  productImportJobs ProductImportJob[]
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   @@index([status])
+  @@index([tenantId])
+}
+
+enum MediaVisibility {
+  PUBLIC
+  PRIVATE
+  KYC // Stage 2 private KYC
+}
+
+/// Owned media assets — delete only by owner / shop / admin
+model MediaAsset {
+  id           String          @id @default(uuid())
+  ownerId      String?
+  shopId       String?
+  entityType   String // product, shop, kyc, user, other
+  entityId     String
+  storageKey   String          @unique
+  originalName String?
+  mimeType     String
+  sizeBytes    Int
+  visibility   MediaVisibility @default(PRIVATE)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  owner       User?         @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  shop        Shop?         @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  kycDocument KycDocument?
+
+  @@index([ownerId])
+  @@index([shopId])
+  @@index([entityType, entityId])
+  @@map("media_assets")
+}
+
+/// Multi-warehouse for merchants
+model Warehouse {
+  id         String   @id @default(cuid())
+  tenantId   String?
+  merchantId String // Shop
+  name       String
+  code       String? // e.g. MSK-01
+  address    String?
+  city       String?
+  country    String?  @default("RU")
+  isDefault  Boolean  @default(false)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant      Shop           @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  stocks        ProductStock[]
+  orderItems    OrderItem[]
+  shippingRates ShippingRate[]
+
+  @@unique([merchantId, code])
+  @@index([tenantId])
+  @@index([merchantId])
+  @@map("warehouses")
+}
+
+/// Shipping method (platform-global or per-merchant)
+model ShippingMethod {
+  id          String   @id @default(cuid())
+  tenantId    String?
+  merchantId  String? // null = platform method
+  name        String
+  code        String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  merchant Shop?        @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  rates  ShippingRate[]
+  orders Order[]
+
+  @@index([tenantId])
+  @@index([merchantId])
+  @@map("shipping_methods")
+}
+
+model ShippingZone {
+  id        String   @id @default(cuid())
+  tenantId  String?
+  name      String
+  countries String[] // ["RU"]
+  regions   String[] // ["Moscow", "Moscow Oblast"]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant?        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rates  ShippingRate[]
+
+  @@index([tenantId])
+  @@map("shipping_zones")
+}
+
+model ShippingRate {
+  id               String   @id @default(cuid())
+  shippingMethodId String
+  shippingZoneId   String
+  warehouseId      String?
+  minWeightKg      Float?   @default(0)
+  maxWeightKg      Float?
+  priceCents       Int
+  pricePerKgCents  Int?
+  estimatedDaysMin Int?
+  estimatedDaysMax Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  method    ShippingMethod @relation(fields: [shippingMethodId], references: [id], onDelete: Cascade)
+  zone      ShippingZone   @relation(fields: [shippingZoneId], references: [id], onDelete: Cascade)
+  warehouse Warehouse?     @relation(fields: [warehouseId], references: [id])
+
+  @@index([shippingMethodId])
+  @@index([shippingZoneId])
+  @@index([warehouseId])
+  @@map("shipping_rates")
+}
+
+/// Stock quantity of a product at a warehouse
+model ProductStock {
+  id          String   @id @default(cuid())
+  productId   String
+  warehouseId String
+  quantity    Int      @default(0)
+  reserved    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@index([warehouseId])
+  @@map("product_stocks")
 }
 
 /// History / snapshot of Connect onboarding for a shop
@@ -291,12 +704,20 @@ model Product {
   shop        Shop           @relation(fields: [shopId], references: [id])
   categoryId  String?
   category    Category?      @relation(fields: [categoryId], references: [id])
+  tenantId    String?
+  tenant      Tenant?        @relation(fields: [tenantId], references: [id])
   name        String
   slug        String
   description String?
   imageUrl    String?
   sku         String?
   gtin        String?
+  /// Stage 17 search facets
+  brand       String?
+  /// Minimum order quantity
+  moq         Int            @default(1)
+  /// Dynamic attribute key/values for faceted search, e.g. { "color": "red" }
+  attributes  Json?
   priceCents  Int
   currency    String         @default("USD")
   stock       Int            @default(0)
@@ -308,13 +729,72 @@ model Product {
   images      ProductImage[]
   documents   ProductDocument[]
   wishlists   WishlistItem[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  stocks       ProductStock[]
+  taxes        ProductTax[]
+  reservations InventoryReservation[]
+  /// Optional denormalized sum of ACTIVE reservations (also tracked via InventoryReservation)
+  reservedStock Int           @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@unique([shopId, slug])
   @@index([status])
   @@index([shopId])
   @@index([categoryId])
+  @@index([tenantId])
+  @@index([shopId, sku])
+  @@index([brand])
+}
+
+/// Stage 16: merchant bulk product import jobs
+model ProductImportJob {
+  id          String    @id @default(uuid())
+  shopId      String
+  shop        Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  fileName    String
+  storageKey  String
+  status      String // uploaded | validated | confirmed | processing | completed | failed
+  totalRows   Int?
+  validRows   Int?
+  errorRows   Int?
+  errors      Json?
+  preview     Json?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([shopId, status])
+  @@index([createdAt])
+  @@map("product_import_jobs")
+}
+
+/// Stage 11: order-level stock reservation (expires if unpaid)
+enum ReservationStatus {
+  ACTIVE
+  CONFIRMED
+  EXPIRED
+  RELEASED
+  CANCELLED
+}
+
+model InventoryReservation {
+  id          String            @id @default(uuid())
+  productId   String
+  orderId     String?
+  warehouseId String?
+  quantity    Int
+  status      ReservationStatus @default(ACTIVE)
+  expiresAt   DateTime
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([productId, status])
+  @@index([orderId])
+  @@index([expiresAt])
+  @@index([status, expiresAt])
+  @@map("inventory_reservations")
 }
 
 model ProductImage {
@@ -369,6 +849,8 @@ model RfqRequest {
   number      String          @unique
   buyerId     String
   buyer       User            @relation("RfqBuyer", fields: [buyerId], references: [id])
+  tenantId    String?
+  tenant      Tenant?         @relation(fields: [tenantId], references: [id])
   title       String
   description String?
   status      RfqStatus       @default(DRAFT)
@@ -386,6 +868,7 @@ model RfqRequest {
   @@index([buyerId, status])
   @@index([status])
   @@index([deadline])
+  @@index([tenantId])
 }
 
 model RfqItem {
@@ -502,22 +985,37 @@ model Order {
   customer              User?                @relation("CustomerOrders", fields: [customerId], references: [id])
   shopId                String
   shop                  Shop                 @relation(fields: [shopId], references: [id])
+  tenantId              String?
+  tenant                Tenant?              @relation(fields: [tenantId], references: [id])
   status                OrderStatus          @default(PENDING_PAYMENT)
   currency              String               @default("USD")
-  subtotalCents         Int
+  subtotalCents         Int // goods without tax
+  taxCents              Int                  @default(0)
   commissionCents       Int                  @default(0)
-  totalCents            Int
+  totalCents            Int // goods + tax + shipping
   customerEmail         String?
   customerName          String?
   paymentTokenHash      String?
   paymentTokenExpiresAt DateTime?
+  shippingMethodId      String?
+  shippingMethod        ShippingMethod?      @relation(fields: [shippingMethodId], references: [id])
+  shippingRateId        String?
+  shippingPriceCents    Int?                 @default(0)
+  shippingDaysMin       Int?
+  shippingDaysMax       Int?
   items                 OrderItem[]
   payments              Payment[]
   statusHistory         OrderStatusHistory[]
   disputes              Dispute[]
   refunds               Refund[]
   ledger                LedgerEntry[]
+  documents             Document[]
+  inventoryReservations InventoryReservation[]
   paymentRef            String?
+  /// Stage 12: CART (default) | RFQ
+  source                String               @default("CART")
+  rfqId                 String?
+  offerId               String?
   createdAt             DateTime             @default(now())
   updatedAt             DateTime             @updatedAt
 
@@ -525,18 +1023,30 @@ model Order {
   @@index([shopId])
   @@index([customerId])
   @@index([createdAt])
+  @@index([tenantId])
+  @@index([shippingMethodId])
+  @@index([rfqId])
+  @@index([source])
 }
 
 model OrderItem {
-  id             String   @id @default(cuid())
+  id             String     @id @default(cuid())
   orderId        String
-  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  order          Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId      String?
-  product        Product? @relation(fields: [productId], references: [id])
+  product        Product?   @relation(fields: [productId], references: [id])
   productName    String
   unitPriceCents Int
   quantity       Int
   lineTotalCents Int
+  taxRateId      String?
+  taxRate        TaxRate?   @relation(fields: [taxRateId], references: [id])
+  taxCents       Int        @default(0)
+  warehouseId    String?
+  warehouse      Warehouse? @relation(fields: [warehouseId], references: [id])
+
+  @@index([warehouseId])
+  @@index([taxRateId])
 }
 
 model OrderStatusHistory {
@@ -595,20 +1105,26 @@ model LedgerEntry {
 }
 
 model PayoutRequest {
-  id          String       @id @default(cuid())
-  shopId      String
-  shop        Shop         @relation(fields: [shopId], references: [id])
-  amountCents Int
-  currency    String       @default("USD")
-  status      PayoutStatus @default(PENDING)
-  method      String       @default("bank")
-  note        String?
-  adminNote   String?
-  processedAt DateTime?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id               String       @id @default(uuid())
+  shopId           String
+  shop             Shop         @relation(fields: [shopId], references: [id])
+  amountCents      Int
+  currency         String       @default("USD")
+  status           PayoutStatus @default(PENDING)
+  method           String       @default("bank")
+  note             String?
+  adminNote        String?
+  reservedAt       DateTime?
+  processedAt      DateTime?
+  completedAt      DateTime?
+  failureReason    String?
+  stripeTransferId String?      @unique
+  requestedById    String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   @@index([shopId, status])
+  @@index([status])
 }
 
 model Ticket {
@@ -655,18 +1171,31 @@ model Dispute {
 }
 
 model Refund {
-  id          String       @id @default(cuid())
-  orderId     String
-  order       Order        @relation(fields: [orderId], references: [id])
-  amountCents Int
-  reason      String?
-  status      RefundStatus @default(PENDING)
-  adminNote   String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                  String       @id @default(uuid())
+  orderId             String
+  order               Order        @relation(fields: [orderId], references: [id])
+  amountCents         Int
+  currency            String       @default("USD")
+  reason              String?
+  status              RefundStatus @default(REQUESTED)
+  adminNote           String?
+
+  requestedById       String?
+  approvedById        String?
+  approvedAt          DateTime?
+
+  stripeRefundId      String?      @unique
+  providerRequestedAt DateTime?
+  providerConfirmedAt DateTime?
+  completedAt         DateTime?
+  failureReason       String?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([status])
   @@index([orderId])
+  @@index([stripeRefundId])
 }
 
 model AuditLog {
@@ -683,4 +1212,123 @@ model AuditLog {
   @@index([actorId])
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+/// Transactional outbox for reliable domain event publishing (TZ2 Stage 3)
+model Outbox {
+  id          String    @id @default(cuid())
+  eventType   String
+  payload     Json
+  status      String    @default("PENDING") // PENDING | PROCESSING | DONE | FAILED
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+  attempts    Int       @default(0)
+  lastError   String?
+
+  @@index([status, createdAt])
+  @@map("outbox")
+}
+
+/// Idempotency keys for critical mutations (checkout, status change)
+model IdempotencyKey {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  userId      String?
+  endpoint    String
+  requestHash String?
+  response    Json?
+  status      String   @default("PROCESSING") // PROCESSING | COMPLETED | FAILED
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+  @@map("idempotency_keys")
+}
+
+/// Stage 9: double-entry financial ledger
+enum FinancialTransactionType {
+  PAYMENT
+  REFUND
+  PAYOUT
+  COMMISSION
+  ADJUSTMENT
+  CHARGEBACK
+}
+
+enum FinancialTransactionStatus {
+  PENDING
+  POSTED
+  REVERSED
+  FAILED
+}
+
+enum AccountType {
+  PLATFORM_CLEARING
+  PLATFORM_COMMISSION
+  VENDOR_PAYABLE
+  VENDOR_AVAILABLE
+  CUSTOMER_BALANCE
+}
+
+enum EntryDirection {
+  DEBIT
+  CREDIT
+}
+
+model FinancialTransaction {
+  id            String                     @id @default(uuid())
+  type          FinancialTransactionType
+  referenceType String // Order, Refund, Payout
+  referenceId   String
+  currency      String                     @default("USD")
+  status        FinancialTransactionStatus @default(PENDING)
+  description   String?
+  createdAt     DateTime                   @default(now())
+  postedAt      DateTime?
+
+  entries FinancialEntry[]
+
+  @@index([referenceType, referenceId])
+  @@index([type])
+  @@index([status])
+  @@map("financial_transactions")
+}
+
+model FinancialEntry {
+  id            String          @id @default(uuid())
+  transactionId String
+  account       AccountType
+  shopId        String?
+  direction     EntryDirection
+  amountCents   Int // always positive
+  currency      String          @default("USD")
+  createdAt     DateTime        @default(now())
+
+  transaction FinancialTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@index([transactionId])
+  @@index([account, shopId])
+  @@index([shopId])
+  @@map("financial_entries")
+}
+
+/// Durable Stripe (and future providers) webhook log — Stage 7 idempotency
+model PaymentWebhookEvent {
+  id           String    @id @default(uuid())
+  provider     String // "stripe"
+  externalId   String // Stripe event.id
+  eventType    String // payment_intent.succeeded, charge.refunded, …
+  status       String // received | processed | failed | ignored
+  payloadHash  String? // sha256 of raw body
+  payload      Json?
+  receivedAt   DateTime  @default(now())
+  processedAt  DateTime?
+  errorMessage String?
+  orderId      String?
+
+  @@unique([provider, externalId])
+  @@index([eventType])
+  @@index([status])
+  @@index([orderId])
+  @@map("payment_webhook_events")
 }

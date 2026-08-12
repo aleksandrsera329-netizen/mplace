@@ -308,10 +308,11 @@
         }
         body.innerHTML = cart.items.map((item) => {
           const unit = item.product?.priceCents ?? 0;
+          const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
           return `<div class="cart-item">
             <div style="flex:1">
-              <div style="font-weight:600">${item.product?.name || ''}</div>
-              <div style="font-size:13px;opacity:0.7">${item.quantity} × ${I.formatMoney(unit)}</div>
+              <div style="font-weight:600">${e(item.product?.name || '')}</div>
+              <div style="font-size:13px;opacity:0.7">${e(item.quantity)} × ${e(I.formatMoney(unit))}</div>
             </div>
           </div>`;
         }).join('');
@@ -378,43 +379,53 @@
         I.applyDocument();
       } catch (err) {
         console.error(err);
+        const eMsg = typeof escapeHtml === 'function' ? escapeHtml(err.message || '') : String(err.message || '');
         document.getElementById('productContent').innerHTML =
-          '<p style="color:var(--danger)">Ошибка загрузки: ' + (err.message || '') + '</p>';
+          '<p style="color:var(--danger)">Ошибка загрузки: ' + eMsg + '</p>';
       }
+    }
+
+    function safeImgUrl(url) {
+      const raw = String(url || '');
+      if (!/^(https?:|\/|data:image\/)/i.test(raw)) return '';
+      return typeof escapeAttr === 'function' ? escapeAttr(raw) : raw.replace(/"/g, '&quot;');
     }
 
     function renderProduct(p) {
       document.getElementById('breadcrumbName').textContent = p.name;
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+      const a = typeof escapeAttr === 'function' ? escapeAttr : e;
 
       const stockText = p.stock > 0
-        ? `<span style="color:var(--success)">В наличии: ${p.stock} шт.</span>`
+        ? `<span style="color:var(--success)">В наличии: ${e(p.stock)} шт.</span>`
         : `<span style="color:var(--danger)">Нет в наличии</span>`;
+      const imgSrc = safeImgUrl(p.imageUrl);
 
       document.getElementById('productContent').innerHTML = `
         <div class="product-gallery">
           <div class="main-image">
-            ${p.imageUrl
-              ? `<img src="${p.imageUrl}" alt="${String(p.name || '').replace(/"/g, '&quot;')}">`
+            ${imgSrc
+              ? `<img src="${imgSrc}" alt="${a(p.name || '')}">`
               : '🛢️'}
           </div>
         </div>
 
         <div class="product-info">
           <div class="product-meta-row">
-            <span>${p.category?.name || ''}</span>
+            <span>${e(p.category?.name || '')}</span>
             <span>•</span>
-            <span>${p.shop?.name || ''}</span>
+            <span>${e(p.shop?.name || '')}</span>
             <span>•</span>
-            <span>SKU: ${p.sku || '—'}</span>
+            <span>SKU: ${e(p.sku || '—')}</span>
           </div>
 
-          <h1>${p.name}</h1>
+          <h1>${e(p.name)}</h1>
           <div>${stockText}</div>
-          <div class="product-price-big">${I.formatMoney(p.priceCents)}</div>
+          <div class="product-price-big">${e(I.formatMoney(p.priceCents))}</div>
 
           <div class="qty-control">
             <button type="button" id="qtyDec">−</button>
-            <input type="number" id="qtyInput" value="1" min="1" max="${p.stock || 999}">
+            <input type="number" id="qtyInput" value="1" min="1" max="${Number(p.stock) || 999}">
             <button type="button" id="qtyInc">+</button>
           </div>
 
@@ -425,23 +436,23 @@
 
           <div class="product-description">
             <h2>Описание</h2>
-            <p style="line-height:1.7; color:var(--text-muted)">${p.description || 'Описание отсутствует'}</p>
+            <p style="line-height:1.7; color:var(--text-muted)">${e(p.description || 'Описание отсутствует')}</p>
             <div class="specs-grid">
               <div class="spec-item">
                 <span>Артикул (SKU)</span>
-                <strong>${p.sku || '—'}</strong>
+                <strong>${e(p.sku || '—')}</strong>
               </div>
               <div class="spec-item">
                 <span>GTIN</span>
-                <strong>${p.gtin || '—'}</strong>
+                <strong>${e(p.gtin || '—')}</strong>
               </div>
               <div class="spec-item">
                 <span>Поставщик</span>
-                <strong>${p.shop?.name || '—'}</strong>
+                <strong>${e(p.shop?.name || '—')}</strong>
               </div>
               <div class="spec-item">
                 <span>Категория</span>
-                <strong>${p.category?.name || '—'}</strong>
+                <strong>${e(p.category?.name || '—')}</strong>
               </div>
             </div>
           </div>
@@ -494,20 +505,26 @@
         if (!similar.length) return;
 
         document.getElementById('similarSection').style.display = 'block';
-        document.getElementById('similarGrid').innerHTML = similar.map((p) => `
-          <article class="product-card" style="opacity:1;transform:none;cursor:pointer;" onclick="location.href='${productUrl(p)}'">
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+        const a = typeof escapeAttr === 'function' ? escapeAttr : e;
+        document.getElementById('similarGrid').innerHTML = similar.map((p) => {
+          const href = productUrl(p);
+          const imgSrc = safeImgUrl(p.imageUrl);
+          return `
+          <article class="product-card" style="opacity:1;transform:none;cursor:pointer;" onclick="location.href='${a(href)}'">
             <div class="product-image">
-              ${p.imageUrl ? `<img src="${p.imageUrl}" alt="" style="max-height:100px;">` : '🛢️'}
+              ${imgSrc ? `<img src="${imgSrc}" alt="" style="max-height:100px;">` : '🛢️'}
             </div>
             <div class="product-body">
-              <div class="product-category">${p.category?.name || ''}</div>
-              <h3 class="product-title">${p.name}</h3>
+              <div class="product-category">${e(p.category?.name || '')}</div>
+              <h3 class="product-title">${e(p.name)}</h3>
               <div class="product-footer">
-                <div class="product-price">${I.formatMoney(p.priceCents)}</div>
+                <div class="product-price">${e(I.formatMoney(p.priceCents))}</div>
               </div>
             </div>
           </article>
-        `).join('');
+        `;
+        }).join('');
       } catch (e) {}
     }
 

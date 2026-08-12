@@ -233,6 +233,8 @@
           return;
         }
 
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+        const a = typeof escapeAttr === 'function' ? escapeAttr : e;
         content.innerHTML = `
           <div class="orders-list">
             ${list.map((order) => {
@@ -247,18 +249,18 @@
               const shop = order.shop?.name || '';
 
               return `
-                <div class="order-card" data-id="${order.id}">
+                <div class="order-card" data-id="${a(order.id)}">
                   <div class="order-top">
                     <div>
-                      <div class="order-number">${order.orderNumber || order.id}</div>
-                      <div style="font-size:0.9rem; color:var(--text-muted); margin-top:4px;">${date}</div>
+                      <div class="order-number">${e(order.orderNumber || order.id)}</div>
+                      <div style="font-size:0.9rem; color:var(--text-muted); margin-top:4px;">${e(date)}</div>
                     </div>
-                    <div class="order-status ${status.class}">${status.text}</div>
+                    <div class="order-status ${e(status.class)}">${e(status.text)}</div>
                   </div>
                   <div class="order-meta">
-                    ${shop ? `<div>Поставщик: <strong>${shop}</strong></div>` : ''}
-                    <div>Позиций: <strong>${itemsCount}</strong></div>
-                    <div class="order-total">${I.formatMoney(order.totalCents || order.subtotalCents || 0)}</div>
+                    ${shop ? `<div>Поставщик: <strong>${e(shop)}</strong></div>` : ''}
+                    <div>Позиций: <strong>${e(itemsCount)}</strong></div>
+                    <div class="order-total">${e(I.formatMoney(order.totalCents || order.subtotalCents || 0))}</div>
                   </div>
                 </div>
               `;
@@ -286,11 +288,12 @@
             </div>
           `;
         } else {
+          const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
           content.innerHTML = `
             <div class="state-block">
               <div class="icon">⚠️</div>
               <h2>Ошибка загрузки</h2>
-              <p>${err.message || 'Не удалось получить список заявок'}</p>
+              <p>${e(err.message || 'Не удалось получить список заявок')}</p>
               <button type="button" class="btn-primary" id="retryOrders">Попробовать снова</button>
             </div>
           `;

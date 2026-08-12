@@ -1,4 +1,10 @@
-import { Controller, Get, OnModuleDestroy } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  OnModuleDestroy,
+  Res,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -9,8 +15,12 @@ import {
   PrismaHealthIndicator,
 } from '@nestjs/terminus';
 import { SkipThrottle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import Redis from 'ioredis';
+import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
+
+type DepStatus = 'up' | 'down' | 'skipped';
 
 @ApiTags('Health')
 @SkipThrottle()
@@ -23,6 +33,7 @@ export class HealthController implements OnModuleDestroy {
     private readonly prismaHealth: PrismaHealthIndicator,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly metrics: MetricsService,
   ) {
     const redisUrl = this.config.get<string>('REDIS_URL');
     if (redisUrl) {
@@ -47,20 +58,77 @@ export class HealthController implements OnModuleDestroy {
   }
 
   /**
-   * Terminus health: database + optional Redis.
+   * Liveness: process is up (k8s livenessProbe).
    * GET /api/health
    */
   @Get()
+  @ApiOperation({ summary: 'Liveness probe (process up)' })
+  live() {
+    return this.livenessBody();
+  }
+
+  /** Alias: GET /api/health/live */
+  @Get('live')
+  @ApiOperation({ summary: 'Liveness probe alias' })
+  liveAlias() {
+    return this.livenessBody();
+  }
+
+  private livenessBody() {
+    return {
+      status: 'ok',
+      probe: 'liveness',
+      service: 'mplace-api',
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Readiness: Postgres + Redis + Meilisearch (when configured).
+   * GET /api/health/ready
+   * Returns 503 if any required dependency is down.
+   */
+  @Get('ready')
+  @ApiOperation({
+    summary: 'Readiness probe (Postgres + Redis + Meilisearch)',
+  })
+  async ready(@Res({ passthrough: true }) res: Response) {
+    const checks = await this.probeDependencies(true);
+    const ready = checks.ready;
+    res.status(ready ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    return {
+      status: ready ? 'ok' : 'not_ready',
+      probe: 'readiness',
+      service: 'mplace-api',
+      ...checks,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Full Terminus health (compat): DB hard-fail; Redis hard-fail if configured.
+   * GET /api/health/full
+   */
+  @Get('full')
   @HealthCheck()
-  @ApiOperation({ summary: 'Health check (database + Redis if configured)' })
+  @ApiOperation({
+    summary: 'Full health check (Terminus: database + Redis + Meili)',
+  })
   check() {
-    const checks = [
+    const checks: Array<() => Promise<HealthIndicatorResult>> = [
       () => this.prismaHealth.pingCheck('database', this.prisma),
     ];
 
     if (this.redis) {
       checks.push(() => this.checkRedis());
+    } else {
+      checks.push(async () => ({
+        redis: { status: 'up', message: 'not configured' },
+      }));
     }
+
+    checks.push(() => this.checkMeilisearch(false));
+    checks.push(async () => this.checkStripeConfig());
 
     return this.health.check(checks);
   }
@@ -72,8 +140,29 @@ export class HealthController implements OnModuleDestroy {
   @Get('status')
   @ApiOperation({ summary: 'Simple status JSON for UI badge' })
   async status() {
-    let database: 'up' | 'down' = 'down';
-    let redis: 'up' | 'down' | 'skipped' = 'skipped';
+    const checks = await this.probeDependencies(false);
+    const ok = checks.database === 'up' && checks.redis !== 'down';
+    return {
+      status: ok ? 'ok' : 'degraded',
+      service: 'mplace-api',
+      database: checks.database,
+      redis: checks.redis,
+      meilisearch: checks.meilisearch,
+      stripe: checks.stripe,
+      ready: checks.ready,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Probe deps and update Prometheus gauges.
+   * @param strictMeili — if true and MEILISEARCH_URL set, down Meili fails readiness
+   */
+  private async probeDependencies(strictMeili: boolean) {
+    let database: DepStatus = 'down';
+    let redis: DepStatus = 'skipped';
+    let meilisearch: DepStatus = 'skipped';
+    let stripe: 'configured' | 'missing' = 'missing';
 
     try {
       await this.prisma.$queryRaw`SELECT 1`;
@@ -81,6 +170,7 @@ export class HealthController implements OnModuleDestroy {
     } catch {
       database = 'down';
     }
+    this.metrics.setDependency('postgres', database === 'up');
 
     if (this.redis) {
       try {
@@ -93,14 +183,99 @@ export class HealthController implements OnModuleDestroy {
         redis = 'down';
       }
     }
+    this.metrics.setDependency(
+      'redis',
+      redis === 'up' || redis === 'skipped',
+    );
 
-    const ok = database === 'up' && redis !== 'down';
+    const meiliUrl = this.config.get<string>('MEILISEARCH_URL');
+    if (meiliUrl) {
+      try {
+        const res = await fetch(`${meiliUrl.replace(/\/$/, '')}/health`, {
+          signal: AbortSignal.timeout(2500),
+        });
+        meilisearch = res.ok ? 'up' : 'down';
+      } catch {
+        meilisearch = 'down';
+      }
+    }
+    this.metrics.setDependency(
+      'meilisearch',
+      meilisearch === 'up' || meilisearch === 'skipped',
+    );
+
+    if (this.config.get<string>('STRIPE_SECRET_KEY')) {
+      stripe = 'configured';
+    }
+
+    const redisOk = redis !== 'down'; // skipped is OK
+    const meiliOk =
+      !strictMeili || meilisearch === 'skipped' || meilisearch === 'up';
+    // If Meili configured and strict readiness — require up
+    const ready =
+      database === 'up' &&
+      redisOk &&
+      (strictMeili
+        ? meilisearch === 'skipped' || meilisearch === 'up'
+        : true);
+
     return {
-      status: ok ? 'ok' : 'degraded',
-      service: 'mplace-api',
       database,
       redis,
-      timestamp: new Date().toISOString(),
+      meilisearch,
+      stripe,
+      ready: ready && meiliOk,
+    };
+  }
+
+  private async checkMeilisearch(
+    failHard: boolean,
+  ): Promise<HealthIndicatorResult> {
+    const key = 'meilisearch';
+    const meiliUrl = this.config.get<string>('MEILISEARCH_URL');
+    if (!meiliUrl) {
+      return { [key]: { status: 'up', message: 'not configured' } };
+    }
+    try {
+      const res = await fetch(`${meiliUrl.replace(/\/$/, '')}/health`, {
+        signal: AbortSignal.timeout(2500),
+      });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return { [key]: { status: 'up' } };
+    } catch (e) {
+      if (failHard) {
+        const result: HealthIndicatorResult = {
+          [key]: { status: 'down', message: (e as Error).message },
+        };
+        throw new HealthCheckError('Meilisearch check failed', result);
+      }
+      return {
+        [key]: {
+          status: 'up',
+          message: `degraded: ${(e as Error).message}`,
+        },
+      };
+    }
+  }
+
+  private checkStripeConfig(): HealthIndicatorResult {
+    const key = 'stripe';
+    const secret = this.config.get<string>('STRIPE_SECRET_KEY');
+    if (!secret) {
+      return {
+        [key]: {
+          status: 'up',
+          message: 'STRIPE_SECRET_KEY not set (demo mode)',
+        },
+      };
+    }
+    return {
+      [key]: {
+        status: 'up',
+        mode: secret.startsWith('sk_live') ? 'live' : 'test_or_other',
+      },
     };
   }
 

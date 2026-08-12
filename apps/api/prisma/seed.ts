@@ -1,5 +1,6 @@
 import {
   OrderStatus,
+  Permission,
   PrismaClient,
   ProductStatus,
   ShopStatus,
@@ -9,6 +10,40 @@ import {
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+
+/** Stage 6: full admin permission set for ADMIN + SUPER_ADMIN (guard bypasses SUPER_ADMIN) */
+const ADMIN_PERMISSIONS: Permission[] = [
+  Permission.users_read,
+  Permission.users_write,
+  Permission.shops_read,
+  Permission.shops_verify,
+  Permission.shops_suspend,
+  Permission.orders_read,
+  Permission.orders_refund,
+  Permission.payments_read,
+  Permission.payments_refund,
+  Permission.payouts_read,
+  Permission.payouts_approve,
+  Permission.kyc_read,
+  Permission.kyc_approve,
+  Permission.disputes_read,
+  Permission.disputes_resolve,
+  Permission.audit_read,
+];
+
+async function seedRolePermissions() {
+  for (const role of [UserRole.ADMIN, UserRole.SUPER_ADMIN] as const) {
+    for (const permission of ADMIN_PERMISSIONS) {
+      await prisma.rolePermission.upsert({
+        where: {
+          role_permission: { role, permission },
+        },
+        create: { role, permission },
+        update: {},
+      });
+    }
+  }
+}
 
 async function main() {
   const passwordHash = await bcrypt.hash('123456', 12);
@@ -48,9 +83,13 @@ async function main() {
   await wipe(() => prisma.category.deleteMany());
   await wipe(() => prisma.kycDocument.deleteMany());
   await wipe(() => prisma.refreshToken.deleteMany());
+  await wipe(() => prisma.rolePermission.deleteMany());
   await wipe(() => prisma.auditLog.deleteMany());
   await wipe(() => prisma.user.deleteMany());
   await wipe(() => prisma.shop.deleteMany());
+
+  // Stage 6: role → permission matrix
+  await seedRolePermissions();
 
   // Oil & Gas suppliers
   const drillTech = await prisma.shop.create({

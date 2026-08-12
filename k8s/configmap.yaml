@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mplace-config
+  namespace: mplace
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  # Browser-facing URL should be overridden per environment (ingress host)
+  NEXT_PUBLIC_API_URL: "http://mplace.local/api"
+  MEILISEARCH_URL: "http://meilisearch:7700"
+  STORAGE_PROVIDER: "local"

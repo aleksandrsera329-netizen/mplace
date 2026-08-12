@@ -1,8 +1,15 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Heart } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/store/cart"
+import { useAuthStore } from "@/store/auth"
+import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
+import { useI18n } from "@/i18n/store"
 
 interface Product {
   id: string
@@ -10,8 +17,8 @@ interface Product {
   priceCents: number
   stock: number
   imageUrl?: string | null
-  category?: { name: string }
-  shop?: { name: string }
+  category?: { name: string } | null
+  shop?: { name: string } | null
 }
 
 function formatMoney(cents: number) {
@@ -23,10 +30,48 @@ function formatMoney(cents: number) {
 }
 
 export function ProductCard({ product }: { product: Product }) {
+  const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
+  const { isAuthenticated, accessToken } = useAuthStore()
+  const { t } = useI18n()
+  const qc = useQueryClient()
+  const loggedIn = isAuthenticated() || !!accessToken
+
+  const { data: wishlist } = useQuery({
+    queryKey: ["wishlist"],
+    queryFn: () => api.wishlist(),
+    enabled: loggedIn,
+    staleTime: 30_000,
+  })
+
+  const inWishlist = Boolean(
+    wishlist?.some(
+      (w) => w.productId === product.id || w.product?.id === product.id,
+    ),
+  )
+
+  const toggleWish = useMutation({
+    mutationFn: async () => {
+      if (!isAuthenticated() && !accessToken) {
+        router.push("/login")
+        return
+      }
+      if (inWishlist) {
+        await api.removeFromWishlist(product.id)
+      } else {
+        await api.addToWishlist(product.id)
+      }
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["wishlist"] })
+    },
+  })
+
   const stockClass = product.stock > 10 ? "text-success" : "text-danger"
   const stockText =
-    product.stock > 0 ? `В наличии: ${product.stock}` : "Нет в наличии"
+    product.stock > 0
+      ? `${t("product.inStock")}: ${product.stock}`
+      : t("product.outOfStock")
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg">
@@ -50,9 +95,31 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
         {product.stock > 0 && product.stock < 8 && (
           <span className="absolute left-3 top-3 rounded-md bg-primary px-2 py-0.5 text-xs font-bold text-primary-foreground">
-            Мало
+            {t("product.lowStock")}
           </span>
         )}
+        <button
+          type="button"
+          title={
+            inWishlist ? t("product.inWishlist") : t("product.wishlist")
+          }
+          className="absolute right-3 top-3 z-10 rounded-full bg-background/80 p-2 hover:bg-background"
+          disabled={toggleWish.isPending}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            toggleWish.mutate()
+          }}
+        >
+          <Heart
+            className={cn(
+              "h-4 w-4",
+              inWishlist
+                ? "fill-primary text-primary"
+                : "text-muted-foreground",
+            )}
+          />
+        </button>
       </div>
 
       <div className="flex flex-1 flex-col p-4">
@@ -78,7 +145,7 @@ export function ProductCard({ product }: { product: Product }) {
             disabled={product.stock <= 0}
             onClick={() => void addItem(product.id)}
           >
-            В корзину
+            {t("product.addToCart")}
           </Button>
         </div>
       </div>

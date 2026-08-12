@@ -233,18 +233,19 @@
         }
         body.innerHTML = cart.items.map((item) => {
           const unit = item.product?.priceCents ?? item.priceCents ?? 0;
+          const e = escapeHtml;
           return `
           <div class="cart-item">
             <div style="flex:1">
-              <div style="font-weight:600">${item.product?.name || 'Товар'}</div>
-              <div style="font-size:13px; opacity:0.7">${item.product?.shop?.name || ''} · ${I.formatMoney(unit)}</div>
+              <div style="font-weight:600">${e(item.product?.name || 'Товар')}</div>
+              <div style="font-size:13px; opacity:0.7">${e(item.product?.shop?.name || '')} · ${e(I.formatMoney(unit))}</div>
               <div style="margin-top:6px">
-                <button type="button" class="qty-btn" data-dec="${item.id}">−</button>
-                <span style="margin:0 8px">${item.quantity}</span>
-                <button type="button" class="qty-btn" data-inc="${item.id}">+</button>
+                <button type="button" class="qty-btn" data-dec="${e(item.id)}">−</button>
+                <span style="margin:0 8px">${e(item.quantity)}</span>
+                <button type="button" class="qty-btn" data-inc="${e(item.id)}">+</button>
               </div>
             </div>
-            <div style="font-weight:700;color:var(--accent)">${I.formatMoney(unit * item.quantity)}</div>
+            <div style="font-weight:700;color:var(--accent)">${e(I.formatMoney(unit * item.quantity))}</div>
           </div>`;
         }).join('');
       } catch (e) {
@@ -273,7 +274,11 @@
     function productImageHtml(p, i) {
       const fallback = icons[i % icons.length];
       if (p.imageUrl) {
-        return `<img src="${p.imageUrl}" alt="${String(p.name || '').replace(/"/g, '&quot;')}" loading="lazy" onerror="this.replaceWith(document.createTextNode('${fallback}'))" />`;
+        // Validate URL protocol — block javascript:
+        const raw = String(p.imageUrl || '');
+        const safeUrl = /^(https?:|\/|data:image\/)/i.test(raw) ? escapeAttr(raw) : '';
+        if (!safeUrl) return fallback;
+        return `<img src="${safeUrl}" alt="${escapeAttr(p.name || '')}" loading="lazy" onerror="this.style.display='none'" />`;
       }
       return fallback;
     }
@@ -296,6 +301,7 @@
       }
 
       grid.innerHTML = products.map((p, i) => {
+        const e = escapeHtml;
         const stockClass = p.stock > 10 ? 'stock-ok' : 'stock-low';
         const stockText = p.stock > 0
           ? (I.t('product.stock', { n: p.stock }) || `В наличии: ${p.stock}`)
@@ -306,22 +312,22 @@
 
         const href = '/product.html?id=' + encodeURIComponent(p.slug || p.id);
         return `
-          <article class="product-card" style="cursor:pointer" onclick="location.href='${href}'">
+          <article class="product-card" style="cursor:pointer" onclick="location.href='${escapeAttr(href)}'">
             <div class="product-image">
               ${productImageHtml(p, i)}
               ${lowBadge}
             </div>
             <div class="product-body">
-              <div class="product-category">${p.category?.name || I.t('common.general') || ''}</div>
-              <h3 class="product-title">${p.name}</h3>
+              <div class="product-category">${e(p.category?.name || I.t('common.general') || '')}</div>
+              <h3 class="product-title">${e(p.name)}</h3>
               <div class="product-meta">
-                ${p.shop?.name || ''} · <span class="${stockClass}">${stockText}</span>
+                ${e(p.shop?.name || '')} · <span class="${stockClass}">${e(stockText)}</span>
               </div>
               <div class="product-footer">
                 <div class="product-price">${I.formatMoney(p.priceCents)}</div>
                 <div style="display:flex;gap:8px;align-items:center;">
-                  <button type="button" class="btn-add btn-wish" data-id="${p.id}" title="В избранное" onclick="event.stopPropagation(); toggleWishlist(this)" style="min-width:40px;padding:8px 10px;">♡</button>
-                  <button type="button" class="btn-add" data-id="${p.id}" onclick="event.stopPropagation()">${I.t('product.addToCart') || 'В заявку'}</button>
+                  <button type="button" class="btn-add btn-wish" data-id="${escapeAttr(p.id)}" title="В избранное" onclick="event.stopPropagation(); toggleWishlist(this)" style="min-width:40px;padding:8px 10px;">♡</button>
+                  <button type="button" class="btn-add" data-id="${escapeAttr(p.id)}" onclick="event.stopPropagation()">${e(I.t('product.addToCart') || 'В заявку')}</button>
                 </div>
               </div>
             </div>

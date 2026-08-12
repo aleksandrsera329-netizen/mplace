@@ -260,25 +260,26 @@
       const div = document.createElement('div');
       div.className = 'item-row';
       div.id = `item-${id}`;
+      const a = typeof escapeAttr === 'function' ? escapeAttr : (s) => String(s ?? '').replace(/"/g, '&quot;');
       div.innerHTML = `
         <button class="remove-btn" onclick="removeItem(${id})" title="Удалить">×</button>
         <div class="item-grid">
           <div class="form-group" style="margin:0;">
             <label>Название позиции *</label>
-            <input type="text" class="item-name" value="${data.name || ''}" placeholder="Gate Valve 6&quot; Class 600">
+            <input type="text" class="item-name" value="${a(data.name || '')}" placeholder="Gate Valve 6&quot; Class 600">
           </div>
           <div class="form-group" style="margin:0;">
             <label>Количество *</label>
-            <input type="number" class="item-qty" value="${data.quantity || 1}" min="1">
+            <input type="number" class="item-qty" value="${Number(data.quantity) || 1}" min="1">
           </div>
           <div class="form-group" style="margin:0;">
             <label>Ед. изм.</label>
-            <input type="text" class="item-unit" value="${data.unit || 'шт'}" placeholder="шт">
+            <input type="text" class="item-unit" value="${a(data.unit || 'шт')}" placeholder="шт">
           </div>
         </div>
         <div class="form-group" style="margin-top:12px; margin-bottom:0;">
           <label>Спецификация / требования</label>
-          <input type="text" class="item-specs" value="${data.specs || ''}" placeholder="API 6A, материал и т.д.">
+          <input type="text" class="item-specs" value="${a(data.specs || '')}" placeholder="API 6A, материал и т.д.">
         </div>
       `;
       document.getElementById('itemsList').appendChild(div);
@@ -345,13 +346,14 @@
       try {
         const rfq = await MplaceApi.createRfq(payload);
         
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
         document.getElementById('rfqContent').innerHTML = `
           <div class="state-block">
             <div style="font-size:4rem; margin-bottom:20px;">✅</div>
             <h2>RFQ успешно создан!</h2>
             <p style="color:var(--text-muted); margin:12px 0 8px;">Номер заявки:</p>
             <div style="font-size:1.4rem; font-weight:700; color:var(--primary); margin-bottom:28px;">
-              ${rfq.number || rfq.id || '—'}
+              ${e(rfq.number || rfq.id || '—')}
             </div>
             <p style="color:var(--text-muted); margin-bottom:32px;">
               Поставщики получили уведомление и скоро пришлют предложения.

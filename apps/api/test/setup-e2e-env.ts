@@ -21,11 +21,15 @@ if (
 }
 
 process.env.E2E_DATABASE_URL = process.env.DATABASE_URL;
+// Never NODE_ENV=production in e2e — Stage 4 fail-fast would require Stripe etc.
+process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET =
   process.env.JWT_SECRET || 'e2e_jwt_secret_32_chars_minimum_xx';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+process.env.MEILI_MASTER_KEY =
+  process.env.MEILI_MASTER_KEY || 'e2e_meili_master_key_16';
 process.env.PAYMENT_PROVIDER = process.env.PAYMENT_PROVIDER || 'dev';
 process.env.ALLOW_DEV_PAYMENTS = 'true';
-process.env.NODE_ENV = process.env.NODE_ENV || 'development';
 process.env.DEV_PAYMENT_SECRET =
   process.env.DEV_PAYMENT_SECRET || 'e2e_dev_secret';
 process.env.LOCAL_DEV_CONFIRM_LOOPBACK = 'false';

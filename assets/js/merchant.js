@@ -13,6 +13,17 @@
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
+  /** Stage 21 XSS — escape untrusted strings before innerHTML templates */
+  function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   if (I) {
     I.mountSwitcher('#localeMount');
     window.addEventListener('mplace:locale', () => {
@@ -100,12 +111,12 @@
           ${box('SALES THIS WEEK', `<div class="chart-area">${bars}</div>`)}
           ${box('RECENT ORDERS', table(['Order', 'Customer', 'Total', 'Status'],
             (myOrders.length ? myOrders : D.orders.slice(0, 5)).map(o =>
-              `<tr><td>#${o.id}</td><td>${o.customer}</td><td>${fmtMoney(o.total)}</td><td><span class="${statusClass(o.status)}">${o.status}</span></td></tr>`
+              `<tr><td>#${esc(o.id)}</td><td>${esc(o.customer)}</td><td>${esc(fmtMoney(o.total))}</td><td><span class="${esc(statusClass(o.status))}">${esc(o.status)}</span></td></tr>`
             ).join('')), 'info')}
         </div>
         ${box('YOUR PRODUCTS', table(['Name', 'Price', 'Stock', 'Sold', 'Status'],
           (myProducts.length ? myProducts : D.products.slice(0, 5)).map(p =>
-            `<tr><td>${p.name.slice(0, 40)}</td><td>${fmtMoney(p.price)}</td><td>${p.stock}</td><td>${p.sold}</td><td><span class="${statusClass(p.status)}">${p.status}</span></td></tr>`
+            `<tr><td>${esc(String(p.name || '').slice(0, 40))}</td><td>${esc(fmtMoney(p.price))}</td><td>${esc(p.stock)}</td><td>${esc(p.sold)}</td><td><span class="${esc(statusClass(p.status))}">${esc(p.status)}</span></td></tr>`
           ).join('')), 'success')}`;
     },
 
@@ -118,15 +129,15 @@
             <span class="text-muted" style="font-size:12px">API live</span></div>` +
           box('My Products', table(['#', 'Name', 'Price', 'Stock', 'Sold', 'Status', 'Action'],
             list.map(p => `<tr>
-              <td title="${p.id}">${String(p.id).slice(0, 8)}</td>
-              <td>${p.name}</td>
-              <td>${fmtCents(p.priceCents != null ? p.priceCents : Math.round((p.price || 0) * 100))}</td>
-              <td>${p.stock ?? 0}</td><td>${p.soldCount ?? p.sold ?? 0}</td>
-              <td><span class="${statusClass(p.status)}">${p.status}</span></td>
+              <td title="${esc(p.id)}">${esc(String(p.id).slice(0, 8))}</td>
+              <td>${esc(p.name)}</td>
+              <td>${esc(fmtCents(p.priceCents != null ? p.priceCents : Math.round((p.price || 0) * 100)))}</td>
+              <td>${esc(p.stock ?? 0)}</td><td>${esc(p.soldCount ?? p.sold ?? 0)}</td>
+              <td><span class="${esc(statusClass(p.status))}">${esc(p.status)}</span></td>
               <td><button class="btn btn-primary btn-xs" onclick="MerchantApp.toast('OK')">Edit</button></td>
             </tr>`).join('') || `<tr><td colspan="7" class="text-muted" style="text-align:center;padding:16px">${I ? I.t('admin.noProducts') : 'No products'}</td></tr>`));
       } catch (e) {
-        return header(I ? I.t('merchant.products') : 'Products') + box(I ? I.t('admin.apiError') : 'API error', `<p class="text-danger">${e.message}</p>`);
+        return header(I ? I.t('merchant.products') : 'Products') + box(I ? I.t('admin.apiError') : 'API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -135,7 +146,7 @@
       return header('Inventory', 'Catalog / Inventory') +
         box('Stock Levels', table(['Product', 'SKU/GTIN', 'Stock', 'Status'],
           list.map(p => `<tr>
-            <td>${p.name.slice(0, 36)}</td><td class="text-muted">${p.gtin}</td><td>${p.stock}</td>
+            <td>${esc(String(p.name || '').slice(0, 36))}</td><td class="text-muted">${esc(p.gtin)}</td><td>${esc(p.stock)}</td>
             <td>${p.stock < 30 ? '<span class="status status-pending">Low</span>' : '<span class="status status-active">OK</span>'}</td>
           </tr>`).join('')));
     },
@@ -144,16 +155,16 @@
       try {
         const list = window.MplaceApi ? await MplaceApi.orders() : [];
         const rows = list.map(o => `<tr>
-          <td><strong>${o.orderNumber}</strong></td>
-          <td>${o.customer?.name || o.customerName || o.customerEmail || '—'}</td>
-          <td>${o.items?.length || 0}</td>
-          <td>${fmtCents(o.totalCents || 0)}</td>
-          <td><span class="${statusClass(o.status)}">${o.status}</span></td>
-          <td>${new Date(o.createdAt).toLocaleString()}</td>
+          <td><strong>${esc(o.orderNumber)}</strong></td>
+          <td>${esc(o.customer?.name || o.customerName || o.customerEmail || '—')}</td>
+          <td>${esc(o.items?.length || 0)}</td>
+          <td>${esc(fmtCents(o.totalCents || 0))}</td>
+          <td><span class="${esc(statusClass(o.status))}">${esc(o.status)}</span></td>
+          <td>${esc(new Date(o.createdAt).toLocaleString())}</td>
           <td>
-            <select class="form-control" style="width:auto;padding:2px 6px;font-size:11px" data-m-order="${o.id}">
+            <select class="form-control" style="width:auto;padding:2px 6px;font-size:11px" data-m-order="${esc(o.id)}">
               ${['PAID','PROCESSING','SHIPPED','COMPLETED','CANCELLED'].map(s =>
-                `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
+                `<option value="${esc(s)}" ${s === o.status ? 'selected' : ''}>${esc(s)}</option>`).join('')}
             </select>
           </td>
         </tr>`).join('') || `<tr><td colspan="7" style="text-align:center;padding:16px" class="text-muted">${I ? I.t('merchant.noOrders') : 'No orders'}</td></tr>`;
@@ -169,7 +180,7 @@
             tr('admin.col.update'),
           ], rows));
       } catch (e) {
-        return header(I ? I.t('merchant.orders') : 'Orders') + box(I ? I.t('admin.apiError') : 'API error', `<p class="text-danger">${e.message}</p>`);
+        return header(I ? I.t('merchant.orders') : 'Orders') + box(I ? I.t('admin.apiError') : 'API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -177,7 +188,7 @@
       return header('Cancellations') +
         box('Cancelled', table(['Order', 'Customer', 'Total', 'Date'],
           D.orders.filter(o => o.status === 'Cancelled').map(o =>
-            `<tr><td>#${o.id}</td><td>${o.customer}</td><td>${fmtMoney(o.total)}</td><td>${o.date}</td></tr>`
+            `<tr><td>#${esc(o.id)}</td><td>${esc(o.customer)}</td><td>${esc(fmtMoney(o.total))}</td><td>${esc(o.date)}</td></tr>`
           ).join('') || '<tr><td colspan="4" style="text-align:center;padding:20px" class="text-muted">No cancellations</td></tr>'));
     },
 
@@ -297,7 +308,8 @@
     try {
       $('#content').innerHTML = await fn();
     } catch (e) {
-      $('#content').innerHTML = header(page) + box('Error', `<p class="text-danger">${e.message}</p>`);
+      const msg = (typeof escapeHtml === 'function' ? escapeHtml : String)(e.message || e);
+      $('#content').innerHTML = header(page) + box('Error', `<p class="text-danger">${msg}</p>`);
     }
     $$('[data-search]').forEach(input => {
       input.addEventListener('input', () => {

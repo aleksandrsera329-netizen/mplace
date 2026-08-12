@@ -13,6 +13,8 @@ import {
   UserStatus,
 } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
+import { DomainEventService } from '../events/domain-event.service';
+import { DomainEvents } from '../events/domain-events';
 import { PrismaService } from '../prisma/prisma.service';
 
 /** UI may send BLOCKED; Prisma uses SUSPENDED */
@@ -26,6 +28,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly events: DomainEventService,
   ) {}
 
   async getDashboard() {
@@ -284,6 +287,14 @@ export class AdminService {
       entityId: shopId,
       meta: { from: existing.status, newStatus: status },
     });
+
+    if (status === ShopStatus.ACTIVE) {
+      this.events.emit(DomainEvents.MerchantApproved, {
+        shopId,
+        from: existing.status,
+        actorId,
+      });
+    }
 
     return shop;
   }

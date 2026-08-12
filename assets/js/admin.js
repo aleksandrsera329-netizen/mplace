@@ -15,6 +15,17 @@
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
   let cache = { products: null, categories: null, shops: null };
 
+  /** Stage 21 XSS — escape untrusted strings before innerHTML templates */
+  function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   if (I) {
     I.mountSwitcher('#localeMount');
     window.addEventListener('mplace:locale', () => {
@@ -200,14 +211,14 @@
 
   function renderProducts(list) {
       const rows = (list || []).map(p => `<tr>
-        <td title="${p.id}">${String(p.id).slice(0, 8)}</td>
-        <td><span class="thumb">📦</span>${p.name}</td>
-        <td>${p.shop?.name || p.shop || '—'}</td>
-        <td>${p.category?.name || p.category || '—'}</td>
-        <td>${fmtCents(p.priceCents != null ? p.priceCents : Math.round((p.price || 0) * 100))}</td>
-        <td>${p.stock ?? 0}</td>
-        <td>${p.soldCount ?? p.sold ?? 0}</td>
-        <td><span class="${statusClass(p.status)}">${p.status}</span></td>
+        <td title="${esc(p.id)}">${esc(String(p.id).slice(0, 8))}</td>
+        <td><span class="thumb">📦</span>${esc(p.name)}</td>
+        <td>${esc(p.shop?.name || p.shop || '—')}</td>
+        <td>${esc(p.category?.name || p.category || '—')}</td>
+        <td>${esc(fmtCents(p.priceCents != null ? p.priceCents : Math.round((p.price || 0) * 100)))}</td>
+        <td>${esc(p.stock ?? 0)}</td>
+        <td>${esc(p.soldCount ?? p.sold ?? 0)}</td>
+        <td><span class="${esc(statusClass(p.status))}">${esc(p.status)}</span></td>
         <td>${actions(p.id)}</td>
       </tr>`).join('') || `<tr><td colspan="9" class="text-muted" style="text-align:center;padding:20px">${I ? I.t('admin.noProducts') : 'No products'}</td></tr>`;
       const tt = I || { t: (k) => k };
@@ -233,7 +244,7 @@
           appealedDisputes: s.appealedDisputes,
         });
       } catch (e) {
-        return header('Dashboard') + box('API error', `<p class="text-danger">${e.message}</p><p>Is API running on ${Api.getBase()}?</p>`);
+        return header('Dashboard') + box('API error', `<p class="text-danger">${esc(e.message)}</p><p>Is API running on ${esc(Api.getBase())}?</p>`);
       }
     },
 
@@ -243,7 +254,7 @@
         cache.products = list;
         return renderProducts(list);
       } catch (e) {
-        return header('Products') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Products') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -252,17 +263,17 @@
         const list = await Api.categories();
         cache.categories = list;
         const rows = list.map(c => `<tr>
-          <td>${String(c.id).slice(0, 8)}</td>
-          <td>${c.name}</td>
-          <td>${c.parent?.name || 'Root'}</td>
-          <td>${c._count?.products ?? 0}</td>
+          <td>${esc(String(c.id).slice(0, 8))}</td>
+          <td>${esc(c.name)}</td>
+          <td>${esc(c.parent?.name || 'Root')}</td>
+          <td>${esc(c._count?.products ?? 0)}</td>
           <td>${actions(c.id)}</td>
         </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;padding:16px" class="text-muted">No categories</td></tr>';
         return header('Categories', 'Catalog / Categories') +
           toolbar('Search…', `<button class="btn btn-success btn-sm" data-open-modal="category">+ Add Category</button>`) +
           box('Categories (API)', table(['#', 'Name', 'Parent', 'Products', 'Action'], rows));
       } catch (e) {
-        return header('Categories') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Categories') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -270,17 +281,17 @@
       try {
         const list = await Api.orders();
         const rows = list.map(o => `<tr>
-          <td><strong>${o.orderNumber}</strong></td>
-          <td>${o.customer?.name || o.customerName || o.customerEmail || '—'}</td>
-          <td>${o.shop?.name || '—'}</td>
-          <td>${o.items?.length || o._count?.items || 0}</td>
-          <td>${fmtCents(o.totalCents || 0)}</td>
-          <td><span class="${statusClass(o.status)}">${o.status}</span></td>
-          <td>${new Date(o.createdAt).toLocaleString()}</td>
+          <td><strong>${esc(o.orderNumber)}</strong></td>
+          <td>${esc(o.customer?.name || o.customerName || o.customerEmail || '—')}</td>
+          <td>${esc(o.shop?.name || '—')}</td>
+          <td>${esc(o.items?.length || o._count?.items || 0)}</td>
+          <td>${esc(fmtCents(o.totalCents || 0))}</td>
+          <td><span class="${esc(statusClass(o.status))}">${esc(o.status)}</span></td>
+          <td>${esc(new Date(o.createdAt).toLocaleString())}</td>
           <td>
-            <select class="form-control" style="width:auto;display:inline-block;padding:2px 6px;font-size:11px" data-order-status="${o.id}">
+            <select class="form-control" style="width:auto;display:inline-block;padding:2px 6px;font-size:11px" data-order-status="${esc(o.id)}">
               ${['PENDING_PAYMENT','PAID','PROCESSING','SHIPPED','COMPLETED','CANCELLED'].map(s =>
-                `<option value="${s}" ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}
+                `<option value="${esc(s)}" ${s === o.status ? 'selected' : ''}>${esc(s)}</option>`).join('')}
             </select>
           </td>
         </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:16px" class="text-muted">No orders</td></tr>';
@@ -288,7 +299,7 @@
           toolbar('Search orders…', '<span class="text-muted" style="font-size:12px">API live</span>') +
           box('Order List', table(['Order #', 'Customer', 'Shop', 'Items', 'Total', 'Status', 'Date', 'Update'], rows));
       } catch (e) {
-        return header('Orders') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Orders') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -296,18 +307,18 @@
       try {
         const list = await Api.adminCustomers();
         const rows = list.map(c => `<tr>
-          <td title="${c.id}">${String(c.id).slice(0, 8)}</td>
-          <td><span class="thumb">👤</span>${c.name}</td>
-          <td>${c.email}</td>
-          <td>${c._count?.orders ?? 0}</td>
-          <td><span class="${statusClass(c.status)}">${c.status}</span></td>
-          <td>${new Date(c.createdAt).toLocaleDateString()}</td>
+          <td title="${esc(c.id)}">${esc(String(c.id).slice(0, 8))}</td>
+          <td><span class="thumb">👤</span>${esc(c.name)}</td>
+          <td>${esc(c.email)}</td>
+          <td>${esc(c._count?.orders ?? 0)}</td>
+          <td><span class="${esc(statusClass(c.status))}">${esc(c.status)}</span></td>
+          <td>${esc(new Date(c.createdAt).toLocaleDateString())}</td>
         </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:16px" class="text-muted">No customers</td></tr>';
         return header('Customers', 'Admin / Customers') +
           toolbar('Search customers…') +
           box('Customer List (API)', table(['#', 'Name', 'Email', 'Orders', 'Status', 'Joined'], rows));
       } catch (e) {
-        return header('Customers') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Customers') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -315,20 +326,20 @@
       try {
         const list = await Api.adminMerchants();
         const rows = list.map(m => `<tr>
-          <td title="${m.id}">${String(m.id).slice(0, 8)}</td>
-          <td>${m.name}</td>
-          <td>${m.email}</td>
-          <td><strong>${m.shop?.name || '—'}</strong></td>
-          <td>${m.shop?._count?.products ?? 0}</td>
-          <td>${m.shop?._count?.orders ?? 0}</td>
+          <td title="${esc(m.id)}">${esc(String(m.id).slice(0, 8))}</td>
+          <td>${esc(m.name)}</td>
+          <td>${esc(m.email)}</td>
+          <td><strong>${esc(m.shop?.name || '—')}</strong></td>
+          <td>${esc(m.shop?._count?.products ?? 0)}</td>
+          <td>${esc(m.shop?._count?.orders ?? 0)}</td>
           <td>${m.shop?.verified ? '<span class="badge badge-success">Verified</span>' : '<span class="badge badge-warning">Unverified</span>'}</td>
-          <td><span class="${statusClass(m.shop?.status || m.status)}">${m.shop?.status || m.status}</span></td>
+          <td><span class="${esc(statusClass(m.shop?.status || m.status))}">${esc(m.shop?.status || m.status)}</span></td>
         </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:16px" class="text-muted">No merchants</td></tr>';
         return header('Merchants', 'Vendors / Merchants') +
           toolbar('Search merchants…') +
           box('Merchant List (API)', table(['#', 'Name', 'Email', 'Shop', 'Products', 'Orders', 'Verify', 'Status'], rows));
       } catch (e) {
-        return header('Merchants') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Merchants') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -336,16 +347,16 @@
       try {
         const list = await Api.shops();
         const rows = list.map(s => `<tr>
-          <td title="${s.id}">${String(s.id).slice(0, 8)}</td>
-          <td><span class="thumb">🏪</span>${s.name}</td>
-          <td>${s.slug}</td>
-          <td>${s._count?.products ?? 0}</td>
-          <td>${s._count?.orders ?? 0}</td>
-          <td><span class="${statusClass(s.status)}">${s.status}</span></td>
+          <td title="${esc(s.id)}">${esc(String(s.id).slice(0, 8))}</td>
+          <td><span class="thumb">🏪</span>${esc(s.name)}</td>
+          <td>${esc(s.slug)}</td>
+          <td>${esc(s._count?.products ?? 0)}</td>
+          <td>${esc(s._count?.orders ?? 0)}</td>
+          <td><span class="${esc(statusClass(s.status))}">${esc(s.status)}</span></td>
           <td>
-            <select class="form-control" style="width:auto;display:inline-block;padding:2px 6px;font-size:11px" data-shop-status="${s.id}">
+            <select class="form-control" style="width:auto;display:inline-block;padding:2px 6px;font-size:11px" data-shop-status="${esc(s.id)}">
               ${['PENDING','ACTIVE','SUSPENDED','REJECTED'].map(st =>
-                `<option value="${st}" ${st === s.status ? 'selected' : ''}>${st}</option>`).join('')}
+                `<option value="${esc(st)}" ${st === s.status ? 'selected' : ''}>${esc(st)}</option>`).join('')}
             </select>
           </td>
         </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;padding:16px" class="text-muted">No shops</td></tr>';
@@ -353,7 +364,7 @@
           toolbar('Search shops…') +
           box('Shop List (API)', table(['#', 'Name', 'Slug', 'Products', 'Orders', 'Status', 'Set status'], rows));
       } catch (e) {
-        return header('Shops') + box('API error', `<p class="text-danger">${e.message}</p>`);
+        return header('Shops') + box('API error', `<p class="text-danger">${esc(e.message)}</p>`);
       }
     },
 
@@ -739,7 +750,8 @@
       const html = await fn();
       $('#content').innerHTML = html;
     } catch (e) {
-      $('#content').innerHTML = header(page) + box('Error', `<p class="text-danger">${e.message}</p>`);
+      const msg = (typeof escapeHtml === 'function' ? escapeHtml : String)(e.message || e);
+      $('#content').innerHTML = header(page) + box('Error', `<p class="text-danger">${msg}</p>`);
     }
     bindPageEvents();
     $('#content').scrollTop = 0;

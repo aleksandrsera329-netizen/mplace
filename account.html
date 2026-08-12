@@ -327,11 +327,15 @@
     return '$' + ((cents || 0) / 100).toFixed(2);
   }
 
+  // Stage 21: full HTML escape (prefer global from api.js)
   function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   async function api(path, opts = {}) {

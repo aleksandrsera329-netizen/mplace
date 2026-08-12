@@ -18,6 +18,29 @@ Write-Output "UPLOAD=$up"
 $doc = $up | ConvertFrom-Json
 if (-not $doc.id) { throw "upload failed: $up" }
 $docId = $doc.id
+if ($doc.filePath) { throw "filePath must be null for private KYC, got $($doc.filePath)" }
+if (-not $doc.mediaAsset) { Write-Output "WARN: mediaAsset missing in response (ok if stripped)" }
+
+# --- Stage 2 ACL / signed download ---
+try {
+  Invoke-RestMethod -Uri "$base/kyc/documents/$docId/download" -TimeoutSec 5 | Out-Null
+  throw 'expected 401 without JWT'
+} catch {
+  $code = $_.Exception.Response.StatusCode.value__
+  if ($code -ne 401) { throw "expected 401 without JWT, got $code" }
+  Write-Output 'no-jwt → 401 OK'
+}
+
+$dl = Invoke-RestMethod -Uri "$base/kyc/documents/$docId/download" -Headers @{ Authorization = "Bearer $mToken" }
+Write-Output "download url=$($dl.url) expiresIn=$($dl.expiresIn)"
+if (-not $dl.url) { throw 'missing signed url' }
+if ($dl.url -match '/uploads/kyc') { throw 'signed url must not be public /uploads/kyc' }
+
+# Fetch signed stream (local HMAC or S3)
+$signedFull = if ($dl.url.StartsWith('http')) { $dl.url } else { "http://127.0.0.1:3001$($dl.url)" }
+$bytes = & curl.exe -s -o - $signedFull
+if (-not $bytes -or $bytes.Length -lt 10) { throw 'signed download returned empty body' }
+Write-Output "signed stream bytes=$($bytes.Length) OK"
 
 $list = Invoke-RestMethod -Uri "$base/shops/$shopId/kyc" -Headers @{ Authorization = "Bearer $mToken" }
 Write-Output "list count=$($list.Count) status0=$($list[0].status)"

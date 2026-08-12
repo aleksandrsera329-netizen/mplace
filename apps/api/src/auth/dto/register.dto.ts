@@ -75,7 +75,9 @@ export class Enable2faDto {
   code!: string;
 }
 
+/** Body refresh is optional when HttpOnly cookie is present (Stage 5). */
 export class RefreshTokenDto {
+  @IsOptional()
   @IsString()
-  refreshToken!: string;
+  refreshToken?: string;
 }

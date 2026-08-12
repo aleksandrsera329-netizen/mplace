@@ -1,5 +1,8 @@
 # Бэкап и восстановление
 
+> **PostgreSQL backup / restore (Stage 28):** see **[BACKUP.md](./BACKUP.md)**  
+> Scripts: `scripts/backup-db.*`, `scripts/restore-db.*`, `scripts/verify-backup-restore.ps1`
+
 ## Бэкап «до нефтегаза» (общий маркетплейс)
 
 | | |

@@ -34,6 +34,17 @@ docker compose down -v
 
 ## Примечания
 
-- Prisma: **PostgreSQL** (`schema.prisma` provider = postgresql)
-- Старт API: `prisma db push` + seed + Nest
+- Prisma: **PostgreSQL** (`schema.prisma` + `migration_lock.toml` = postgresql)
+- Старт: one-shot service **`migrate`** → `prisma migrate deploy`, затем **api** = `node dist/src/main.js`
+- Seed **не** запускается автоматически (только вручную: `npx prisma db seed`)
 - Фронт раздаёт **nginx**, API проксируется на `/api/`
+
+### Миграции
+
+```powershell
+docker compose up -d postgres
+docker compose run --rm migrate
+# seed (dev/staging only):
+# docker compose run --rm --entrypoint "" api npx prisma db seed
+docker compose up -d api
+```

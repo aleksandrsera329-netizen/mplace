@@ -3,14 +3,25 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { Request, Response, NextFunction } from 'express';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import {
+  PERMISSIONS_POLICY,
+  buildCorsOptions,
+  buildHelmetOptions,
+  resolveCorsOrigins,
+} from './common/security/security-headers';
+import { requestIdMiddleware } from './common/observability/request-id.middleware';
+import { initSentry } from './sentry';
 
 async function bootstrap() {
+  await initSentry();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
     rawBody: true, // Stripe webhooks
@@ -20,12 +31,34 @@ async function bootstrap() {
   const logger = app.get(PinoLogger);
   app.useLogger(logger);
 
+  // Trust reverse proxy (nginx) so req.secure / HSTS work correctly
+  app.set('trust proxy', 1);
+
+  // Stage 26: requestId + correlationId (headers + AsyncLocalStorage)
+  // Must run early so all downstream logs/handlers see context
+  app.use(requestIdMiddleware);
+
+  const nodeEnv = config.get<string>('NODE_ENV') || process.env.NODE_ENV;
+  const isProduction = nodeEnv === 'production';
+
+  // Stage 22: security headers via helmet
   app.use(
-    helmet({
-      contentSecurityPolicy: false, // Swagger UI + Stripe.js + storefront
-      crossOriginEmbedderPolicy: false,
-    }),
+    helmet(
+      buildHelmetOptions({
+        enableSwagger: true,
+        isProduction,
+      }),
+    ),
   );
+
+  // Permissions-Policy (not fully covered by all helmet versions)
+  app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Permissions-Policy', PERMISSIONS_POLICY);
+    next();
+  });
+
+  // Stage 5: HttpOnly refreshToken cookie
+  app.use(cookieParser());
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,33 +68,25 @@ async function bootstrap() {
     }),
   );
 
-  const corsOrigins =
-    config
-      .get<string>('CORS_ORIGINS')
-      ?.split(',')
-      .map((o) => o.trim())
-      .filter(Boolean) || [
-      'http://localhost',
-      'http://127.0.0.1',
-      'http://localhost:8080',
-      'http://127.0.0.1:8080',
-      'http://localhost:8088',
-      'http://127.0.0.1:8088',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-    ];
-
-  app.enableCors({
-    origin: corsOrigins.includes('*') ? true : corsOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-Session-Key',
-      'X-Order-Access-Token',
-    ],
-  });
+  // Stage 22: CORS allowlist only — never origin: '*' with credentials
+  const corsOrigins = resolveCorsOrigins(
+    config.get<string>('CORS_ORIGINS'),
+    nodeEnv,
+  );
+  if (config.get<string>('CORS_ORIGINS')?.includes('*')) {
+    logger.warn(
+      'CORS_ORIGINS contains "*" — ignored; using allowlist (credentials require explicit origins)',
+    );
+  }
+  const cors = buildCorsOptions(corsOrigins);
+  // Expose observability headers to browsers
+  cors.exposedHeaders = [
+    ...((cors.exposedHeaders as string[]) || []),
+    'X-Request-Id',
+    'X-Correlation-Id',
+  ];
+  app.enableCors(cors);
+  logger.log(`CORS allowlist: ${corsOrigins.join(', ')}`);
 
   // ===== SWAGGER =====
   const swaggerConfig = new DocumentBuilder()
@@ -103,17 +128,29 @@ async function bootstrap() {
     },
   });
 
-  // Critical env — only ConfigService (no process.env)
+  // Critical env already validated by ConfigModule.validate (env.validation.ts).
+  // Keep a defensive check for misconfigured non-validated boots.
   const dbUrl = config.get<string>('DATABASE_URL');
-  if (!dbUrl) {
-    logger.error('Missing required env: DATABASE_URL');
-    process.exit(1);
-  }
   const jwt = config.get<string>('JWT_SECRET');
-  if (!jwt) {
-    logger.error('Missing required env: JWT_SECRET');
+  if (!dbUrl || !jwt) {
+    logger.error('Missing required env: DATABASE_URL and/or JWT_SECRET');
     process.exit(1);
   }
+
+  // Stage 2: block public static access to KYC / private storage prefixes
+  // (even if monorepo root is served as static frontend)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const p = req.path || '';
+    if (
+      p.startsWith('/uploads/kyc') ||
+      p.startsWith('/uploads/private') ||
+      p.startsWith('/private/kyc')
+    ) {
+      res.status(403).type('text/plain').send('Forbidden');
+      return;
+    }
+    next();
+  });
 
   // Production / Docker: serve storefront from FRONTEND_DIR
   const serveFrontend =

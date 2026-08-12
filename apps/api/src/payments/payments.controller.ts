@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request } from 'express';
@@ -22,6 +23,7 @@ import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { ThrottleLimits } from '../common/throttle/throttle.limits';
 import { PaymentsService } from './payments.service';
 import { StripeConnectService } from './stripe-connect.service';
 
@@ -131,6 +133,7 @@ export class PaymentsController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
+  @Throttle(ThrottleLimits.PAYMENT)
   @Post('orders/:id/payment-intent')
   createIntent(
     @CurrentUser() user: JwtPayload | undefined,
@@ -146,13 +149,37 @@ export class PaymentsController {
     );
   }
 
+  /**
+   * Stripe webhooks (no JWT). Prefer this path with Nest rawBody.
+   * Alias: POST /api/webhooks/stripe
+   * SkipThrottle: provider retries must not hit 429.
+   */
+  @SkipThrottle()
   @Post('payments/webhook')
   webhook(
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature?: string,
   ) {
+    return this.dispatchStripeWebhook(req, signature);
+  }
+
+  /** Stage 7 alias matching common Stripe dashboard path */
+  @SkipThrottle()
+  @Post('webhooks/stripe')
+  webhookStripeAlias(
+    @Req() req: RawBodyRequest<Request>,
+    @Headers('stripe-signature') signature?: string,
+  ) {
+    return this.dispatchStripeWebhook(req, signature);
+  }
+
+  private dispatchStripeWebhook(
+    req: RawBodyRequest<Request>,
+    signature?: string,
+  ) {
     const raw = req.rawBody;
-    if (!raw) {
+    if (!raw?.length) {
+      // Fallback only when rawBody middleware missing (dev) — signature will fail in prod
       return this.payments.handleStripeWebhook(
         Buffer.from(JSON.stringify(req.body || {})),
         signature,

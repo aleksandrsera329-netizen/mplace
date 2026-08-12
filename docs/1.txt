@@ -1,0 +1,32 @@
+# ТЗ2 — автопродолжение (без запросов подтверждения)
+Обновлено: 2026-08-06
+
+## DONE Stage 1 Frontend (Next apps/web)
+- Customer: catalog, cart, checkout, login, account, orders, wishlist, RFQ
+- Merchant: dashboard, products, orders, payouts, RFQ offers, Connect
+- Admin: dashboard, users, shops, orders, disputes, payouts, audit
+- Build: 25 routes OK
+
+## DONE Stage 2 (partial)
+- Docker: service `web` (Dockerfile.web), nginx /app + /uploads
+- Health: Meili + Stripe config checks
+- Sentry: optional SENTRY_DSN (apps/api/src/sentry.ts)
+- Helm scaffold: deploy/helm/mplace
+- Monitoring compose: deploy/docker-compose.monitoring.yml
+
+## DONE Stage 3 (partial → solid)
+- Domain event bus (@nestjs/event-emitter)
+- Events: ProductCreated, OrderCreated, RfqCreated, PayoutRequested, MerchantApproved
+- BullMQ: emails, notifications, search-index, payouts, image-processing queues
+- WebSocket gateway namespace /ws (join rooms, order.status, rfq.event)
+- Listener fans out events → queues + WS
+
+## NEXT (auto when continuing)
+- Stripe Elements real pay on /orders/[id]
+- Multi-currency / i18n
+- CQRS read models + full inventory
+- SaaS multi-tenant (Stage 14)
+- Wire SMTP for email processor
+
+API: C:\Users\sasha\mplace\apps\api
+Web: C:\Users\sasha\mplace\apps\web

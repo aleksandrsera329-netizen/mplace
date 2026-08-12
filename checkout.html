@@ -236,23 +236,26 @@
         renderForm();
       } catch (err) {
         console.error(err);
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
         document.getElementById('checkoutContent').innerHTML =
-          `<p style="text-align:center;color:var(--danger)">Ошибка загрузки корзины: ${err.message || ''}</p>`;
+          `<p style="text-align:center;color:var(--danger)">Ошибка загрузки корзины: ${e(err.message || '')}</p>`;
       }
     }
 
     function renderForm() {
       const user = MplaceApi.getUser() || {};
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+      const a = typeof escapeAttr === 'function' ? escapeAttr : e;
       const itemsHtml = currentCart.items.map((item) => {
         const p = item.product || {};
         const line = unitPrice(item) * item.quantity;
         return `
           <div class="summary-item">
             <div>
-              <div style="font-weight:600">${p.name || 'Товар'}</div>
-              <div style="font-size:0.85rem; color:var(--text-muted)">${item.quantity} шт. · ${p.shop?.name || ''}</div>
+              <div style="font-weight:600">${e(p.name || 'Товар')}</div>
+              <div style="font-size:0.85rem; color:var(--text-muted)">${e(item.quantity)} шт. · ${e(p.shop?.name || '')}</div>
             </div>
-            <div style="font-weight:700">${I.formatMoney(line)}</div>
+            <div style="font-weight:700">${e(I.formatMoney(line))}</div>
           </div>
         `;
       }).join('');
@@ -268,13 +271,13 @@
             <div class="form-group">
               <label>Ваше имя *</label>
               <input type="text" id="customerName" placeholder="Иван Иванов" required
-                value="${String(user.name || '').replace(/"/g, '&quot;')}">
+                value="${a(user.name || '')}">
             </div>
 
             <div class="form-group">
               <label>Email *</label>
               <input type="email" id="customerEmail" placeholder="buyer@company.com" required
-                value="${String(user.email || '').replace(/"/g, '&quot;')}">
+                value="${a(user.email || '')}">
             </div>
 
             <div class="form-group">
@@ -345,14 +348,15 @@
           } catch (_) { /* ignore payment intent errors on demo */ }
         }
 
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
         document.getElementById('checkoutContent').innerHTML = `
           <div class="success-screen">
             <div class="success-icon">✅</div>
             <h1>Заявка успешно создана!</h1>
             <p style="color:var(--text-muted)">Мы получили вашу заявку и скоро свяжемся с вами.</p>
-            <div class="order-number">Номер заявки: ${orderNumber}</div>
+            <div class="order-number">Номер заявки: ${e(orderNumber)}</div>
             ${orders.length > 1
-              ? `<p style="color:var(--text-muted);font-size:0.9rem">Создано заказов: ${orders.length} (по поставщикам)</p>`
+              ? `<p style="color:var(--text-muted);font-size:0.9rem">Создано заказов: ${e(orders.length)} (по поставщикам)</p>`
               : ''}
             <div style="margin-top:32px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
               <a href="/" class="btn-submit" style="display:inline-block; text-decoration:none; width:auto; padding:16px 32px;">Вернуться в каталог</a>

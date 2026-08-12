@@ -1,4 +1,8 @@
 node_modules/
+# Stage 28: local DB dumps (keep drill reports optional — ignore dumps only)
+backups/postgres/*.sql
+backups/postgres/*.sql.gz
+backups/postgres/*.sha256
 dist/
 coverage/
 .env

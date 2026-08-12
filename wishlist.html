@@ -168,11 +168,15 @@
     return '$' + ((cents || 0) / 100).toFixed(2);
   }
 
+  // Stage 21: full HTML escape (prefer global from api.js)
   function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   async function api(path, opts = {}) {
@@ -224,8 +228,12 @@
         <div class="products-grid">
           ${items.map(item => {
             const p = item.product || item;
-            const img = p.imageUrl
-              ? `<img src="${esc(p.imageUrl)}" alt="${esc(p.name)}" loading="lazy">`
+            const rawImg = String(p.imageUrl || '');
+            const safeImg = /^(https?:|\/|data:image\/)/i.test(rawImg)
+              ? (typeof escapeAttr === 'function' ? escapeAttr(rawImg) : esc(rawImg))
+              : '';
+            const img = safeImg
+              ? `<img src="${safeImg}" alt="${esc(p.name)}" loading="lazy">`
               : '🛢️';
             return `
               <article class="product-card">

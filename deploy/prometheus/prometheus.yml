@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: mplace-api
+    metrics_path: /api/metrics
+    static_configs:
+      # Inside compose network:
+      # - targets: ["api:3000"]
+      # From host (API published on 3001):
+      - targets: ["host.docker.internal:3001"]
+
+  # Optional: scrape readiness as blackbox later
+  # - job_name: mplace-api-ready
+  #   metrics_path: /api/health/ready

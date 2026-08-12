@@ -459,11 +459,15 @@
     return '$' + ((cents || 0) / 100).toFixed(2);
   }
 
+  // Prefer global escapeHtml from api.js (Stage 21)
   function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
     return String(s == null ? '' : s)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   // ===== Dashboard =====
@@ -519,18 +523,19 @@
     if (status) q.set('status', status);
 
     const data = await adminFetch('/users?' + q);
+    const e = escapeHtml;
     document.getElementById('usersBody').innerHTML = data.items.map(u => `
       <tr>
-        <td><input type="checkbox" value="${u.id}" onchange="toggleOne('users','${u.id}',this)"></td>
-        <td>${u.email}</td>
-        <td>${u.name || '—'}</td>
-        <td>${u.role}</td>
-        <td><span class="badge badge-${u.status}">${u.status}</span></td>
-        <td>${u._count?.orders || 0}</td>
+        <td><input type="checkbox" value="${e(u.id)}" onchange="toggleOne('users','${e(u.id)}',this)"></td>
+        <td>${e(u.email)}</td>
+        <td>${e(u.name || '—')}</td>
+        <td>${e(u.role)}</td>
+        <td><span class="badge badge-${e(u.status)}">${e(u.status)}</span></td>
+        <td>${e(u._count?.orders || 0)}</td>
         <td>
           ${u.status !== 'SUSPENDED' && u.status !== 'INACTIVE'
-            ? `<button class="btn-sm danger" onclick="setUserStatus('${u.id}','SUSPENDED')">Block</button>`
-            : `<button class="btn-sm" onclick="setUserStatus('${u.id}','ACTIVE')">Unblock</button>`}
+            ? `<button class="btn-sm danger" onclick="setUserStatus('${e(u.id)}','SUSPENDED')">Block</button>`
+            : `<button class="btn-sm" onclick="setUserStatus('${e(u.id)}','ACTIVE')">Unblock</button>`}
         </td>
       </tr>
     `).join('') || '<tr><td colspan="7" style="text-align:center;opacity:.6">Нет данных</td></tr>';
@@ -565,18 +570,19 @@
     if (status) q.set('status', status);
 
     const data = await adminFetch('/shops?' + q);
+    const e = escapeHtml;
     document.getElementById('shopsBody').innerHTML = data.items.map(s => `
       <tr>
-        <td><input type="checkbox" value="${s.id}" onchange="toggleOne('shops','${s.id}',this)"></td>
-        <td><strong>${s.name}</strong><br><small style="opacity:.6">${s.slug}</small></td>
-        <td>${s.owner?.email || '—'}</td>
-        <td><span class="badge badge-${s.status}">${s.status}</span></td>
-        <td>${s._count?.products || 0}</td>
-        <td>${s._count?.orders || 0}</td>
+        <td><input type="checkbox" value="${e(s.id)}" onchange="toggleOne('shops','${e(s.id)}',this)"></td>
+        <td><strong>${e(s.name)}</strong><br><small style="opacity:.6">${e(s.slug)}</small></td>
+        <td>${e(s.owner?.email || '—')}</td>
+        <td><span class="badge badge-${e(s.status)}">${e(s.status)}</span></td>
+        <td>${e(s._count?.products || 0)}</td>
+        <td>${e(s._count?.orders || 0)}</td>
         <td>
-          ${s.status === 'PENDING' ? `<button class="btn-sm" onclick="setShopStatus('${s.id}','ACTIVE')">Approve</button>` : ''}
-          ${s.status === 'ACTIVE' ? `<button class="btn-sm danger" onclick="setShopStatus('${s.id}','SUSPENDED')">Suspend</button>` : ''}
-          ${s.status === 'SUSPENDED' ? `<button class="btn-sm" onclick="setShopStatus('${s.id}','ACTIVE')">Activate</button>` : ''}
+          ${s.status === 'PENDING' ? `<button class="btn-sm" onclick="setShopStatus('${e(s.id)}','ACTIVE')">Approve</button>` : ''}
+          ${s.status === 'ACTIVE' ? `<button class="btn-sm danger" onclick="setShopStatus('${e(s.id)}','SUSPENDED')">Suspend</button>` : ''}
+          ${s.status === 'SUSPENDED' ? `<button class="btn-sm" onclick="setShopStatus('${e(s.id)}','ACTIVE')">Activate</button>` : ''}
         </td>
       </tr>
     `).join('') || '<tr><td colspan="7" style="text-align:center;opacity:.6">Нет данных</td></tr>';
@@ -611,14 +617,15 @@
     if (status) q.set('status', status);
 
     const data = await adminFetch('/orders?' + q);
+    const e = escapeHtml;
     document.getElementById('ordersBody').innerHTML = data.items.map(o => `
       <tr>
-        <td><a href="/order.html?id=${o.id}" style="color:var(--primary)">${o.orderNumber || o.id.slice(0,8)}</a></td>
-        <td>${o.customer?.email || o.customerEmail || '—'}</td>
-        <td>${o.shop?.name || '—'}</td>
-        <td>${money(o.totalCents)}</td>
-        <td><span class="badge badge-${o.status}">${o.status}</span></td>
-        <td>${new Date(o.createdAt).toLocaleDateString()}</td>
+        <td><a href="/order.html?id=${e(o.id)}" style="color:var(--primary)">${e(o.orderNumber || o.id.slice(0,8))}</a></td>
+        <td>${e(o.customer?.email || o.customerEmail || '—')}</td>
+        <td>${e(o.shop?.name || '—')}</td>
+        <td>${e(money(o.totalCents))}</td>
+        <td><span class="badge badge-${e(o.status)}">${e(o.status)}</span></td>
+        <td>${e(new Date(o.createdAt).toLocaleDateString())}</td>
       </tr>
     `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет данных</td></tr>';
 
@@ -636,17 +643,18 @@
     if (status) q.set('status', status);
 
     const data = await adminFetch('/disputes?' + q);
+    const e = escapeHtml;
     document.getElementById('disputesBody').innerHTML = data.items.map(d => `
       <tr>
-        <td>${d.id.slice(0,8)}</td>
-        <td>${d.order?.orderNumber || d.order?.id?.slice(0,8) || '—'}</td>
-        <td>${d.openedBy?.email || '—'}</td>
-        <td><span class="badge badge-${d.status}">${d.status}</span></td>
-        <td>${new Date(d.createdAt).toLocaleDateString()}</td>
+        <td>${e(d.id.slice(0,8))}</td>
+        <td>${e(d.order?.orderNumber || d.order?.id?.slice(0,8) || '—')}</td>
+        <td>${e(d.openedBy?.email || '—')}</td>
+        <td><span class="badge badge-${e(d.status)}">${e(d.status)}</span></td>
+        <td>${e(new Date(d.createdAt).toLocaleDateString())}</td>
         <td>
           ${['OPEN','APPEALED'].includes(d.status) ? `
-            <button class="btn-sm" onclick="resolveDispute('${d.id}','RESOLVED_BUYER')">Buyer</button>
-            <button class="btn-sm" onclick="resolveDispute('${d.id}','RESOLVED_SELLER')">Seller</button>
+            <button class="btn-sm" onclick="resolveDispute('${e(d.id)}','RESOLVED_BUYER')">Buyer</button>
+            <button class="btn-sm" onclick="resolveDispute('${e(d.id)}','RESOLVED_SELLER')">Seller</button>
           ` : '—'}
         </td>
       </tr>
@@ -675,19 +683,20 @@
     if (status) q.set('status', status);
 
     const data = await adminFetch('/payouts?' + q);
+    const e = escapeHtml;
     document.getElementById('payoutsBody').innerHTML = data.items.map(p => `
       <tr>
-        <td>${p.id.slice(0,8)}</td>
-        <td>${p.shop?.name || '—'}<br><small>${p.shop?.owner?.email || ''}</small></td>
-        <td>${money(p.amountCents)}</td>
-        <td><span class="badge badge-${p.status}">${p.status}</span></td>
-        <td>${new Date(p.createdAt).toLocaleDateString()}</td>
+        <td>${e(p.id.slice(0,8))}</td>
+        <td>${e(p.shop?.name || '—')}<br><small>${e(p.shop?.owner?.email || '')}</small></td>
+        <td>${e(money(p.amountCents))}</td>
+        <td><span class="badge badge-${e(p.status)}">${e(p.status)}</span></td>
+        <td>${e(new Date(p.createdAt).toLocaleDateString())}</td>
         <td>
           ${p.status === 'PENDING' ? `
-            <button class="btn-sm" onclick="processPayout('${p.id}','APPROVED')">Approve</button>
-            <button class="btn-sm danger" onclick="processPayout('${p.id}','REJECTED')">Reject</button>
+            <button class="btn-sm" onclick="processPayout('${e(p.id)}','APPROVED')">Approve</button>
+            <button class="btn-sm danger" onclick="processPayout('${e(p.id)}','REJECTED')">Reject</button>
           ` : p.status === 'APPROVED' ? `
-            <button class="btn-sm" onclick="processPayout('${p.id}','PAID')">Mark Paid</button>
+            <button class="btn-sm" onclick="processPayout('${e(p.id)}','PAID')">Mark Paid</button>
           ` : '—'}
         </td>
       </tr>
@@ -718,14 +727,15 @@
     if (entity) q.set('entityType', entity);
 
     const data = await adminFetch('/audit?' + q);
+    const e = escapeHtml;
     document.getElementById('auditBody').innerHTML = data.items.map(a => `
       <tr>
-        <td>${new Date(a.createdAt).toLocaleString()}</td>
-        <td>${a.actor?.email || 'system'}</td>
-        <td><strong>${a.action}</strong></td>
-        <td>${a.entityType || '—'}</td>
-        <td>${a.entityId ? a.entityId.slice(0,8) : '—'}</td>
-        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${typeof a.meta === 'object' && a.meta ? esc(JSON.stringify(a.meta)).slice(0,120) : esc(a.meta || '')}</td>
+        <td>${e(new Date(a.createdAt).toLocaleString())}</td>
+        <td>${e(a.actor?.email || 'system')}</td>
+        <td><strong>${e(a.action)}</strong></td>
+        <td>${e(a.entityType || '—')}</td>
+        <td>${e(a.entityId ? a.entityId.slice(0,8) : '—')}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${e(typeof a.meta === 'object' && a.meta ? JSON.stringify(a.meta).slice(0,120) : (a.meta || ''))}</td>
       </tr>
     `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет записей</td></tr>';
 

@@ -6,7 +6,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { OrderStatus, UserRole } from '@prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
+import { DomainEventService } from '../events/domain-event.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { TaxService } from '../tax/tax.service';
+import { InventoryService } from '../warehouse/inventory.service';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
@@ -14,6 +17,7 @@ describe('OrdersService', () => {
 
   const mockTx = {
     order: {
+      findUnique: jest.fn(),
       update: jest.fn(),
     },
     orderStatusHistory: {
@@ -64,12 +68,30 @@ describe('OrdersService', () => {
     log: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockEvents = {
+    emit: jest.fn(),
+  };
+
+  const mockInventory = {
+    reserve: jest.fn(),
+    confirm: jest.fn(),
+    release: jest.fn(),
+    releaseExpired: jest.fn(),
+  };
+
+  const mockTax = {
+    calculateForOrder: jest.fn().mockResolvedValue({ taxCents: 0 }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: AuditService, useValue: mockAudit },
+        { provide: InventoryService, useValue: mockInventory },
+        { provide: DomainEventService, useValue: mockEvents },
+        { provide: TaxService, useValue: mockTax },
       ],
     }).compile();
 
@@ -168,6 +190,10 @@ describe('OrdersService', () => {
       };
 
       mockPrisma.order.findUnique.mockResolvedValue(existing);
+      mockTx.order.findUnique.mockResolvedValue({
+        ...existing,
+        items: [],
+      });
       mockTx.order.update.mockResolvedValue({
         ...existing,
         status: OrderStatus.PROCESSING,

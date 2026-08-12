@@ -8,12 +8,25 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrderStatus, PaymentStatus, RefundStatus } from '@prisma/client';
-import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
+import {
+  OrderStatus,
+  PaymentStatus,
+  UserRole,
+} from '@prisma/client';
+import { createHash, createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
+import {
+  patchRequestContext,
+} from '../common/observability/request-context';
+import { StructuredLogger } from '../common/observability/structured-logger.service';
+import { DomainEventService } from '../events/domain-event.service';
+import { DomainEvents } from '../events/domain-events';
+import { MetricsService } from '../metrics/metrics.service';
 import { OrdersService } from '../orders/orders.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LedgerService } from '../finance/ledger.service';
+import { RefundsService } from '../refunds/refunds.service';
 import { StripeConnectService } from './stripe-connect.service';
 
 function isLocalRuntime(nodeEnv: string | undefined, allowLocal: string | undefined) {
@@ -25,6 +38,7 @@ function isLocalRuntime(nodeEnv: string | undefined, allowLocal: string | undefi
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
+  private readonly slog: StructuredLogger;
   private readonly provider: string;
 
   constructor(
@@ -34,10 +48,16 @@ export class PaymentsService {
     @Inject(forwardRef(() => StripeConnectService))
     private readonly stripeConnect: StripeConnectService,
     private readonly audit: AuditService,
+    private readonly refundsService: RefundsService,
+    private readonly ledger: LedgerService,
+    private readonly events: DomainEventService,
+    structuredLogger: StructuredLogger,
+    private readonly metrics: MetricsService,
   ) {
     this.provider = (
       this.config.get<string>('PAYMENT_PROVIDER') || 'dev'
     ).toLowerCase();
+    this.slog = structuredLogger.child('PaymentsService');
   }
 
   private stripeClient() {
@@ -51,7 +71,8 @@ export class PaymentsService {
   }
 
   /**
-   * Refund via Stripe (full or partial). Destination charges: reverse_transfer.
+   * Admin convenience: request → approve → provider (Stage 8 state machine).
+   * COMPLETED only arrives via Stripe webhook.
    */
   async refundPayment(
     orderId: string,
@@ -73,74 +94,42 @@ export class PaymentsService {
       throw new BadRequestException('No successful Stripe payment found');
     }
 
-    if (
-      amountCents != null &&
-      (amountCents <= 0 || amountCents > payment.amountCents)
-    ) {
+    const amt = amountCents ?? payment.amountCents;
+    if (amt <= 0 || amt > payment.amountCents) {
       throw new BadRequestException('Invalid refund amount');
     }
 
-    const stripe = this.stripeClient();
-    const stripeReason =
-      reason === 'fraudulent' || reason === 'duplicate'
-        ? reason
-        : 'requested_by_customer';
+    if (!actorId) {
+      throw new BadRequestException('actorId required for refund flow');
+    }
 
-    const refund = await stripe.refunds.create({
-      payment_intent: payment.providerPaymentId,
-      ...(amountCents != null ? { amount: amountCents } : {}),
-      reason: stripeReason,
-      // Destination charges: pull funds back from connected account
-      reverse_transfer: true,
-      refund_application_fee: true,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        paymentId: payment.id,
-      },
-    });
+    const user = {
+      sub: actorId,
+      role: UserRole.ADMIN,
+      email: '',
+      shopId: null,
+    } as JwtPayload;
 
-    const refundAmount =
-      typeof refund.amount === 'number' ? refund.amount : amountCents ?? payment.amountCents;
-    const full = refundAmount >= payment.amountCents;
-
-    const refundRow = await this.prisma.refund.create({
-      data: {
-        orderId: order.id,
-        amountCents: refundAmount,
-        reason: reason || stripeReason,
-        status: RefundStatus.COMPLETED,
-        adminNote: `stripe_refund=${refund.id}`,
-      },
-    });
-
-    await this.prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
-      },
-    });
-
-    await this.audit.log({
-      actorId: actorId ?? null,
-      action: 'PAYMENT',
-      entityType: 'Refund',
-      entityId: refundRow.id,
-      meta: {
-        orderId: order.id,
-        stripeRefundId: refund.id,
-        amountCents: refundAmount,
-        full,
-      },
-    });
+    const requested = await this.refundsService.requestRefund(
+      user,
+      orderId,
+      amt,
+      reason,
+    );
+    await this.refundsService.approveRefund(requested.id, actorId);
+    const provider = await this.refundsService.requestProviderRefund(
+      requested.id,
+      actorId,
+    );
 
     return {
       ok: true,
-      refundId: refundRow.id,
-      stripeRefundId: refund.id,
-      amountCents: refundAmount,
-      status: refund.status,
-      orderStatus: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
+      refundId: provider.id,
+      stripeRefundId: provider.stripeRefundId,
+      amountCents: provider.amountCents,
+      status: provider.status,
+      message:
+        'Refund PROVIDER_REQUESTED — COMPLETED only after Stripe webhook',
     };
   }
 
@@ -315,8 +304,8 @@ export class PaymentsService {
   }
 
   /**
-   * Stripe webhook — Connect + payments.
-   * Events: account.updated, payment_intent.succeeded, refunds/disputes (logged).
+   * Stripe webhook — durable PaymentWebhookEvent + idempotency (Stage 7).
+   * Events: account.updated, payment_intent.succeeded, refunds/disputes.
    */
   async handleStripeWebhook(rawBody: Buffer, signature: string | undefined) {
     const secret = this.config.get<string>('STRIPE_WEBHOOK_SECRET');
@@ -324,11 +313,14 @@ export class PaymentsService {
     if (!secret || !apiKey) {
       throw new ServiceUnavailableException('Stripe webhook not configured');
     }
+    if (!signature?.trim()) {
+      throw new BadRequestException('Invalid webhook signature');
+    }
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Stripe = require('stripe');
     const stripe = new Stripe(apiKey);
     let event: {
-      id?: string;
+      id: string;
       type: string;
       data: { object: Record<string, unknown> };
     };
@@ -339,8 +331,139 @@ export class PaymentsService {
       throw new BadRequestException('Invalid webhook signature');
     }
 
-    this.logger.log(`Stripe webhook ${event.type} id=${event.id || 'n/a'}`);
+    if (!event?.id) {
+      throw new BadRequestException('Stripe event missing id');
+    }
 
+    return this.processVerifiedStripeEvent(event, rawBody);
+  }
+
+  /**
+   * After signature verification: store event, process once, mark status.
+   * Exported for unit tests (inject pre-built event without Stripe crypto).
+   */
+  async processVerifiedStripeEvent(
+    event: {
+      id: string;
+      type: string;
+      data: { object: Record<string, unknown> };
+    },
+    rawBody?: Buffer,
+  ) {
+    this.logger.log(`Stripe webhook ${event.type} id=${event.id}`);
+
+    const existing = await this.prisma.paymentWebhookEvent.findUnique({
+      where: {
+        provider_externalId: {
+          provider: 'stripe',
+          externalId: event.id,
+        },
+      },
+    });
+
+    if (existing?.status === 'processed' || existing?.status === 'ignored') {
+      this.metrics.incWebhookProcessed('already_processed');
+      return {
+        received: true,
+        status: 'already_processed' as const,
+        type: event.type,
+        eventId: event.id,
+      };
+    }
+
+    const orderIdHint = this.extractOrderIdFromEvent(event);
+    const payloadHash = rawBody
+      ? createHash('sha256').update(rawBody).digest('hex')
+      : null;
+
+    const webhookEvent = await this.prisma.paymentWebhookEvent.upsert({
+      where: {
+        provider_externalId: {
+          provider: 'stripe',
+          externalId: event.id,
+        },
+      },
+      create: {
+        provider: 'stripe',
+        externalId: event.id,
+        eventType: event.type,
+        status: 'received',
+        payloadHash,
+        orderId: orderIdHint,
+      },
+      update: {
+        // retry after failed: reset error, keep received
+        status: 'received',
+        errorMessage: null,
+        orderId: orderIdHint ?? undefined,
+        payloadHash: payloadHash ?? undefined,
+      },
+    });
+
+    try {
+      const processResult = await this.processStripeEvent(
+        event,
+        webhookEvent.id,
+      );
+
+      const finalStatus =
+        processResult.status === 'ignored' ? 'ignored' : 'processed';
+
+      await this.prisma.paymentWebhookEvent.update({
+        where: { id: webhookEvent.id },
+        data: {
+          status: finalStatus,
+          processedAt: new Date(),
+          orderId: processResult.orderId ?? orderIdHint ?? undefined,
+          errorMessage: null,
+        },
+      });
+
+      this.metrics.incWebhookProcessed(finalStatus);
+
+      return {
+        received: true,
+        status: finalStatus as 'processed' | 'ignored',
+        type: event.type,
+        eventId: event.id,
+      };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : String(error);
+      await this.prisma.paymentWebhookEvent.update({
+        where: { id: webhookEvent.id },
+        data: {
+          status: 'failed',
+          errorMessage: message.slice(0, 500),
+        },
+      });
+      this.metrics.incWebhookFailed(message.slice(0, 64));
+      // Re-throw so Stripe retries
+      throw error;
+    }
+  }
+
+  private extractOrderIdFromEvent(event: {
+    type: string;
+    data: { object: Record<string, unknown> };
+  }): string | null {
+    const obj = event.data?.object || {};
+    const meta = (obj.metadata || {}) as Record<string, string>;
+    if (meta.orderId?.trim()) return meta.orderId.trim();
+    return null;
+  }
+
+  /**
+   * Business handlers. Returns 'ignored' for unhandled types.
+   */
+  private async processStripeEvent(
+    event: {
+      id: string;
+      type: string;
+      data: { object: Record<string, unknown> };
+    },
+    _webhookEventId: string,
+  ): Promise<{ status: 'ok' | 'ignored'; orderId?: string | null }> {
     switch (event.type) {
       case 'account.updated': {
         await this.handleConnectAccountUpdated(
@@ -349,10 +472,9 @@ export class PaymentsService {
             metadata?: Record<string, string>;
           },
         );
-        break;
+        return { status: 'ok' };
       }
       case 'payment_intent.succeeded': {
-        // Works with Destination Charges — amount/currency/metadata.orderId still validated
         const pi = event.data.object as {
           id: string;
           amount?: number;
@@ -362,8 +484,28 @@ export class PaymentsService {
           transfer_data?: { destination?: string };
           application_fee_amount?: number;
         };
-        await this.completeStripeSucceeded(pi);
-        break;
+        const result = await this.completeStripeSucceeded(pi);
+        const orderId =
+          pi.metadata?.orderId?.trim() ||
+          (result && 'orderId' in result
+            ? (result as { orderId?: string }).orderId
+            : null);
+        return { status: 'ok', orderId };
+      }
+      case 'payment_intent.payment_failed': {
+        await this.handlePaymentIntentFailed(
+          event.data.object as {
+            id?: string;
+            metadata?: Record<string, string>;
+            last_payment_error?: { message?: string };
+          },
+        );
+        return {
+          status: 'ok',
+          orderId: (
+            event.data.object.metadata as { orderId?: string } | undefined
+          )?.orderId,
+        };
       }
       case 'charge.refunded':
       case 'refund.created':
@@ -372,14 +514,18 @@ export class PaymentsService {
           event.type,
           event.data.object as Record<string, unknown>,
         );
-        break;
+        const meta = (event.data.object.metadata || {}) as Record<
+          string,
+          string
+        >;
+        return { status: 'ok', orderId: meta.orderId };
       }
       case 'payout.paid':
       case 'payout.failed': {
         this.logger.log(
           `Stripe payout ${event.type} id=${String(event.data.object?.id)} status=${String(event.data.object?.status)}`,
         );
-        break;
+        return { status: 'ok' };
       }
       case 'charge.dispute.created':
       case 'charge.dispute.updated': {
@@ -387,17 +533,58 @@ export class PaymentsService {
           event.type,
           event.data.object as Record<string, unknown>,
         );
-        break;
+        return { status: 'ok' };
       }
       default:
         this.logger.debug(`Stripe event ignored: ${event.type}`);
+        return { status: 'ignored' };
     }
+  }
 
-    return { received: true, type: event.type };
+  private async handlePaymentIntentFailed(pi: {
+    id?: string;
+    metadata?: Record<string, string>;
+    last_payment_error?: { message?: string };
+  }) {
+    const providerPaymentId = String(pi.id || '');
+    const orderId = pi.metadata?.orderId?.trim();
+    if (!providerPaymentId && !orderId) return;
+
+    const payment = providerPaymentId
+      ? await this.prisma.payment.findFirst({
+          where: { provider: 'stripe', providerPaymentId },
+        })
+      : orderId
+        ? await this.prisma.payment.findFirst({
+            where: {
+              orderId,
+              provider: 'stripe',
+              status: PaymentStatus.PENDING,
+            },
+            orderBy: { createdAt: 'desc' },
+          })
+        : null;
+
+    if (payment && payment.status === PaymentStatus.PENDING) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.FAILED,
+          rawPayload: JSON.stringify({
+            reason: 'payment_intent.payment_failed',
+            message: pi.last_payment_error?.message,
+            pi,
+          }),
+        },
+      });
+    }
+    this.logger.warn(
+      `payment_intent.payment_failed pi=${providerPaymentId} orderId=${orderId || 'n/a'}`,
+    );
   }
 
   /**
-   * Apply refund side-effects from Stripe webhooks.
+   * Stage 8: only webhook confirms refund → COMPLETED (via RefundsService).
    * Supports Refund object (refund.*) and Charge (charge.refunded).
    */
   private async handleStripeRefundEvent(
@@ -406,16 +593,30 @@ export class PaymentsService {
   ) {
     const meta = (obj.metadata || {}) as Record<string, string>;
     let orderId = meta.orderId?.trim() || '';
+    const refundIdFromMeta = meta.refundId?.trim() || '';
     const paymentIntentId = String(
       obj.payment_intent || obj.paymentIntent || '',
     );
-    const refundId = String(obj.id || '');
+
+    // charge.refunded: id is charge; nested refunds.data[0].id may be refund
+    let stripeRefundId = String(obj.id || '');
+    const nested = obj.refunds as
+      | { data?: Array<{ id?: string; amount?: number }> }
+      | undefined;
+    if (type === 'charge.refunded' && nested?.data?.[0]?.id) {
+      stripeRefundId = String(nested.data[0].id);
+    }
+    // For refund.* events, obj.id is the refund id
+    if (type.startsWith('refund.')) {
+      stripeRefundId = String(obj.id || '');
+    }
+
     const amount =
       typeof obj.amount === 'number'
         ? obj.amount
         : typeof obj.amount_refunded === 'number'
           ? obj.amount_refunded
-          : null;
+          : nested?.data?.[0]?.amount ?? null;
 
     if (!orderId && paymentIntentId) {
       const payment = await this.prisma.payment.findFirst({
@@ -425,64 +626,14 @@ export class PaymentsService {
     }
 
     this.logger.log(
-      `Refund event ${type} refund=${refundId} orderId=${orderId || 'n/a'} amount=${amount}`,
+      `Refund event ${type} stripeRefund=${stripeRefundId} orderId=${orderId || 'n/a'} amount=${amount}`,
     );
 
-    if (!orderId) return;
-
-    const order = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: { payments: true },
-    });
-    if (!order) return;
-
-    const payment = order.payments.find(
-      (p) => p.status === PaymentStatus.SUCCEEDED,
-    );
-    const refundAmount = amount ?? payment?.amountCents ?? order.totalCents;
-    const full = refundAmount >= order.totalCents;
-
-    // Idempotent: avoid duplicate Refund rows for same stripe id
-    const existing = await this.prisma.refund.findFirst({
-      where: {
-        orderId,
-        adminNote: { contains: refundId },
-      },
-    });
-    if (!existing && refundId) {
-      await this.prisma.refund.create({
-        data: {
-          orderId,
-          amountCents: refundAmount,
-          reason: type,
-          status: RefundStatus.COMPLETED,
-          adminNote: `stripe_refund=${refundId}`,
-        },
-      });
-    }
-
-    if (
-      order.status !== OrderStatus.REFUNDED &&
-      order.status !== OrderStatus.PARTIALLY_REFUNDED
-    ) {
-      await this.prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: full ? OrderStatus.REFUNDED : OrderStatus.PARTIALLY_REFUNDED,
-        },
-      });
-    }
-
-    await this.audit.log({
-      action: 'PAYMENT',
-      entityType: 'Order',
-      entityId: orderId,
-      meta: {
-        event: type,
-        stripeRefundId: refundId,
-        amountCents: refundAmount,
-        full,
-      },
+    await this.refundsService.confirmProviderRefund({
+      stripeRefundId: stripeRefundId || null,
+      orderId: orderId || null,
+      amountCents: amount,
+      refundIdFromMeta: refundIdFromMeta || null,
     });
   }
 
@@ -608,11 +759,11 @@ export class PaymentsService {
       this.logger.error(
         `Stripe PI ${providerPaymentId}: payment row not found orderId=${metaOrderId}`,
       );
-      return { ok: false, reason: 'payment_not_found' };
+      return { ok: false, reason: 'payment_not_found', orderId: metaOrderId || null };
     }
 
     if (payment.status === PaymentStatus.SUCCEEDED) {
-      return { ok: true, already: true };
+      return { ok: true, already: true, orderId: payment.orderId };
     }
 
     const fail = async (reason: string) => {
@@ -626,7 +777,7 @@ export class PaymentsService {
       this.logger.error(
         `Stripe validation failed payment=${payment!.id}: ${reason}`,
       );
-      return { ok: false as const, reason };
+      return { ok: false as const, reason, orderId: payment!.orderId };
     };
 
     if (!metaOrderId || metaOrderId !== payment.orderId) {
@@ -844,6 +995,8 @@ export class PaymentsService {
     }
 
     const orderId = payment.orderId;
+    patchRequestContext({ orderId, paymentId: payment.id });
+    const payStarted = Date.now();
     const result = await this.orders.markPaidFromPayment(
       orderId,
       input.providerPaymentId,
@@ -860,6 +1013,14 @@ export class PaymentsService {
       this.logger.error(
         `markPaid failed order=${orderId} reason=${result.reason}`,
       );
+      this.slog.error('Payment mark paid failed', {
+        orderId,
+        paymentId: payment.id,
+        status: 'failed',
+        durationMs: Date.now() - payStarted,
+        error: result.reason,
+      });
+      this.metrics.incPaymentFailed(result.reason || 'mark_paid_failed');
       return result;
     }
 
@@ -873,7 +1034,93 @@ export class PaymentsService {
       },
     });
 
-    return { ok: true };
+    // Stage 9: double-entry financial ledger (idempotent by Order id)
+    try {
+      const order = await this.prisma.order.findUnique({
+        where: { id: orderId },
+        select: {
+          id: true,
+          shopId: true,
+          customerId: true,
+          tenantId: true,
+          totalCents: true,
+          commissionCents: true,
+          currency: true,
+          orderNumber: true,
+        },
+      });
+      if (order) {
+        patchRequestContext({ shopId: order.shopId, orderId: order.id });
+        await this.ledger.postPayment({
+          orderId: order.id,
+          amountCents: order.totalCents,
+          commissionCents: order.commissionCents,
+          shopId: order.shopId,
+          currency: order.currency,
+          description: `Payment ${order.orderNumber}`,
+        });
+
+        // Stage 18: durable ORDER_PAID notifications (buyer + merchant)
+        this.events.emit(DomainEvents.OrderPaid, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          shopId: order.shopId,
+          customerId: order.customerId,
+          tenantId: order.tenantId,
+          totalCents: order.totalCents,
+        });
+
+        this.slog.info('Payment succeeded', {
+          orderId: order.id,
+          paymentId: payment.id,
+          shopId: order.shopId,
+          status: 200,
+          durationMs: Date.now() - payStarted,
+        });
+        this.metrics.incPaymentSucceeded();
+      }
+    } catch (e) {
+      this.logger.error(
+        `Ledger postPayment failed order=${orderId}: ${e instanceof Error ? e.message : e}`,
+      );
+      this.slog.error('Payment ledger post failed', {
+        orderId,
+        paymentId: payment.id,
+        status: 'error',
+        durationMs: Date.now() - payStarted,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      this.metrics.incPaymentFailed('ledger_post_failed');
+      // Do not roll back payment success — money movement already confirmed
+      // Still try to emit OrderPaid for notifications
+      try {
+        const order = await this.prisma.order.findUnique({
+          where: { id: orderId },
+          select: {
+            id: true,
+            shopId: true,
+            customerId: true,
+            tenantId: true,
+            orderNumber: true,
+            totalCents: true,
+          },
+        });
+        if (order) {
+          this.events.emit(DomainEvents.OrderPaid, {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            shopId: order.shopId,
+            customerId: order.customerId,
+            tenantId: order.tenantId,
+            totalCents: order.totalCents,
+          });
+        }
+      } catch {
+        /* ignore secondary emit failures */
+      }
+    }
+
+    return { ok: true, orderId };
   }
 
   verifyHmac(payload: string, signature: string, secret: string): boolean {

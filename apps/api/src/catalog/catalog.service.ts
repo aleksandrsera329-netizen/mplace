@@ -11,10 +11,19 @@ import { CacheService } from '../cache/cache.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { SearchService } from '../search/search.service';
 import { StorageService } from '../storage/storage.service';
+import { DomainEventService } from '../events/domain-event.service';
+import { DomainEvents } from '../events/domain-events';
+import { FileSecurityService } from '../common/upload/file-security.service';
+import { QueueProducer } from '../queue/queue.producer';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsDto } from './dto/list-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Prisma } from '@prisma/client';
+
+/** Loose product shape for search indexing fallback */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ProductSearchDocInline = any;
 
 function slugify(input: string): string {
   return input
@@ -33,7 +42,27 @@ export class CatalogService {
     private readonly cache: CacheService,
     private readonly search: SearchService,
     private readonly storage: StorageService,
+    private readonly events: DomainEventService,
+    private readonly queues: QueueProducer,
+    private readonly fileSecurity: FileSecurityService,
   ) {}
+
+  /** Stage 17: prefer async search-index queue; inline fallback without Redis */
+  private async scheduleSearchIndex(
+    productId: string,
+    action: 'index' | 'remove',
+    productForInline?: ProductSearchDocInline,
+  ) {
+    const enq = await this.queues.enqueueSearchIndex({ action, productId });
+    if (enq.queued) return;
+    if (action === 'remove') {
+      await this.search.removeProduct(productId).catch(() => null);
+      return;
+    }
+    if (productForInline) {
+      await this.search.indexProduct(productForInline).catch(() => null);
+    }
+  }
 
   private async invalidateCatalogCache() {
     await this.cache.delByPattern('categories:*');
@@ -179,13 +208,37 @@ export class CatalogService {
       include: {
         shop: { select: { id: true, name: true, slug: true } },
         category: { select: { id: true, name: true } },
+        stocks: {
+          select: {
+            id: true,
+            warehouseId: true,
+            quantity: true,
+            reserved: true,
+            warehouse: {
+              select: { id: true, name: true, code: true, isDefault: true },
+            },
+          },
+        },
       },
     });
     if (!product) {
       throw new NotFoundException('Product not found');
     }
     this.assertCanRead(product.shopId, product.status, user);
-    return product;
+
+    const availableFromStocks = product.stocks.length
+      ? product.stocks.reduce(
+          (sum, s) => sum + Math.max(0, s.quantity - s.reserved),
+          0,
+        )
+      : product.stock;
+
+    return {
+      ...product,
+      /** Available to sell (quantity - reserved) */
+      availableStock: availableFromStocks,
+      stock: availableFromStocks,
+    };
   }
 
   async createProduct(user: JwtPayload, dto: CreateProductDto) {
@@ -217,6 +270,12 @@ export class CatalogService {
         description: dto.description,
         sku: dto.sku,
         gtin: dto.gtin,
+        brand: dto.brand?.trim() || null,
+        moq: dto.moq != null ? Math.max(1, dto.moq) : 1,
+        attributes:
+          dto.attributes != null
+            ? (dto.attributes as Prisma.InputJsonValue)
+            : undefined,
         priceCents,
         currency: dto.currency ?? 'USD',
         stock: Math.max(0, dto.stock ?? 0),
@@ -245,10 +304,44 @@ export class CatalogService {
     });
     await this.invalidateCatalogCache();
     if (product.status === ProductStatus.ACTIVE) {
-      await this.search.indexProduct(product);
+      await this.scheduleSearchIndex(product.id, 'index', product);
     }
 
+    this.events.emit(DomainEvents.ProductCreated, {
+      productId: product.id,
+      shopId: product.shopId,
+      name: product.name,
+      status: product.status,
+    });
+
     return product;
+  }
+
+  async getProductStocks(user: JwtPayload, productId: string) {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true, shopId: true },
+    });
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    this.assertCanWriteShop(user, product.shopId);
+
+    return this.prisma.productStock.findMany({
+      where: { productId },
+      include: {
+        warehouse: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            isDefault: true,
+            city: true,
+          },
+        },
+      },
+      orderBy: { warehouse: { name: 'asc' } },
+    });
   }
 
   async updateProduct(user: JwtPayload, id: string, dto: UpdateProductDto) {
@@ -278,6 +371,14 @@ export class CatalogService {
         await this.storage.deleteImage(existing.imageUrl);
       }
     }
+    if (dto.brand !== undefined) data.brand = dto.brand?.trim() || null;
+    if (dto.moq !== undefined) data.moq = Math.max(1, dto.moq);
+    if (dto.attributes !== undefined) {
+      data.attributes =
+        dto.attributes == null
+          ? Prisma.JsonNull
+          : (dto.attributes as Prisma.InputJsonValue);
+    }
 
     const product = await this.prisma.product.update({
       where: { id },
@@ -301,10 +402,16 @@ export class CatalogService {
     });
     await this.invalidateCatalogCache();
     if (product.status === ProductStatus.ACTIVE) {
-      await this.search.indexProduct(product);
+      await this.scheduleSearchIndex(product.id, 'index', product);
     } else {
-      await this.search.removeProduct(product.id);
+      await this.scheduleSearchIndex(product.id, 'remove');
     }
+
+    this.events.emit(DomainEvents.ProductUpdated, {
+      productId: product.id,
+      shopId: product.shopId,
+      status: product.status,
+    });
 
     return product;
   }
@@ -329,7 +436,11 @@ export class CatalogService {
       meta: { soft: true, previousStatus: existing.status, name: existing.name },
     });
     await this.invalidateCatalogCache();
-    await this.search.removeProduct(id);
+    await this.scheduleSearchIndex(id, 'remove');
+    this.events.emit(DomainEvents.ProductDeleted, {
+      productId: id,
+      shopId: existing.shopId,
+    });
     if (existing.imageUrl) {
       await this.storage.deleteImage(existing.imageUrl);
     }
@@ -338,6 +449,8 @@ export class CatalogService {
   }
 
   async uploadProductImage(file: Express.Multer.File) {
+    const safe = await this.fileSecurity.assertSafe(file, 'image');
+    this.fileSecurity.applySafeMeta(file, safe);
     const url = await this.storage.uploadImage(file, 'products');
     return { url };
   }
@@ -357,11 +470,10 @@ export class CatalogService {
     if (!product) throw new NotFoundException('Product not found');
     this.assertCanWriteShop(user, product.shopId);
 
-    if (!file?.buffer?.length) {
-      throw new BadRequestException('File is required');
-    }
+    const safe = await this.fileSecurity.assertSafe(file, 'document');
+    this.fileSecurity.applySafeMeta(file, safe);
 
-    const isImage = file.mimetype?.startsWith('image/');
+    const isImage = safe.mimeType.startsWith('image/');
     const filePath = isImage
       ? await this.storage.uploadImage(file, 'documents')
       : await this.storage.uploadFile(file, 'documents');
@@ -369,7 +481,7 @@ export class CatalogService {
     const doc = await this.prisma.productDocument.create({
       data: {
         productId,
-        name: (name?.trim() || file.originalname || 'document').slice(0, 200),
+        name: (name?.trim() || safe.safeOriginalName || 'document').slice(0, 200),
         filePath,
         docType: (docType || 'certificate').slice(0, 80),
       },
@@ -451,27 +563,33 @@ export class CatalogService {
     };
   }
 
-  /** Meilisearch product search */
+  /** Meilisearch product search (legacy path — delegates to Stage 17 advanced) */
   async searchProducts(
     query: string,
-    opts?: { limit?: number; categoryId?: string },
+    opts?: {
+      limit?: number;
+      categoryId?: string;
+      shopId?: string;
+      brand?: string;
+      priceMin?: number;
+      priceMax?: number;
+      inStock?: boolean | string;
+      page?: number;
+      sort?: string;
+    },
   ) {
-    if (!query || query.trim().length < 2) {
-      return { hits: [], query: query || '', estimatedTotalHits: 0 };
-    }
-
-    let filter = 'status = ACTIVE';
-    if (opts?.categoryId) {
-      // string id must be quoted for Meilisearch
-      filter += ` AND categoryId = "${opts.categoryId}"`;
-    }
-
-    const result = await this.search.searchProducts(query.trim(), {
-      limit: Math.min(Number(opts?.limit) || 20, 50),
-      filter,
+    return this.search.searchProductsAdvanced({
+      q: query || '',
+      limit: opts?.limit,
+      categoryId: opts?.categoryId,
+      shopId: opts?.shopId,
+      brand: opts?.brand,
+      priceMin: opts?.priceMin,
+      priceMax: opts?.priceMax,
+      inStock: opts?.inStock,
+      page: opts?.page,
+      sort: opts?.sort,
     });
-
-    return result;
   }
 
   // ── helpers ────────────────────────────────────────────

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/store/cart"
 import { api } from "@/lib/api"
 import type { CartItem } from "@/lib/api"
+import { toast } from "@/components/ui/toast"
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -33,7 +34,7 @@ export default function CartPage() {
       console.error(e)
       const msg =
         e instanceof Error ? e.message : "Не удалось изменить количество"
-      alert(msg)
+      toast({ title: "Ошибка", description: msg, type: "error" })
     }
   }
 
@@ -44,7 +45,7 @@ export default function CartPage() {
     } catch (e) {
       console.error(e)
       const msg = e instanceof Error ? e.message : "Не удалось удалить позицию"
-      alert(msg)
+      toast({ title: "Ошибка", description: msg, type: "error" })
     }
   }
 

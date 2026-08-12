@@ -1,89 +1,212 @@
-# Mplace — multi-vendor marketplace
+# Mplace — multi-vendor B2B marketplace
 
-## Product TZ (новое)
+NestJS API + **Next.js primary UI** (`apps/web`: storefront, cart/checkout, buyer/merchant/admin).  
+Legacy root `*.html` is optional fallback only ([LEGACY.md](LEGACY.md)).  
+Stack: **PostgreSQL 16 · Redis 7 · Meilisearch · BullMQ · Stripe**.
 
-Полное ТЗ по epic/US/sprint:
+## Documentation map
 
-- [`docs/spec/PRODUCT_TZ.md`](docs/spec/PRODUCT_TZ.md) — Epic 1–11  
-- [`docs/spec/GAP_ANALYSIS.md`](docs/spec/GAP_ANALYSIS.md) — vs текущий код  
-- [`docs/spec/SPRINT_PLAN.md`](docs/spec/SPRINT_PLAN.md) — спринты 1–10+  
+| Doc | Content |
+|-----|---------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, modules, data flow |
+| [docs/FRONTEND.md](docs/FRONTEND.md) | Next vs legacy matrix, role routes, cutover |
+| [docs/API.md](docs/API.md) | HTTP API overview + Swagger |
+| [docs/DATABASE.md](docs/DATABASE.md) | Schema, migrations, seed policy |
+| [docs/SECURITY.md](docs/SECURITY.md) | Auth, secrets, headers, ACL, XSS |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Local / Docker / prod deploy, rollback |
+| [docs/PAYMENTS.md](docs/PAYMENTS.md) | Stripe, webhooks, refunds, ledger link |
+| [docs/RFQ.md](docs/RFQ.md) | RFQ → offer → award → Order |
+| [docs/KYC.md](docs/KYC.md) | Private KYC uploads + signed download |
+| [docs/BACKUP.md](docs/BACKUP.md) | DB backup / restore / drill |
+| [docs/MONITORING.md](docs/MONITORING.md) | Health, Prometheus, alerts |
+| [docs/TEST_MATRIX.md](docs/TEST_MATRIX.md) | Security & money test gate |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Stages status (0–30) |
+| [docs/PRODUCTION_GATE.md](docs/PRODUCTION_GATE.md) | **Stage 30** pilot / investor go-live checklist |
+| [docs/AUDIT.md](docs/AUDIT.md) | Area status snapshot |
 
-**Сейчас в работе (рекомендация):** Sprint 1 — Auth + Roles + lockout + email verify foundation.
+Product TZ (historical): [`docs/spec/PRODUCT_TZ.md`](docs/spec/PRODUCT_TZ.md).
 
 ---
 
-Рабочая папка: `C:\Users\sasha\mplace`
+## Quick start (local)
 
-## Запуск
+### Prerequisites
+
+- Node.js 20+
+- PostgreSQL 16+ (or Docker)
+- Redis (recommended; queues/throttle degrade without it)
+- Optional: Meilisearch, Stripe keys
+
+### 1) Database
+
+```powershell
+# Option A: local Postgres
+# Create DB "mplace", user/password as in DATABASE_URL
+
+# Option B: Docker only infra
+cd C:\Users\sasha\mplace
+docker compose up -d postgres redis meilisearch
+```
+
+### 2) API
 
 ```powershell
 cd C:\Users\sasha\mplace\apps\api
-npm install
-npx prisma migrate dev
-npx prisma db seed
-npm run start:dev
+copy .env.example .env   # if present; else ensure DATABASE_URL + JWT_SECRET
+# DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/mplace?schema=public
+# PORT=3001
+# REDIS_URL=redis://127.0.0.1:6379
+# PAYMENT_PROVIDER=dev
+# ALLOW_DEV_PAYMENTS=true
 
-# второй терминал
+npm install
+npx prisma migrate deploy
+npx prisma db seed          # dev only — never on prod boot
+npm run start:dev
+```
+
+- API: http://127.0.0.1:3001/api  
+- Swagger: http://127.0.0.1:3001/api/docs  
+- Health: http://127.0.0.1:3001/api/health  
+- Ready: http://127.0.0.1:3001/api/health/ready  
+- Metrics: http://127.0.0.1:3001/api/metrics  
+
+### 3) Web (Next.js — primary UI)
+
+```powershell
+cd C:\Users\sasha\mplace\apps\web
+# NEXT_PUBLIC_API_URL=http://127.0.0.1:3001/api
+npm install
+npm run dev
+```
+
+- Storefront: http://127.0.0.1:3000/  
+- Cart / checkout: `/cart`, `/checkout`  
+- Buyer / merchant / admin: `/buyer`, `/merchant`, `/admin`  
+- Login: `/login` (role redirect after auth)
+
+See [docs/FRONTEND.md](docs/FRONTEND.md).
+
+### 4) Legacy HTML (optional fallback only)
+
+```powershell
 cd C:\Users\sasha\mplace
 py -m http.server 8080
+# open http://127.0.0.1:8080/  — not used in Docker nginx path
 ```
 
-- Витрина: http://127.0.0.1:8080/
-- API health: http://127.0.0.1:3000/api/health
+Details: [LEGACY.md](LEGACY.md).
 
-## Демо-логины (только development)
-
-| Роль | Email | Password |
-|------|-------|----------|
-| Admin | superadmin@demo.com | 123456 |
-| Merchant | merchant@demo.com | 123456 |
-| Customer | customer@demo.com | 123456 |
-
-## Платежи
-
-| Окружение | Настройка |
-|-----------|-----------|
-| **Production** | `PAYMENT_PROVIDER=stripe`, `ALLOW_DEV_PAYMENTS=false` — см. `.env.production.example` |
-| **Local** | `PAYMENT_PROVIDER=dev` + `ALLOW_DEV_PAYMENTS=true` + CLI-скрипт |
-
-- `POST /orders/:id/pay` **удалён**.
-- Guest token: только header **`X-Order-Access-Token`** (не query).
-- Stripe webhook: подпись + **amount_received + currency + metadata.orderId**.
-- UI: **Stripe Elements** в `cart.html` при `mode=stripe`.
-- Dev-confirm: только `scripts/dev-confirm-payment.ps1` (секрет **не** во фронте).
-- `assets/js/dev-config.js` **удалён**.
-
-## Безопасность заказов
-
-- Просмотр/оплата: владелец / merchant своего shop / admin / guest token.
-- Остатки: atomic `Prisma.sql` (SQLite + PostgreSQL).
-- Номер заказа: `MP-{time}-{hash}`.
-- State machine + `OrderStatusHistory` + audit.
-
-## Реальные API (не demo-data)
-
-- Catalog, shops, orders, cart, checkout, payments
-- Payouts / ledger / balance
-- Tickets, disputes, refunds, audit
-- Admin reports summary
-
-Меню админки без фиктивных аддонов (themes/plugins и т.п. убраны из навигации).
-
-## Тесты
+### Full Docker stack
 
 ```powershell
-cd C:\Users\sasha\mplace\apps\api
-npm test
-# e2e (нужна мигрированная БД + seed):
-npm run test:e2e
+cd C:\Users\sasha\mplace
+docker compose up -d --build
+# migrate runs once before API
+# nginx :8088 → web + api
+curl http://localhost:3001/api/health
 ```
 
-## Production checklist
+Details: [docs/DOCKER.md](docs/DOCKER.md), [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-См. `.env.production.example` и `docs/SECURITY_ORDERS_PAYMENTS.md`.
+---
 
-- [ ] PostgreSQL + migrations
-- [ ] `PAYMENT_PROVIDER=stripe`, `ALLOW_DEV_PAYMENTS=false`
-- [ ] Случайный `JWT_SECRET`, Stripe live/test keys
-- [ ] HTTPS, CORS whitelist, Redis, backups
-- [ ] Нет demo-паролей в UI
+## Demo logins (development seed only)
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super admin | `superadmin@demo.com` | `123456` |
+| Merchant | `merchant@demo.com` | `123456` |
+| Customer | `customer@demo.com` | `123456` |
+
+> Admins require TOTP MFA after first login (Stage 6). Do **not** use these credentials in production.
+
+---
+
+## Main commands (`apps/api`)
+
+| Command | Purpose |
+|---------|---------|
+| `npm run start:dev` | Nest watch |
+| `npm run build` | Compile |
+| `npm run start:prod` | `node dist/src/main.js` |
+| `npx prisma migrate deploy` | Apply migrations (prod/CI) |
+| `npx prisma migrate dev` | Create migration (dev) |
+| `npx prisma db seed` | Seed demo data (manual) |
+| `npm test` | Unit / integration |
+| `npm run test:security` | Critical security & money suite |
+| `npm run test:e2e` | E2E (DB + env required) |
+
+Backup:
+
+```powershell
+$env:DATABASE_URL = "postgresql://..."
+.\scripts\backup-db.ps1
+.\scripts\verify-backup-restore.ps1   # full drill
+```
+
+---
+
+## Subsystems (one-liners)
+
+| Area | Summary |
+|------|---------|
+| **Auth** | JWT access + refresh family rotation; admin TOTP MFA; lockout after 5 fails |
+| **Payments** | Stripe PaymentIntents + idempotent webhooks; no `POST /orders/:id/pay` |
+| **Ledger** | Double-entry `FinancialTransaction` / entries; debit = credit |
+| **Payouts** | Atomic RESERVED + `Shop FOR UPDATE` |
+| **RFQ** | Create → offers → award → `Order PENDING_PAYMENT` |
+| **KYC** | Private storage, signed URLs, shop ACL |
+| **Search** | Meilisearch facets + queue reindex |
+| **Jobs** | BullMQ: email, import, inventory release, search |
+
+---
+
+## Project status (Stage 30)
+
+**Verdict:** ready for **pilot customers** and **investor demo** after env secrets / HTTPS / Stripe webhook are set on the target host.
+
+Full scored checklist: **[docs/PRODUCTION_GATE.md](docs/PRODUCTION_GATE.md)**.
+
+### Pre-flight (ops — target environment)
+
+- [ ] PostgreSQL + `prisma migrate deploy` (no `db push`, no auto-seed)
+- [ ] Strong secrets: `JWT_SECRET`, DB password, `REDIS_URL`, Meili key
+- [ ] `NODE_ENV=production`, `PAYMENT_PROVIDER=stripe`, `ALLOW_DEV_PAYMENTS=false`
+- [ ] Stripe test/live keys + webhook secret verified
+- [ ] HTTPS reverse proxy; CORS allowlist (no `*`); security headers
+- [ ] Redis for BullMQ + rate limits
+- [ ] Backups scheduled ([BACKUP.md](docs/BACKUP.md))
+- [ ] Health `/api/health/ready` + metrics `/api/metrics` ([MONITORING.md](docs/MONITORING.md))
+- [ ] `SENTRY_DSN` for error tracking
+- [ ] `npm run test:security` green before release ([TEST_MATRIX.md](docs/TEST_MATRIX.md))
+- [ ] No demo seed in production
+
+### Gate evidence (2026-08-12)
+
+| Check | Result |
+|-------|--------|
+| `apps/api` build | ✅ |
+| `apps/web` build | ✅ |
+| Unit tests | ✅ 182 |
+| `test:security` | ✅ 85 |
+
+---
+
+## Architecture snapshot
+
+```
+Browser → Next.js apps/web (primary; legacy HTML = fallback only)
+        ↓ Bearer + cookies + X-Session-Key
+NestJS API  /api
+        ↓
+PostgreSQL · Redis (BullMQ/cache) · Meilisearch · Storage (local|S3|R2)
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+---
+
+## License
+
+UNLICENSED / private project.

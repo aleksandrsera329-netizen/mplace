@@ -17,7 +17,9 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '@prisma/client';
+import { Permission, UserRole } from '@prisma/client';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -105,13 +107,14 @@ class ProcessPayoutBody {
 
 @ApiTags('Admin')
 @Controller('admin')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 export class AdminController {
   constructor(private readonly admin: AdminService) {}
 
   /** Legacy stats (kept for existing admin UI) */
   @Get('stats')
+  @RequirePermissions(Permission.users_read, Permission.orders_read)
   @ApiOperation({ summary: 'Legacy dashboard stats' })
   async stats() {
     const d = await this.admin.getDashboard();
@@ -130,12 +133,14 @@ export class AdminController {
   }
 
   @Get('dashboard')
+  @RequirePermissions(Permission.users_read, Permission.orders_read)
   @ApiOperation({ summary: 'Admin dashboard metrics' })
   dashboard() {
     return this.admin.getDashboard();
   }
 
   @Get('users')
+  @RequirePermissions(Permission.users_read)
   @ApiOperation({ summary: 'List users (cursor)' })
   listUsers(@Query() query: CursorListQuery) {
     return this.admin.listUsers({
@@ -149,17 +154,20 @@ export class AdminController {
 
   /** Backward-compatible: all customers */
   @Get('customers')
+  @RequirePermissions(Permission.users_read)
   customers() {
     return this.admin.listUsers({ role: 'CUSTOMER', limit: 100 });
   }
 
   /** Backward-compatible: all merchants */
   @Get('merchants')
+  @RequirePermissions(Permission.users_read)
   merchants() {
     return this.admin.listUsers({ role: 'MERCHANT', limit: 100 });
   }
 
   @Patch('users/:id/status')
+  @RequirePermissions(Permission.users_write)
   updateUserStatus(
     @Param('id') id: string,
     @Body() body: StatusBody,
@@ -169,6 +177,7 @@ export class AdminController {
   }
 
   @Patch('users/:id/role')
+  @RequirePermissions(Permission.users_write)
   updateUserRole(
     @Param('id') id: string,
     @Body() body: RoleBody,
@@ -178,6 +187,7 @@ export class AdminController {
   }
 
   @Get('shops')
+  @RequirePermissions(Permission.shops_read)
   listShops(@Query() query: CursorListQuery) {
     return this.admin.listShops({
       status: query.status,
@@ -188,6 +198,7 @@ export class AdminController {
   }
 
   @Patch('shops/:id/status')
+  @RequirePermissions(Permission.shops_suspend)
   updateShopStatus(
     @Param('id') id: string,
     @Body() body: StatusBody,
@@ -197,6 +208,7 @@ export class AdminController {
   }
 
   @Get('orders')
+  @RequirePermissions(Permission.orders_read)
   listOrders(@Query() query: CursorListQuery) {
     return this.admin.listOrders({
       status: query.status,
@@ -207,6 +219,7 @@ export class AdminController {
   }
 
   @Get('disputes')
+  @RequirePermissions(Permission.disputes_read)
   listDisputes(@Query() query: CursorListQuery) {
     return this.admin.listDisputes({
       status: query.status,
@@ -216,6 +229,7 @@ export class AdminController {
   }
 
   @Patch('disputes/:id/resolve')
+  @RequirePermissions(Permission.disputes_resolve)
   resolveDispute(
     @Param('id') id: string,
     @Body() body: ResolveDisputeBody,
@@ -230,6 +244,7 @@ export class AdminController {
   }
 
   @Get('payouts')
+  @RequirePermissions(Permission.payouts_read)
   @ApiOperation({ summary: 'List payout requests (cursor)' })
   listPayouts(@Query() query: CursorListQuery) {
     return this.admin.listPayouts({
@@ -240,6 +255,7 @@ export class AdminController {
   }
 
   @Patch('payouts/:id/process')
+  @RequirePermissions(Permission.payouts_approve)
   @ApiOperation({ summary: 'Approve / reject / mark paid a payout' })
   processPayout(
     @Param('id') id: string,
@@ -255,6 +271,7 @@ export class AdminController {
   }
 
   @Get('audit')
+  @RequirePermissions(Permission.audit_read)
   @ApiOperation({ summary: 'Audit log (cursor)' })
   listAudit(@Query() query: AuditListQuery) {
     return this.admin.listAudit({

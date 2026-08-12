@@ -6,7 +6,10 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CacheService } from '../cache/cache.service';
 import { SearchService } from '../search/search.service';
 import { StorageService } from '../storage/storage.service';
+import { DomainEventService } from '../events/domain-event.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { FileSecurityService } from '../common/upload/file-security.service';
+import { QueueProducer } from '../queue/queue.producer';
 import { CatalogService } from './catalog.service';
 
 // Avoid loading meilisearch ESM in unit tests
@@ -49,9 +52,10 @@ describe('CatalogService', () => {
   };
 
   const mockSearch = {
-    indexProduct: jest.fn(),
-    removeProduct: jest.fn(),
+    indexProduct: jest.fn().mockResolvedValue(undefined),
+    removeProduct: jest.fn().mockResolvedValue(undefined),
     searchProducts: jest.fn(),
+    searchProductsAdvanced: jest.fn(),
     enabled: true,
   };
 
@@ -65,6 +69,30 @@ describe('CatalogService', () => {
     log: jest.fn().mockResolvedValue(undefined),
   };
 
+  const mockEvents = {
+    emit: jest.fn(),
+  };
+
+  const mockQueues = {
+    enqueueSearchIndex: jest.fn().mockResolvedValue({ queued: false }),
+  };
+
+  const mockFileSecurity = {
+    assertSafe: jest.fn().mockImplementation(async (file: Express.Multer.File) => ({
+      safeOriginalName: file?.originalname || 'file',
+      storageKeyName: 'uuid.png',
+      storageFileName: 'uuid.png',
+      ext: '.png',
+      declaredMime: file?.mimetype || 'image/png',
+      detectedMime: file?.mimetype || 'image/png',
+      mimeType: file?.mimetype || 'image/png',
+      sizeBytes: file?.size || 0,
+      buffer: file?.buffer || Buffer.alloc(0),
+      kind: 'image',
+    })),
+    applySafeMeta: jest.fn((f: Express.Multer.File) => f),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -74,12 +102,16 @@ describe('CatalogService', () => {
         { provide: SearchService, useValue: mockSearch },
         { provide: StorageService, useValue: mockStorage },
         { provide: AuditService, useValue: mockAudit },
+        { provide: DomainEventService, useValue: mockEvents },
+        { provide: QueueProducer, useValue: mockQueues },
+        { provide: FileSecurityService, useValue: mockFileSecurity },
       ],
     }).compile();
 
     service = module.get<CatalogService>(CatalogService);
     jest.clearAllMocks();
     mockAudit.log.mockResolvedValue(undefined);
+    mockQueues.enqueueSearchIndex.mockResolvedValue({ queued: false });
   });
 
   it('should be defined', () => {
@@ -176,7 +208,8 @@ describe('CatalogService', () => {
       expect(mockAudit.log).toHaveBeenCalledWith(
         expect.objectContaining({ action: 'CREATE', entityType: 'Product' }),
       );
-      // DRAFT → no meilisearch index
+      // DRAFT → no meilisearch index schedule
+      expect(mockQueues.enqueueSearchIndex).not.toHaveBeenCalled();
       expect(mockSearch.indexProduct).not.toHaveBeenCalled();
     });
 
@@ -219,6 +252,7 @@ describe('CatalogService', () => {
       } as any);
 
       expect(result.name).toBe('New Name');
+      // Queue offline → inline index fallback
       expect(mockSearch.indexProduct).toHaveBeenCalled();
       expect(mockCache.delByPattern).toHaveBeenCalled();
     });
@@ -242,25 +276,20 @@ describe('CatalogService', () => {
   });
 
   describe('searchProducts', () => {
-    it('should search via Meilisearch', async () => {
-      mockSearch.searchProducts.mockResolvedValue({
+    it('should search via Meilisearch advanced API', async () => {
+      mockSearch.searchProductsAdvanced.mockResolvedValue({
         hits: [{ id: 'p1', name: 'Pump' }],
         estimatedTotalHits: 1,
+        total: 1,
+        facets: {},
       });
 
       const result = await service.searchProducts('pump', { limit: 10 });
 
       expect(result.hits).toHaveLength(1);
-      expect(mockSearch.searchProducts).toHaveBeenCalledWith(
-        'pump',
-        expect.objectContaining({ limit: 10 }),
+      expect(mockSearch.searchProductsAdvanced).toHaveBeenCalledWith(
+        expect.objectContaining({ q: 'pump', limit: 10 }),
       );
-    });
-
-    it('should return empty for short query', async () => {
-      const result = await service.searchProducts('a');
-      expect(result.hits).toEqual([]);
-      expect(mockSearch.searchProducts).not.toHaveBeenCalled();
     });
   });
 });

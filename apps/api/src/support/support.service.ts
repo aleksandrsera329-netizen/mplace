@@ -193,7 +193,9 @@ export class SupportService {
         orderId,
         amountCents,
         reason: reason || null,
-        status: RefundStatus.PENDING,
+        status: RefundStatus.REQUESTED,
+        requestedById: user.sub,
+        currency: order.currency || 'USD',
       },
     });
   }
@@ -207,6 +209,12 @@ export class SupportService {
     if (user.role !== UserRole.ADMIN && user.role !== UserRole.SUPER_ADMIN && user.role !== UserRole.MERCHANT) {
       throw new ForbiddenException();
     }
+    // Stage 8: never COMPLETED via API — only Stripe webhook
+    if (status === 'COMPLETED') {
+      throw new ForbiddenException(
+        'COMPLETED is only set by provider webhook. Use APPROVED then POST /refunds/:id/provider',
+      );
+    }
     const refund = await this.prisma.refund.findUnique({
       where: { id },
       include: { order: true },
@@ -218,25 +226,21 @@ export class SupportService {
     ) {
       throw new ForbiddenException();
     }
-    // Full provider refund integration is P1+; mark status only for now
+    if (status === 'APPROVED' && refund.status !== RefundStatus.REQUESTED) {
+      throw new ForbiddenException('Only REQUESTED refunds can be approved');
+    }
     const updated = await this.prisma.refund.update({
       where: { id },
       data: {
-        status: status as RefundStatus,
+        status:
+          status === 'APPROVED'
+            ? RefundStatus.APPROVED
+            : RefundStatus.REJECTED,
         adminNote: adminNote || null,
+        approvedById: user.sub,
+        approvedAt: new Date(),
       },
     });
-    if (status === 'COMPLETED' || status === 'APPROVED') {
-      await this.prisma.order.update({
-        where: { id: refund.orderId },
-        data: {
-          status:
-            refund.amountCents >= refund.order.totalCents
-              ? 'REFUNDED'
-              : 'PARTIALLY_REFUNDED',
-        },
-      });
-    }
     await this.prisma.auditLog.create({
       data: {
         actorId: user.sub,

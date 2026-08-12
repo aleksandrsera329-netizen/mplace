@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { api, type CartItem } from "@/lib/api"
+import { toast } from "@/components/ui/toast"
 
 interface CartState {
   items: CartItem[]
@@ -48,10 +49,22 @@ export const useCartStore = create<CartState>((set, get) => ({
       await api.addToCart(productId, quantity)
       await get().refresh()
       get().open()
+      const { t } = await import("@/i18n/store").then((m) => ({
+        t: m.useI18n.getState().t,
+      }))
+      toast({
+        title: t("common.success"),
+        description: t("product.added"),
+        type: "success",
+      })
     } catch (e) {
       console.error("Add to cart error", e)
-      const msg = e instanceof Error ? e.message : "Не удалось добавить в корзину"
-      alert(msg)
+      const { t } = await import("@/i18n/store").then((m) => ({
+        t: m.useI18n.getState().t,
+      }))
+      const msg =
+        e instanceof Error ? e.message : t("product.addError")
+      toast({ title: t("common.error"), description: msg, type: "error" })
     }
   },
 

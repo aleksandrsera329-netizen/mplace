@@ -357,21 +357,30 @@
         I.applyDocument();
       } catch (err) {
         console.error(err);
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
         document.getElementById('cartContent').innerHTML = `
           <div class="empty-cart">
             <div class="icon">⚠️</div>
             <h2>Ошибка загрузки</h2>
-            <p>${err.message || 'Не удалось загрузить заявку'}</p>
+            <p>${e(err.message || 'Не удалось загрузить заявку')}</p>
             <a href="/" class="btn-checkout" style="display:inline-block; text-decoration:none; width:auto; padding:14px 28px;">Вернуться в каталог</a>
           </div>
         `;
       }
     }
 
+    function safeImgUrl(url) {
+      const raw = String(url || '');
+      if (!/^(https?:|\/|data:image\/)/i.test(raw)) return '';
+      return typeof escapeAttr === 'function' ? escapeAttr(raw) : raw.replace(/"/g, '&quot;');
+    }
+
     function renderCart(cart) {
       const content = document.getElementById('cartContent');
       const clearBtn = document.getElementById('clearCartBtn');
       document.getElementById('cartCount').textContent = cart.itemCount || 0;
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+      const a = typeof escapeAttr === 'function' ? escapeAttr : e;
 
       if (!cart.items || cart.items.length === 0) {
         clearBtn.style.display = 'none';
@@ -392,25 +401,26 @@
         const p = item.product || {};
         const unit = unitPrice(item);
         const line = unit * item.quantity;
+        const imgSrc = safeImgUrl(p.imageUrl);
         return `
-          <div class="cart-item" data-id="${item.id}">
+          <div class="cart-item" data-id="${a(item.id)}">
             <div class="cart-item-image">
-              ${p.imageUrl ? `<img src="${p.imageUrl}" alt="">` : '🛢️'}
+              ${imgSrc ? `<img src="${imgSrc}" alt="">` : '🛢️'}
             </div>
             <div class="cart-item-info">
-              <h3><a href="/product.html?id=${encodeURIComponent(p.slug || p.id || '')}" style="color:inherit">${p.name || 'Товар'}</a></h3>
+              <h3><a href="/product.html?id=${encodeURIComponent(p.slug || p.id || '')}" style="color:inherit">${e(p.name || 'Товар')}</a></h3>
               <div class="cart-item-meta">
-                ${p.shop?.name || ''} · SKU: ${p.sku || '—'}
+                ${e(p.shop?.name || '')} · SKU: ${e(p.sku || '—')}
               </div>
               <div class="qty-control">
-                <button type="button" data-qty="${item.id}" data-delta="-1">−</button>
-                <span>${item.quantity}</span>
-                <button type="button" data-qty="${item.id}" data-delta="1" data-cur="${item.quantity}">+</button>
+                <button type="button" data-qty="${a(item.id)}" data-delta="-1">−</button>
+                <span>${e(item.quantity)}</span>
+                <button type="button" data-qty="${a(item.id)}" data-delta="1" data-cur="${e(item.quantity)}">+</button>
               </div>
             </div>
             <div class="cart-item-right">
-              <div class="item-price">${I.formatMoney(line)}</div>
-              <button type="button" class="btn-remove" data-remove="${item.id}">Удалить</button>
+              <div class="item-price">${e(I.formatMoney(line))}</div>
+              <button type="button" class="btn-remove" data-remove="${a(item.id)}">Удалить</button>
             </div>
           </div>
         `;

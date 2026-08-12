@@ -188,21 +188,24 @@
     }
 
     function showError(msg) {
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
       document.getElementById('offerContent').innerHTML = `
         <div class="state-block">
           <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">⚠️</div>
-          <h2>${msg}</h2>
+          <h2>${e(msg)}</h2>
           <a href="/rfqs.html" class="btn-submit" style="display:inline-block; width:auto; margin-top:24px; text-decoration:none;">Вернуться</a>
         </div>`;
     }
 
     function renderForm(rfq) {
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
+      const a = typeof escapeAttr === 'function' ? escapeAttr : e;
       const itemsHtml = (rfq.items || []).map((item, index) => `
-        <div class="item-row" data-rfq-item-id="${item.id}">
-          <div class="item-name">${item.name}</div>
+        <div class="item-row" data-rfq-item-id="${a(item.id)}">
+          <div class="item-name">${e(item.name)}</div>
           <div class="item-meta">
-            Запрошено: ${item.quantity} ${item.unit || 'шт'}
-            ${item.specs ? ` · ${item.specs}` : ''}
+            Запрошено: ${e(item.quantity)} ${e(item.unit || 'шт')}
+            ${item.specs ? ` · ${e(item.specs)}` : ''}
           </div>
 
           <div class="form-row">
@@ -212,7 +215,7 @@
             </div>
             <div class="form-group">
               <label>Количество, которое можете поставить</label>
-              <input type="number" class="offer-qty" min="1" value="${item.quantity}">
+              <input type="number" class="offer-qty" min="1" value="${Number(item.quantity) || 1}">
             </div>
           </div>
 
@@ -226,7 +229,7 @@
       document.getElementById('offerContent').innerHTML = `
         <div class="page-header">
           <h1>Отправить предложение</h1>
-          <p style="color:var(--text-muted);">RFQ: <strong>${rfq.number}</strong> — ${rfq.title}</p>
+          <p style="color:var(--text-muted);">RFQ: <strong>${e(rfq.number)}</strong> — ${e(rfq.title)}</p>
         </div>
 
         <div class="card">
@@ -287,6 +290,7 @@
           items
         });
 
+        const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
         document.getElementById('offerContent').innerHTML = `
           <div class="state-block">
             <div style="font-size:4rem; margin-bottom:20px;">✅</div>
@@ -294,7 +298,7 @@
             <p style="color:var(--text-muted); margin:16px 0 32px;">
               Покупатель увидит ваше предложение и сможет его выбрать.
             </p>
-            <a href="/rfq.html?id=${currentRfq.id}" class="btn-submit" style="display:inline-block; width:auto; text-decoration:none; padding:14px 28px;">
+            <a href="/rfq.html?id=${e(currentRfq.id)}" class="btn-submit" style="display:inline-block; width:auto; text-decoration:none; padding:14px 28px;">
               Вернуться к RFQ
             </a>
           </div>

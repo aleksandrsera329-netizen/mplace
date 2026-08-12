@@ -199,25 +199,27 @@
     }
 
     function showError(msg) {
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
       document.getElementById('rfqContent').innerHTML = `
         <div class="state-block">
           <div style="font-size:3.5rem; margin-bottom:16px; opacity:0.5;">⚠️</div>
-          <h2>${msg}</h2>
+          <h2>${e(msg)}</h2>
           <a href="/rfqs.html" class="btn-offer" style="display:inline-block; width:auto; margin-top:24px; text-decoration:none;">К списку RFQ</a>
         </div>`;
     }
 
     function renderRfq(rfq) {
+      const e = typeof escapeHtml === 'function' ? escapeHtml : (s) => String(s ?? '');
       const isBuyer = currentUser && (currentUser.id === rfq.buyerId || ['ADMIN','SUPER_ADMIN'].includes((currentUser.role||'').toUpperCase()));
       const isMerchant = currentUser && ['MERCHANT','ADMIN','SUPER_ADMIN'].includes((currentUser.role||'').toUpperCase());
 
       const itemsHtml = (rfq.items || []).map(item => `
         <tr>
           <td>
-            <div style="font-weight:600;">${item.name}</div>
-            <div style="font-size:0.85rem; color:var(--text-muted);">${item.specs || ''}</div>
+            <div style="font-weight:600;">${e(item.name)}</div>
+            <div style="font-size:0.85rem; color:var(--text-muted);">${e(item.specs || '')}</div>
           </td>
-          <td style="text-align:center;">${item.quantity} ${item.unit || 'шт'}</td>
+          <td style="text-align:center;">${e(item.quantity)} ${e(item.unit || 'шт')}</td>
         </tr>
       `).join('');
 
@@ -229,18 +231,18 @@
               <div class="offer-card ${isWinner ? 'winner' : ''}">
                 <div class="offer-header">
                   <div>
-                    <div style="font-weight:700;">${offer.shop?.name || 'Поставщик'}</div>
+                    <div style="font-weight:700;">${e(offer.shop?.name || 'Поставщик')}</div>
                     <div style="font-size:0.85rem; color:var(--text-muted);">
-                      ${getStatusText(offer.status)} · ${new Date(offer.createdAt).toLocaleDateString('ru-RU')}
+                      ${e(getStatusText(offer.status))} · ${e(new Date(offer.createdAt).toLocaleDateString('ru-RU'))}
                     </div>
                   </div>
                   <div style="font-size:1.2rem; font-weight:800; color:var(--primary);">
-                    ${I.formatMoney(offer.totalCents)}
+                    ${e(I.formatMoney(offer.totalCents))}
                   </div>
                 </div>
-                ${offer.message ? `<div style="font-size:0.9rem; margin:10px 0; color:var(--text-muted);">${offer.message}</div>` : ''}
+                ${offer.message ? `<div style="font-size:0.9rem; margin:10px 0; color:var(--text-muted);">${e(offer.message)}</div>` : ''}
                 ${isBuyer && offer.status === 'PENDING' && !rfq.awardedOfferId ? `
-                  <button class="btn-award" onclick="awardOffer('${offer.id}')">Выбрать это предложение</button>
+                  <button class="btn-award" onclick="awardOffer('${e(offer.id)}')">Выбрать это предложение</button>
                 ` : ''}
                 ${isWinner ? `<div style="margin-top:10px; color:#34d399; font-weight:600;">✓ Выбранное предложение</div>` : ''}
               </div>
@@ -250,10 +252,10 @@
       document.getElementById('rfqContent').innerHTML = `
         <div class="rfq-header">
           <div>
-            <div class="rfq-title">${rfq.title}</div>
-            <div class="rfq-number">${rfq.number} · Создан ${new Date(rfq.createdAt).toLocaleDateString('ru-RU')}</div>
+            <div class="rfq-title">${e(rfq.title)}</div>
+            <div class="rfq-number">${e(rfq.number)} · Создан ${e(new Date(rfq.createdAt).toLocaleDateString('ru-RU'))}</div>
           </div>
-          <div class="status-badge status-${rfq.status}">${getStatusText(rfq.status)}</div>
+          <div class="status-badge status-${e(rfq.status)}">${e(getStatusText(rfq.status))}</div>
         </div>
 
         <div class="grid-2">
@@ -284,9 +286,9 @@
             <div class="card">
               <h2>Информация</h2>
               <div style="font-size:0.95rem; line-height:1.7;">
-                <div><strong>Покупатель:</strong> ${rfq.buyer?.name || rfq.buyer?.email || '—'}</div>
-                ${rfq.deadline ? `<div><strong>Срок:</strong> ${new Date(rfq.deadline).toLocaleDateString('ru-RU')}</div>` : ''}
-                <div style="margin-top:12px; color:var(--text-muted);">${rfq.description || 'Без описания'}</div>
+                <div><strong>Покупатель:</strong> ${e(rfq.buyer?.name || rfq.buyer?.email || '—')}</div>
+                ${rfq.deadline ? `<div><strong>Срок:</strong> ${e(new Date(rfq.deadline).toLocaleDateString('ru-RU'))}</div>` : ''}
+                <div style="margin-top:12px; color:var(--text-muted);">${e(rfq.description || 'Без описания')}</div>
               </div>
             </div>
 
@@ -297,7 +299,7 @@
                 <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:12px;">
                   Отправьте коммерческое предложение по этой заявке
                 </p>
-                <button class="btn-offer" onclick="location.href='/rfq-offer.html?id=${rfq.id}'">
+                <button class="btn-offer" onclick="location.href='/rfq-offer.html?id=${e(rfq.id)}'">
                   Отправить предложение
                 </button>
               </div>
@@ -309,7 +311,7 @@
                 <h2>Подобранные поставщики</h2>
                 ${rfq.matches.slice(0,5).map(m => `
                   <div style="padding:8px 0; border-bottom:1px solid var(--border); font-size:0.95rem;">
-                    ${m.shop?.name || 'Магазин'} <span style="color:var(--text-muted); font-size:0.8rem;">· score ${m.score}</span>
+                    ${e(m.shop?.name || 'Магазин')} <span style="color:var(--text-muted); font-size:0.8rem;">· score ${e(m.score)}</span>
                   </div>
                 `).join('')}
               </div>

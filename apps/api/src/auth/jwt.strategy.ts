@@ -28,6 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: true,
         shopId: true,
         status: true,
+        tenantId: true,
       },
     });
 
@@ -40,6 +41,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       email: user.email,
       role: user.role,
       shopId: user.shopId,
+      tenantId: user.tenantId,
     };
   }
 }

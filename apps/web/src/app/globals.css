@@ -56,3 +56,23 @@
     font-family: Inter, system-ui, -apple-system, sans-serif;
   }
 }
+
+/* RTL layout helpers */
+[dir="rtl"] .sidebar {
+  border-right: none;
+  border-left: 1px solid var(--color-border, var(--border, #333));
+}
+
+[dir="rtl"] .cart-drawer {
+  right: auto;
+  left: 0;
+}
+
+[dir="rtl"] .ms-auto {
+  margin-inline-start: auto;
+}
+
+[dir="rtl"] body {
+  font-family: "Segoe UI", Tahoma, "Noto Naskh Arabic", Inter, system-ui,
+    sans-serif;
+}

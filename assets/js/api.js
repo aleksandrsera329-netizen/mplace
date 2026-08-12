@@ -1,5 +1,27 @@
-/* Mplace API client */
+/* Mplace API client + XSS helpers (Stage 21) */
 (function (global) {
+  /**
+   * Escape user-controlled strings before inserting into HTML templates.
+   * Prefer textContent when possible; use escapeHtml for template literals → innerHTML.
+   */
+  function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  /** Escape for double-quoted HTML attributes (href/src still need URL validation). */
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/`/g, '&#96;');
+  }
+
+  global.escapeHtml = escapeHtml;
+  global.escapeAttr = escapeAttr;
+
   function defaultApiBase() {
     if (typeof location === 'undefined' || !location.hostname) {
       return 'http://127.0.0.1:3000/api';
@@ -396,5 +418,9 @@
         method: 'POST',
         body: { body: text },
       }),
+
+    /** XSS helpers (also on window.escapeHtml / escapeAttr) */
+    escapeHtml: escapeHtml,
+    escapeAttr: escapeAttr,
   };
 })(window);

@@ -6,4 +6,6 @@ export class JwtPayload {
   email!: string;
   role!: UserRole;
   shopId!: string | null;
+  /** Multi-tenant: null for platform SUPER_ADMIN / legacy users */
+  tenantId?: string | null;
 }

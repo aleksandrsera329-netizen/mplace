@@ -1,0 +1,69 @@
+namespace: mplace
+imagePullPolicy: IfNotPresent
+
+api:
+  image: mplace-api
+  tag: latest
+  replicas: 1
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+web:
+  image: mplace-web
+  tag: latest
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+postgres:
+  enabled: true
+  image: postgres:16-alpine
+  storage: 10Gi
+  user: mplace
+  password: "mplace-super-secret-change-me"
+  database: mplace
+
+redis:
+  enabled: true
+  image: redis:7-alpine
+
+meilisearch:
+  enabled: true
+  image: getmeili/meilisearch:v1.11
+  masterKey: "masterKeyChangeMe_at_least_16_chars"
+
+config:
+  NODE_ENV: production
+  STORAGE_PROVIDER: local
+  NEXT_PUBLIC_API_URL: "http://mplace.local/api"
+
+secrets:
+  JWT_SECRET: "change-me-to-very-long-random-string-at-least-32-chars"
+
+ingress:
+  enabled: true
+  className: nginx
+  host: mplace.local
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+
+sentry:
+  enabled: true
+  dsn: ""
+  environment: production
+  tracesSampleRate: 0.2
+
+serviceMonitor:
+  enabled: false
+  releaseLabel: monitoring

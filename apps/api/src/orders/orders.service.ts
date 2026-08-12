@@ -14,11 +14,20 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { AuditService } from '../audit/audit.service';
 import { JwtPayload } from '../auth/jwt-payload.interface';
+import { DomainEventService } from '../events/domain-event.service';
+import { DomainEvents } from '../events/domain-events';
 import { PrismaService } from '../prisma/prisma.service';
 import { AddCartItemDto } from './dto/cart.dto';
 import { CheckoutDto } from './dto/checkout.dto';
-import { atomicStockDecrementSql } from '../common/db.util';
 import { canTransition } from './order-status.machine';
+import {
+  releaseReservation,
+  resolveDefaultWarehouse,
+  totalAvailableForProduct,
+} from '../warehouse/warehouse-stock.util';
+import { InventoryService } from '../warehouse/inventory.service';
+import { TaxService } from '../tax/tax.service';
+import { getCurrentTenantId } from '../common/tenant/tenant.context';
 
 const COMMISSION_BPS = 1000;
 const PAYMENT_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -28,6 +37,9 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly inventory: InventoryService,
+    private readonly events: DomainEventService,
+    private readonly tax: TaxService,
   ) {}
 
   // ── Cart ───────────────────────────────────────────────
@@ -161,16 +173,21 @@ export class OrdersService {
       throw new BadRequestException('Cart is empty');
     }
 
-    // re-validate every line
+    // re-validate every line (available = quantity - reserved across warehouses)
     for (const item of cart.items) {
       const fresh = await this.prisma.product.findUnique({
         where: { id: item.productId },
         include: { shop: true },
       });
       this.assertProductSellable(fresh);
-      if (fresh!.stock < item.quantity) {
+      const available = await totalAvailableForProduct(
+        this.prisma,
+        item.productId,
+        fresh!.stock,
+      );
+      if (available < item.quantity) {
         throw new BadRequestException(
-          `Insufficient stock for ${fresh!.name}`,
+          `Недостаточно товара «${fresh!.name}». Доступно: ${available}`,
         );
       }
     }
@@ -182,6 +199,31 @@ export class OrdersService {
       byShop.get(sid)!.push(item);
     }
 
+    // Shipping applied once (first shop order) for multi-shop checkout
+    const shipping = dto.shipping;
+    let shippingPriceCents = 0;
+    let shippingMethodId: string | null = null;
+    let shippingRateId: string | null = null;
+    let shippingDaysMin: number | null = null;
+    let shippingDaysMax: number | null = null;
+
+    if (shipping?.rateId && shipping.priceCents != null) {
+      const rate = await this.prisma.shippingRate.findUnique({
+        where: { id: shipping.rateId },
+        include: { method: true },
+      });
+      if (!rate || !rate.isActive) {
+        throw new BadRequestException('Выбранный тариф доставки недоступен');
+      }
+      shippingPriceCents = Math.max(0, Math.floor(shipping.priceCents));
+      shippingMethodId = shipping.methodId || rate.shippingMethodId;
+      shippingRateId = rate.id;
+      shippingDaysMin =
+        shipping.daysMin ?? rate.estimatedDaysMin ?? null;
+      shippingDaysMax =
+        shipping.daysMax ?? rate.estimatedDaysMax ?? null;
+    }
+
     const result: Array<{
       id: string;
       orderNumber: string;
@@ -190,7 +232,10 @@ export class OrdersService {
       status: OrderStatus;
       shop: { id: string; name: string } | null;
       paymentToken?: string;
+      shippingPriceCents?: number;
     }> = [];
+
+    let shippingAssigned = false;
 
     await this.prisma.$transaction(async (tx) => {
       for (const [shopId, items] of byShop) {
@@ -203,11 +248,83 @@ export class OrdersService {
         );
         const orderNumber = this.generateOrderNumber();
 
+        const applyShipping = !shippingAssigned && shippingPriceCents > 0;
+        if (applyShipping) shippingAssigned = true;
+        const orderShipping = applyShipping ? shippingPriceCents : 0;
+
         const plainToken = randomBytes(32).toString('hex');
         const paymentTokenHash = await bcrypt.hash(plainToken, 10);
         const paymentTokenExpiresAt = new Date(
           Date.now() + PAYMENT_TOKEN_TTL_MS,
         );
+
+        // Resolve warehouse per line (reservation happens after order id exists)
+        const lineMeta: Array<{
+          productId: string;
+          productName: string;
+          unitPriceCents: number;
+          quantity: number;
+          lineTotalCents: number;
+          warehouseId: string | null;
+          taxRateId: string | null;
+          taxCents: number;
+        }> = [];
+
+        for (const i of items) {
+          const product = await tx.product.findUnique({
+            where: { id: i.productId },
+          });
+          if (!product) {
+            throw new NotFoundException(`Товар ${i.productId} не найден`);
+          }
+
+          const warehouse = await resolveDefaultWarehouse(tx, shopId);
+          const warehouseId = warehouse?.id ?? null;
+
+          // Stage 11: stock is NOT decremented here — only reserved after order create
+          const avail = await this.inventory.getAvailable(i.productId, tx);
+          if (avail.available < i.quantity) {
+            throw new BadRequestException(
+              `Недостаточно товара «${product.name}». Доступно: ${avail.available}`,
+            );
+          }
+
+          lineMeta.push({
+            productId: i.productId,
+            productName: product.name,
+            unitPriceCents: product.priceCents,
+            quantity: i.quantity,
+            lineTotalCents: product.priceCents * i.quantity,
+            warehouseId,
+            taxRateId: null,
+            taxCents: 0,
+          });
+        }
+
+        // VAT / НДС per line
+        const tenantId =
+          getCurrentTenantId() || user?.tenantId || null;
+        const taxCalc = await this.tax.calculate(
+          tenantId,
+          lineMeta.map((l) => ({
+            productId: l.productId,
+            quantity: l.quantity,
+            priceCents: l.unitPriceCents,
+          })),
+          dto.taxCountry || 'RU',
+        );
+        const taxByProduct = new Map(
+          taxCalc.items.map((t) => [t.productId, t]),
+        );
+        for (const line of lineMeta) {
+          const t = taxByProduct.get(line.productId);
+          if (t) {
+            line.taxRateId = t.taxRateId;
+            line.taxCents = t.taxCents;
+          }
+        }
+        const orderTaxCents = taxCalc.taxCents;
+        const totalCents = subtotalCents + orderTaxCents + orderShipping;
 
         const order = await tx.order.create({
           data: {
@@ -216,19 +333,28 @@ export class OrdersService {
             shopId,
             status: OrderStatus.PENDING_PAYMENT,
             subtotalCents,
+            taxCents: orderTaxCents,
             commissionCents,
-            totalCents: subtotalCents,
+            totalCents,
             customerEmail: dto.customerEmail || user?.email || null,
             customerName: dto.customerName || null,
             paymentTokenHash,
             paymentTokenExpiresAt,
+            shippingMethodId: applyShipping ? shippingMethodId : null,
+            shippingRateId: applyShipping ? shippingRateId : null,
+            shippingPriceCents: applyShipping ? orderShipping : 0,
+            shippingDaysMin: applyShipping ? shippingDaysMin : null,
+            shippingDaysMax: applyShipping ? shippingDaysMax : null,
             items: {
-              create: items.map((i) => ({
+              create: lineMeta.map((i) => ({
                 productId: i.productId,
-                productName: i.product.name,
-                unitPriceCents: i.product.priceCents,
+                productName: i.productName,
+                unitPriceCents: i.unitPriceCents,
                 quantity: i.quantity,
-                lineTotalCents: i.product.priceCents * i.quantity,
+                lineTotalCents: i.lineTotalCents,
+                warehouseId: i.warehouseId,
+                taxRateId: i.taxRateId,
+                taxCents: i.taxCents,
               })),
             },
             statusHistory: {
@@ -244,8 +370,22 @@ export class OrdersService {
           },
           include: {
             shop: { select: { id: true, name: true } },
+            shippingMethod: { select: { id: true, name: true, code: true } },
           },
         });
+
+        // Stage 11: InventoryReservation ACTIVE (stock not decremented until pay)
+        for (const line of lineMeta) {
+          await this.inventory.reserve({
+            productId: line.productId,
+            quantity: line.quantity,
+            orderId: order.id,
+            warehouseId: line.warehouseId,
+            productName: line.productName,
+            ttlMinutes: Math.ceil(PAYMENT_TOKEN_TTL_MS / 60000),
+            tx,
+          });
+        }
 
         result.push({
           id: order.id,
@@ -255,6 +395,7 @@ export class OrdersService {
           status: order.status,
           shop: order.shop,
           paymentToken: plainToken,
+          shippingPriceCents: order.shippingPriceCents ?? 0,
         });
       }
 
@@ -274,6 +415,13 @@ export class OrdersService {
           status: o.status,
           guest: !user?.sub,
         },
+      });
+      this.events.emit(DomainEvents.OrderCreated, {
+        orderId: o.id,
+        orderNumber: o.orderNumber,
+        totalCents: o.totalCents,
+        shopId: o.shop?.id,
+        customerId: user?.sub ?? null,
       });
     }
 
@@ -299,6 +447,9 @@ export class OrdersService {
         items: true,
         statusHistory: { orderBy: { createdAt: 'asc' }, take: 50 },
         payments: { orderBy: { createdAt: 'desc' }, take: 10 },
+        shippingMethod: {
+          select: { id: true, name: true, code: true, description: true },
+        },
       },
     });
     if (!order) throw new NotFoundException('Order not found');
@@ -429,6 +580,41 @@ export class OrdersService {
     }
 
     const updated = await this.prisma.$transaction(async (tx) => {
+      const full = await tx.order.findUnique({
+        where: { id },
+        include: { items: true },
+      });
+      if (!full) throw new NotFoundException('Order not found');
+
+      // Cancel / refund: release InventoryReservation or restock if already paid
+      const cancelLike =
+        toStatus === OrderStatus.CANCELLED ||
+        toStatus === OrderStatus.REFUNDED;
+      if (cancelLike) {
+        const paidStatuses: OrderStatus[] = [
+          OrderStatus.PAID,
+          OrderStatus.PROCESSING,
+          OrderStatus.SHIPPED,
+          OrderStatus.COMPLETED,
+          OrderStatus.DISPUTED,
+        ];
+        const wasPaid = paidStatuses.includes(order.status);
+        if (!wasPaid) {
+          // Stage 11: free ACTIVE holds (no stock decrement yet)
+          await this.inventory.releaseOrder(id, tx);
+        } else {
+          for (const item of full.items) {
+            if (!item.productId) continue;
+            await releaseReservation(tx, {
+              productId: item.productId,
+              warehouseId: item.warehouseId,
+              quantity: item.quantity,
+              restock: true,
+            });
+          }
+        }
+      }
+
       const o = await tx.order.update({
         where: { id },
         data: { status: toStatus },
@@ -482,16 +668,8 @@ export class OrdersService {
 
     try {
       await this.prisma.$transaction(async (tx) => {
-        for (const item of order.items) {
-          if (!item.productId) continue;
-          // Atomic stock guard — Prisma.sql works on SQLite and PostgreSQL
-          const affected = await tx.$executeRaw(
-            atomicStockDecrementSql(item.productId, item.quantity),
-          );
-          if (Number(affected) === 0) {
-            throw new Error(`stock_fail_${item.productId}`);
-          }
-        }
+        // Stage 11: confirm InventoryReservation → decrement stock
+        await this.inventory.confirm(orderId, tx);
 
         await tx.order.update({
           where: { id: orderId },

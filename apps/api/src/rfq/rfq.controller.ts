@@ -7,13 +7,16 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { CommandBus } from '@nestjs/cqrs';
 import { Throttle } from '@nestjs/throttler';
 import { UserRole } from '@prisma/client';
+import { IsOptional, IsString } from 'class-validator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { ThrottleLimits } from '../common/throttle/throttle.limits';
 import { ListRfqDto } from './dto/list-rfq.dto';
 import {
   CreateRfqDto,
@@ -21,11 +24,36 @@ import {
   RfqMessageDto,
 } from './dto/rfq.dto';
 import { RfqService } from './rfq.service';
+import { CreateRfqCommand } from './commands/create-rfq.command';
+import { RespondToRfqCommand } from './commands/respond-to-rfq.command';
+import { AcceptRfqResponseCommand } from './commands/accept-rfq-response.command';
+import { RejectRfqResponseCommand } from './commands/reject-rfq-response.command';
+import { CloseRfqCommand } from './commands/close-rfq.command';
+
+class CloseBodyDto {
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+class RejectBodyDto {
+  @IsOptional()
+  @IsString()
+  reason?: string;
+}
+
+class AwardBodyDto {
+  @IsString()
+  offerId!: string;
+}
 
 @Controller('rfq')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class RfqController {
-  constructor(private readonly rfq: RfqService) {}
+  constructor(
+    private readonly rfq: RfqService,
+    private readonly commandBus: CommandBus,
+  ) {}
 
   @Get()
   @Roles(
@@ -43,15 +71,11 @@ export class RfqController {
     });
   }
 
-  @Throttle({
-    short: { limit: 2, ttl: 1000 },
-    medium: { limit: 5, ttl: 10_000 },
-    long: { limit: 20, ttl: 60_000 },
-  })
+  @Throttle(ThrottleLimits.RFQ_CREATE)
   @Post()
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateRfqDto) {
-    return this.rfq.create(user, dto);
+    return this.commandBus.execute(new CreateRfqCommand(user, dto));
   }
 
   @Get(':id')
@@ -71,11 +95,7 @@ export class RfqController {
     return this.rfq.comparison(id, user);
   }
 
-  @Throttle({
-    short: { limit: 2, ttl: 1000 },
-    medium: { limit: 8, ttl: 10_000 },
-    long: { limit: 30, ttl: 60_000 },
-  })
+  @Throttle(ThrottleLimits.RFQ_CREATE)
   @Post(':id/offers')
   @Roles(UserRole.MERCHANT)
   offer(
@@ -83,9 +103,23 @@ export class RfqController {
     @Param('id') id: string,
     @Body() dto: CreateRfqOfferDto,
   ) {
-    return this.rfq.createOffer(user, id, dto);
+    return this.commandBus.execute(new RespondToRfqCommand(user, id, dto));
   }
 
+  /** Stage 12: POST /rfq/:id/award { offerId } */
+  @Post(':id/award')
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  awardBody(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: AwardBodyDto,
+  ) {
+    return this.commandBus.execute(
+      new AcceptRfqResponseCommand(user, id, dto.offerId),
+    );
+  }
+
+  /** Legacy path: POST /rfq/:id/award/:offerId */
   @Post(':id/award/:offerId')
   @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   award(
@@ -93,7 +127,34 @@ export class RfqController {
     @Param('id') id: string,
     @Param('offerId') offerId: string,
   ) {
-    return this.rfq.award(id, offerId, user);
+    return this.commandBus.execute(
+      new AcceptRfqResponseCommand(user, id, offerId),
+    );
+  }
+
+  @Post(':id/offers/:offerId/reject')
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  rejectOffer(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('offerId') offerId: string,
+    @Body() body: RejectBodyDto,
+  ) {
+    return this.commandBus.execute(
+      new RejectRfqResponseCommand(user, id, offerId, body.reason),
+    );
+  }
+
+  @Post(':id/close')
+  @Roles(UserRole.CUSTOMER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  close(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() body: CloseBodyDto,
+  ) {
+    return this.commandBus.execute(
+      new CloseRfqCommand(user, id, body.reason),
+    );
   }
 
   @Post(':id/messages')

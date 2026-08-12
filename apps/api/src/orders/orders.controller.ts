@@ -19,10 +19,16 @@ import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { ThrottleLimits } from '../common/throttle/throttle.limits';
 import { AddCartItemDto, UpdateCartItemDto } from './dto/cart.dto';
 import { CheckoutDto, UpdateOrderStatusDto } from './dto/checkout.dto';
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { OrdersService } from './orders.service';
+import { CommandBus } from '@nestjs/cqrs';
+import { CreateOrderCommand } from './commands/create-order.command';
+import { ChangeOrderStatusCommand } from './commands/change-order-status.command';
+import { IdempotencyKey } from '../common/idempotency/idempotency.decorator';
+import { IdempotencyService } from '../common/idempotency/idempotency.service';
 
 class StatusBodyDto extends UpdateOrderStatusDto {
   @IsOptional()
@@ -32,7 +38,11 @@ class StatusBodyDto extends UpdateOrderStatusDto {
 
 @Controller()
 export class OrdersController {
-  constructor(private readonly orders: OrdersService) {}
+  constructor(
+    private readonly orders: OrdersService,
+    private readonly commandBus: CommandBus,
+    private readonly idempotency: IdempotencyService,
+  ) {}
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get('cart')
@@ -74,18 +84,36 @@ export class OrdersController {
   }
 
   @UseGuards(OptionalJwtAuthGuard)
-  @Throttle({
-    short: { limit: 2, ttl: 1000 },
-    medium: { limit: 5, ttl: 10_000 },
-    long: { limit: 15, ttl: 60_000 },
-  })
+  @Throttle(ThrottleLimits.PAYMENT)
   @Post('checkout')
-  checkout(
+  async checkout(
     @CurrentUser() user: JwtPayload | undefined,
     @Headers('x-session-key') sessionKey: string | undefined,
     @Body() dto: CheckoutDto,
+    @IdempotencyKey() idempotencyKey?: string,
   ) {
-    return this.orders.checkout(user ?? null, sessionKey, dto);
+    const { isNew, existingResponse, skipped } = await this.idempotency.start(
+      idempotencyKey,
+      'POST /api/checkout',
+      user?.sub,
+      dto,
+    );
+    if (!isNew && existingResponse !== undefined) {
+      return existingResponse;
+    }
+
+    try {
+      const result = await this.commandBus.execute(
+        new CreateOrderCommand(user ?? null, sessionKey, dto),
+      );
+      if (!skipped) {
+        await this.idempotency.complete(idempotencyKey, result);
+      }
+      return result;
+    } catch (e) {
+      if (!skipped) await this.idempotency.fail(idempotencyKey);
+      throw e;
+    }
   }
 
   /** Removed: POST /orders/:id/pay — payment only via payment-intent + provider webhook */
@@ -115,11 +143,34 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.MERCHANT, UserRole.CUSTOMER)
   @Patch('orders/:id/status')
-  status(
+  async status(
     @CurrentUser() user: JwtPayload,
     @Param('id') id: string,
     @Body() dto: StatusBodyDto,
+    @IdempotencyKey() idempotencyKey?: string,
   ) {
-    return this.orders.updateStatus(user, id, dto.status, dto.reason);
+    const key = idempotencyKey
+      ? `${idempotencyKey}:${id}:${dto.status}`
+      : undefined;
+    const { isNew, existingResponse, skipped } = await this.idempotency.start(
+      key,
+      `PATCH /api/orders/${id}/status`,
+      user.sub,
+      dto,
+    );
+    if (!isNew && existingResponse !== undefined) {
+      return existingResponse;
+    }
+
+    try {
+      const result = await this.commandBus.execute(
+        new ChangeOrderStatusCommand(id, dto.status, user, dto.reason),
+      );
+      if (!skipped) await this.idempotency.complete(key, result);
+      return result;
+    } catch (e) {
+      if (!skipped) await this.idempotency.fail(key);
+      throw e;
+    }
   }
 }

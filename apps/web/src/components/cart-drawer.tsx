@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useCartStore } from "@/store/cart"
 import { Button } from "@/components/ui/button"
 import type { CartItem } from "@/lib/api"
+import { useI18n } from "@/i18n/store"
 
 function formatMoney(cents: number) {
   return new Intl.NumberFormat("ru-RU", {
@@ -18,6 +19,7 @@ function formatMoney(cents: number) {
 export function CartDrawer() {
   const { isOpen, close, items, subtotalCents, itemCount, refresh } =
     useCartStore()
+  const { t } = useI18n()
 
   useEffect(() => {
     void refresh()
@@ -33,13 +35,18 @@ export function CartDrawer() {
         aria-hidden
       />
 
-      <aside className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-l border-border bg-card shadow-2xl">
+      <aside className="cart-drawer fixed end-0 top-0 z-50 flex h-full w-full max-w-md flex-col border-s border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-lg font-semibold">
-            Ваша корзина{" "}
+            {t("cart.title")}{" "}
             <span className="text-muted-foreground">({itemCount})</span>
           </h2>
-          <Button variant="ghost" size="icon" onClick={close} aria-label="Закрыть">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={close}
+            aria-label={t("common.close")}
+          >
             <X className="h-5 w-5" />
           </Button>
         </div>
@@ -47,13 +54,12 @@ export function CartDrawer() {
         <div className="flex-1 overflow-y-auto p-5">
           {items.length === 0 ? (
             <p className="mt-16 text-center text-muted-foreground">
-              Корзина пуста
+              {t("cart.empty")}
             </p>
           ) : (
             <div className="space-y-4">
               {items.map((item: CartItem) => {
-                const unit =
-                  item.product?.priceCents ?? item.priceCents ?? 0
+                const unit = item.product?.priceCents ?? item.priceCents ?? 0
                 return (
                   <div
                     key={item.id}
@@ -61,7 +67,7 @@ export function CartDrawer() {
                   >
                     <div className="flex-1">
                       <div className="font-medium">
-                        {item.product?.name || "Товар"}
+                        {item.product?.name || "—"}
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         {item.quantity} × {formatMoney(unit)}
@@ -79,19 +85,26 @@ export function CartDrawer() {
 
         <div className="border-t border-border p-5">
           <div className="mb-4 flex justify-between text-lg font-bold">
-            <span>Итого</span>
+            <span>{t("cart.total")}</span>
             <span>{formatMoney(subtotalCents)}</span>
           </div>
           {items.length === 0 ? (
             <Button className="w-full" disabled>
-              Оформить заказ
+              {t("cart.checkout")}
             </Button>
           ) : (
-            <Button className="w-full" asChild>
-              <Link href="/cart" onClick={close}>
-                Оформить заказ
-              </Link>
-            </Button>
+            <div className="space-y-2">
+              <Button className="w-full" asChild>
+                <Link href="/checkout" onClick={close}>
+                  {t("cart.checkout")}
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/cart" onClick={close}>
+                  Открыть корзину
+                </Link>
+              </Button>
+            </div>
           )}
         </div>
       </aside>

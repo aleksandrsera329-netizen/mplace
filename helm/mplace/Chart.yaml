@@ -1,0 +1,13 @@
+apiVersion: v2
+name: mplace
+description: Mplace Energy — B2B Oil & Gas Marketplace (Enterprise)
+type: application
+version: 0.1.0
+appVersion: "2.0.0"
+keywords:
+  - marketplace
+  - nestjs
+  - nextjs
+  - b2b
+maintainers:
+  - name: Mplace Team
