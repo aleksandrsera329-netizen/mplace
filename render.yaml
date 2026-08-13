@@ -19,6 +19,12 @@ services:
         value: "3000"
       - key: ALLOW_PILOT
         value: "true"
+      - key: SERVE_FRONTEND
+        value: "true"
+      - key: FRONTEND_DIR
+        value: "/app/frontend"
+      - key: DEMO_PASSWORD
+        sync: false
       - key: PAYMENT_PROVIDER
         value: dev
       - key: ALLOW_DEV_PAYMENTS
