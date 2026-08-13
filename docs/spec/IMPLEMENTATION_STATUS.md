@@ -97,7 +97,7 @@ node dist/src/main.js
 Smoke:
 
 ```http
-POST /api/auth/login { "email":"superadmin@demo.com", "password":"123456" }
+POST /api/auth/login { "email":"superadmin@demo.com", "password":"<DEMO_PASSWORD>" }
 POST /api/rfq  (Bearer customer)
 POST /api/rfq/:id/offers (Bearer merchant)
 GET  /api/rfq/:id/compare (Bearer customer)
@@ -109,9 +109,9 @@ Demo:
 
 | Role | Email | Password |
 |------|-------|----------|
-| SuperAdmin | superadmin@demo.com | 123456 |
-| Merchant | merchant@demo.com | 123456 |
-| Customer | customer@demo.com | 123456 |
+| SuperAdmin | superadmin@demo.com | <DEMO_PASSWORD> |
+| Merchant | merchant@demo.com | <DEMO_PASSWORD> |
+| Customer | customer@demo.com | <DEMO_PASSWORD> |
 
 ---
 

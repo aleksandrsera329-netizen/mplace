@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   description: "B2B marketplace for oil & gas equipment, PPE and materials",
 }
 
+/** Runs before paint — not inside a client component (React 19 safe). */
+const themeInitScript = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.remove('dark');document.documentElement.classList.add('light')}else{document.documentElement.classList.add('dark');document.documentElement.classList.remove('light')}}catch(e){document.documentElement.classList.add('dark')}})();`
+
 export default function RootLayout({
   children,
 }: {
@@ -18,7 +21,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={inter.className}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+          suppressHydrationWarning
+        />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

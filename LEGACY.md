@@ -24,3 +24,8 @@ See [docs/FRONTEND.md](docs/FRONTEND.md) for route matrix and cutover plan.
 - [ ] Merchant + admin only via Next
 - [ ] No external docs link to `*.html`
 - [ ] Then delete root HTML + `assets/js` (or archive)
+
+
+## Current status
+
+Legacy static HTML/JS is archived under `legacy/` and is not served by the production nginx path. The production UI is `apps/web` (Next.js).

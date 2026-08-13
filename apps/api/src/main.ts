@@ -5,8 +5,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
 import { Request, Response, NextFunction } from 'express';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -152,30 +150,7 @@ async function bootstrap() {
     next();
   });
 
-  // Production / Docker: serve storefront from FRONTEND_DIR
-  const serveFrontend =
-    config.get<string>('SERVE_FRONTEND') === 'true' ||
-    !!config.get<string>('FRONTEND_DIR');
-  const frontendDir =
-    config.get<string>('FRONTEND_DIR') ||
-    join(__dirname, '..', '..', '..', '..');
-
-  if (serveFrontend && existsSync(frontendDir)) {
-    app.use((req: Request, res: Response, next: NextFunction) => {
-      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
-      const m = req.path.match(/^\/product\/([^/]+)\/?$/);
-      if (!m) return next();
-      const file = join(frontendDir, 'product.html');
-      if (!existsSync(file)) return next();
-      res.type('html').send(readFileSync(file, 'utf8'));
-    });
-
-    app.useStaticAssets(frontendDir, {
-      index: ['index.html'],
-      fallthrough: true,
-    });
-    logger.log(`frontend static: ${frontendDir}`);
-  }
+  // Storefront is served exclusively by apps/web (Next.js).
 
   const port = Number(config.get<string | number>('PORT') ?? 3000);
   await app.listen(port, '0.0.0.0');

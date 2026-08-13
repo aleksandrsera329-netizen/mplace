@@ -1,0 +1,50 @@
+/* ===== Industrial theme tokens (from дизайн новый) ===== */
+:root {
+  /* ===== Dark Industrial (default) ===== */
+  --bg: #0b1220;
+  --bg-secondary: #111827;
+  --card: #1f2937;
+  --card-hover: #273549;
+  --border: #374151;
+  --border-light: #4b5563;
+  --text: #f3f4f6;
+  --text-muted: #9ca3af;
+  --primary: #f59e0b;
+  --primary-hover: #d97706;
+  --primary-soft: rgba(245, 158, 11, 0.15);
+  --accent: #fbbf24;
+  --success: #10b981;
+  --danger: #ef4444;
+  --header: rgba(15, 23, 42, 0.85);
+  --sidebar: #111827;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="light"] {
+  --bg: #f1f5f9;
+  --bg-secondary: #ffffff;
+  --card: #ffffff;
+  --card-hover: #f8fafc;
+  --border: #e2e8f0;
+  --border-light: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #d97706;
+  --primary-hover: #b45309;
+  --primary-soft: rgba(217, 119, 6, 0.12);
+  --accent: #b45309;
+  --header: rgba(255, 255, 255, 0.9);
+  --sidebar: #ffffff;
+  --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+body.industrial-shell {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg) !important;
+  color: var(--text) !important;
+}

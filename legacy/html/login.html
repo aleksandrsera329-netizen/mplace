@@ -1,0 +1,143 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mplace Energy — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/store.css" />
+  <link rel="stylesheet" href="assets/css/admin.css" />
+  <link rel="stylesheet" href="assets/css/locale.css" />
+  <style>
+    html, body { min-height: 100%; }
+    body { background: var(--bg) !important; color: var(--text); font-family: Inter, system-ui, sans-serif; }
+    .login-page {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at top, #1e293b 0%, var(--bg) 55%) !important;
+      padding: 24px;
+    }
+    .login-box {
+      background: var(--card) !important; border: 1px solid var(--border) !important;
+      border-radius: 16px !important; box-shadow: var(--shadow) !important; overflow: hidden;
+      width: min(420px, 100%);
+    }
+    .login-logo { background: transparent !important; border-bottom: 1px solid var(--border); padding: 24px; text-align: center; }
+    .login-logo h1 { color: var(--text) !important; font-weight: 800; letter-spacing: -0.03em; }
+    .login-logo h1 span { color: var(--primary); }
+    .login-logo p, .login-body h3, .login-hints, .login-footer a, .form-group label { color: var(--text-muted) !important; }
+    .login-body h3 { color: var(--text) !important; font-weight: 700; }
+    .form-control {
+      background: var(--bg) !important; border: 1px solid var(--border) !important;
+      color: var(--text) !important; border-radius: 10px !important;
+    }
+    .btn-primary {
+      background: var(--primary) !important; color: #000 !important; border: none !important;
+      font-weight: 800 !important; border-radius: 12px !important;
+    }
+    .login-hints { background: var(--bg) !important; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .login-hints code { color: var(--primary); }
+    .login-footer { border-top: 1px solid var(--border) !important; background: transparent !important; }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="login-page">
+    <div class="login-locale" id="localeMount"></div>
+    <div class="login-box">
+      <div class="login-logo">
+        <h1>M<span>place</span> Energy</h1>
+        <p data-i18n="app.tagline">Oil & Gas B2B Marketplace</p>
+      </div>
+      <div class="login-body">
+        <h3 data-i18n="login.title">Login</h3>
+        <div id="loginError" class="login-error"></div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email" data-i18n="login.email">Email</label>
+            <input class="form-control" type="email" id="email" name="email" required placeholder="demo-admin@example.invalid" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label for="password" data-i18n="login.password">Password</label>
+            <input class="form-control" type="password" id="password" name="password" required placeholder="••••••" autocomplete="current-password" />
+          </div>
+          <div class="form-check">
+            <input type="checkbox" id="remember" />
+            <label for="remember" data-i18n="login.remember">Remember Me</label>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block" id="loginBtn" data-i18n="login.submit">Login</button>
+        </form>
+        <div class="login-hints">
+          <div><strong data-i18n="login.adminHint">ADMIN</strong><br /><span data-i18n="login.username">Username</span>: <code>demo-admin@example.invalid</code><br /><span data-i18n="login.passwordLabel">Password</span>: <code>[configured in demo environment]</code></div>
+          <div style="margin-top:10px"><strong data-i18n="login.merchantHint">MERCHANT</strong><br /><span data-i18n="login.username">Username</span>: <code>demo-merchant@example.invalid</code><br /><span data-i18n="login.passwordLabel">Password</span>: <code>[configured in demo environment]</code></div>
+          <div style="margin-top:10px;color:#888">API: <code id="apiBaseHint">http://127.0.0.1:3000/api</code></div>
+        </div>
+      </div>
+      <div class="login-footer">
+        <a href="index.html" data-i18n="login.storeFront">← Store front</a>
+        <a href="#" id="regMerchant" data-i18n="login.registerMerchant">Register as merchant</a>
+      </div>
+    </div>
+  </div>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script>
+    const I = window.MplaceI18n;
+    I.mountSwitcher('#localeMount', { className: 'light' });
+
+    const form = document.getElementById('loginForm');
+    const err = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+    const params = new URLSearchParams(location.search);
+    if (params.get('email')) document.getElementById('email').value = params.get('email');
+    document.getElementById('apiBaseHint').textContent = MplaceApi.getBase();
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      err.classList.remove('show');
+      btn.disabled = true;
+      btn.textContent = I.t('login.signing');
+      const email = document.getElementById('email').value.trim().toLowerCase();
+      const password = document.getElementById('password').value;
+      try {
+        const res = await MplaceApi.login(email, password);
+        const user = res.user;
+        const role = String(user.role || '').toUpperCase();
+        MplaceApi.setSession(res.accessToken, {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: role,
+          shopId: user.shopId || null,
+        });
+        const next = params.get('next');
+        const safeNext = next && next.startsWith('/') && !next.startsWith('//') ? next : null;
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN') location.href = safeNext || '/admin/index.html';
+        else if (role === 'MERCHANT') location.href = safeNext || '/merchant.html';
+        else location.href = safeNext || '/account.html';
+      } catch (ex) {
+        err.textContent =
+          ex.status === 0 || /Failed to fetch|NetworkError|API offline/i.test(ex.message)
+            ? I.t('login.errorApi')
+            : I.t('login.errorCreds');
+        err.classList.add('show');
+        btn.disabled = false;
+        btn.textContent = I.t('login.submit');
+      }
+    });
+
+    document.getElementById('regMerchant').onclick = (e) => {
+      e.preventDefault();
+      alert(I.getLang() === 'ru'
+        ? 'Демо: регистрация через API POST /auth/register/merchant'
+        : I.getLang() === 'ar'
+          ? 'تجريبي: التسجيل عبر POST /auth/register/merchant'
+          : 'Demo: register via POST /auth/register/merchant');
+    };
+
+    window.addEventListener('mplace:locale', () => {
+      I.applyDocument();
+      if (!btn.disabled) btn.textContent = I.t('login.submit');
+    });
+  </script>
+</body>
+</html>

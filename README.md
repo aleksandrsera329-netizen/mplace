@@ -1,7 +1,7 @@
 # Mplace — multi-vendor B2B marketplace
 
 NestJS API + **Next.js primary UI** (`apps/web`: storefront, cart/checkout, buyer/merchant/admin).  
-Legacy root `*.html` is optional fallback only ([LEGACY.md](LEGACY.md)).  
+Legacy static UI is archived under `legacy/` and is not part of the production path ([LEGACY.md](LEGACY.md)).  
 Stack: **PostgreSQL 16 · Redis 7 · Meilisearch · BullMQ · Stripe**.
 
 ## Documentation map
@@ -115,9 +115,9 @@ Details: [docs/DOCKER.md](docs/DOCKER.md), [docs/DEPLOYMENT.md](docs/DEPLOYMENT.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super admin | `superadmin@demo.com` | `123456` |
-| Merchant | `merchant@demo.com` | `123456` |
-| Customer | `customer@demo.com` | `123456` |
+| Super admin | `superadmin@demo.com` | Set `DEMO_PASSWORD` before seeding |
+| Merchant | `merchant@demo.com` | Set `DEMO_PASSWORD` before seeding |
+| Customer | `customer@demo.com` | Set `DEMO_PASSWORD` before seeding |
 
 > Admins require TOTP MFA after first login (Stage 6). Do **not** use these credentials in production.
 
@@ -210,3 +210,15 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## License
 
 UNLICENSED / private project.
+
+
+## Commercial readiness
+
+- Canonical deployment: `docs/DEPLOY.md`
+- Security overview: `docs/SECURITY_OVERVIEW.md`
+- Architecture: `docs/ARCHITECTURE_DIAGRAM.md`
+- Feature matrix: `docs/FEATURE_MATRIX.md`
+- License audit: `docs/THIRD_PARTY_LICENSE_AUDIT.md`
+- Investor one-pager: `docs/INVESTOR_ONE_PAGER.md`
+- Demo video script: `docs/DEMO_VIDEO_SCRIPT.md`
+- Legacy static UI: archived under `legacy/`

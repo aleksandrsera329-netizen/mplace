@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useTheme } from "next-themes"
+import { useTheme } from "@/components/theme-provider"
 import {
   FileText,
   Heart,
@@ -80,6 +80,11 @@ export function Header() {
               M<span className="text-primary">place</span> Energy
             </>
           )}
+          {tenant?.name && !tenant.logoUrl && (
+            <span className="hidden text-sm font-medium text-muted-foreground sm:inline">
+              {tenant.name}
+            </span>
+          )}
         </Link>
 
         <form
@@ -99,25 +104,16 @@ export function Header() {
         </form>
 
         <nav className="hidden items-center gap-1 lg:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/">{t("nav.catalog")}</Link>
-          </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/rfq" className="gap-1.5" title={t("nav.rfq")}>
-              <FileText className="h-4 w-4" />
-              <span className="hidden xl:inline">{t("nav.rfq")}</span>
-            </Link>
-          </Button>
-          {loggedIn && (
+          {user && (
             <>
-              {(user?.role === "ADMIN" || user?.role === "SUPER_ADMIN") && (
+              {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/admin">{t("nav.admin")}</Link>
                 </Button>
               )}
-              {(user?.role === "MERCHANT" ||
-                user?.role === "ADMIN" ||
-                user?.role === "SUPER_ADMIN") && (
+              {(user.role === "MERCHANT" ||
+                user.role === "ADMIN" ||
+                user.role === "SUPER_ADMIN") && (
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/merchant">{t("nav.merchant")}</Link>
                 </Button>
@@ -125,7 +121,11 @@ export function Header() {
               <Button variant="ghost" size="sm" asChild>
                 <Link href="/orders" className="gap-1.5" title={t("nav.orders")}>
                   <Package className="h-4 w-4" />
-                  <span className="hidden xl:inline">{t("nav.orders")}</span>
+                </Link>
+              </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/rfq" className="gap-1.5" title={t("nav.rfq")}>
+                  <FileText className="h-4 w-4" />
                 </Link>
               </Button>
             </>
@@ -163,7 +163,12 @@ export function Header() {
 
           <NotificationBell />
 
-          <Button variant="ghost" size="icon" asChild title={t("header.wishlist")}>
+          <Button
+            variant="ghost"
+            size="icon"
+            asChild
+            title={t("header.wishlist")}
+          >
             <Link href={loggedIn ? "/wishlist" : "/login?next=/wishlist"}>
               <Heart className="h-5 w-5" />
             </Link>

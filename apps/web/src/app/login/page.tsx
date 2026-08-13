@@ -45,8 +45,8 @@ function LoginForm() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      email: "customer@demo.com",
-      password: "123456",
+      email: "",
+      password: "",
     },
   })
 
@@ -288,8 +288,8 @@ function LoginForm() {
             </Link>
             <br />
             <span className="mt-2 inline-block text-xs">
-              Демо: customer@demo.com · merchant@demo.com · superadmin@demo.com /
-              123456
+              Демо: customer@demo.com · demo-merchant@example.invalid · demo-admin@example.invalid /
+              Use the password configured for your demo environment.
             </span>
           </p>
         )}

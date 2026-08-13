@@ -41,8 +41,8 @@
 - Откройте URL сервиса  
 - Первый запрос может идти **до минуты** (cold start)  
 - Логины seed (только для демо):  
-  - `superadmin@demo.com` / `123456`  
-  - `merchant@demo.com` / `123456`  
+  - `superadmin@demo.com` / `<DEMO_PASSWORD>`  
+  - `merchant@demo.com` / `<DEMO_PASSWORD>`  
 
 ### 4. Env (уже в blueprint)
 - `JWT_SECRET` — генерируется  

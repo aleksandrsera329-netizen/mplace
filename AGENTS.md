@@ -73,6 +73,6 @@ npm run start:dev
 
 ## Демо-учётки (seed)
 
-- Admin: `superadmin@demo.com` / `123456`
-- Merchant: `merchant@demo.com` / `123456`
-- Customer: `customer@demo.com` / `123456`
+- Admin: `superadmin@demo.com` / `<DEMO_PASSWORD>`
+- Merchant: `merchant@demo.com` / `<DEMO_PASSWORD>`
+- Customer: `customer@demo.com` / `<DEMO_PASSWORD>`

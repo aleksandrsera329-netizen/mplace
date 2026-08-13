@@ -9,7 +9,6 @@ const MODELS_WITH_TENANT = new Set([
   'TenantInvite',
   'User',
   'Shop',
-  'RefreshToken',
   'Warehouse',
   'ShippingMethod',
   'ShippingZone',

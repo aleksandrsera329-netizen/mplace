@@ -26,13 +26,25 @@ export function NotificationBell() {
   const loggedIn = Boolean(user) || isAuthenticated() || !!accessToken
   const [open, setOpen] = useState(false)
 
-  const { data: notifications = [], isLoading } = useQuery({
+  const { data: rawNotifications, isLoading } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => api.notifications.list(),
     enabled: loggedIn,
     refetchInterval: 30_000,
   })
 
+  const notifications = Array.isArray(rawNotifications)
+    ? rawNotifications
+    : Array.isArray((rawNotifications as { items?: unknown })?.items)
+      ? ((rawNotifications as { items: unknown[] }).items as {
+          id: string
+          isRead: boolean
+          title: string
+          message: string
+          link?: string | null
+          createdAt: string
+        }[])
+      : []
   const unreadCount = notifications.filter((n) => !n.isRead).length
 
   const markAsRead = useMutation({

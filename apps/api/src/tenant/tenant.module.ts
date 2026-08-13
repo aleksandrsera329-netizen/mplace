@@ -2,6 +2,7 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { TenantMiddleware } from '../common/tenant/tenant.middleware';
 import { TenantGuard } from '../common/tenant/tenant.guard';
+import { TenantIsolationInterceptor } from '../common/tenant/tenant-isolation.interceptor';
 import { AcceptInviteHandler } from './commands/accept-invite.handler';
 import { CreateInviteHandler } from './commands/create-invite.handler';
 import { CreateTenantHandler } from './commands/create-tenant.handler';
@@ -23,6 +24,7 @@ import {
     TenantInviteCreatedHandler,
     TenantMiddleware,
     TenantGuard,
+    TenantIsolationInterceptor,
   ],
   exports: [
     CreateTenantHandler,
@@ -31,6 +33,7 @@ import {
     AcceptInviteHandler,
     TenantGuard,
     TenantMiddleware,
+    TenantIsolationInterceptor,
   ],
 })
 export class TenantModule implements NestModule {

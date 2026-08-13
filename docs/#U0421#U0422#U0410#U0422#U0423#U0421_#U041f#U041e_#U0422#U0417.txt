@@ -408,9 +408,9 @@ Local Docker:
 
 Demo: https://mplace-vu4o.onrender.com/
 
-  superadmin@demo.com / 123456
-  merchant@demo.com   / 123456
-  customer@demo.com   / 123456
+  superadmin@demo.com / <DEMO_PASSWORD>
+  merchant@demo.com   / <DEMO_PASSWORD>
+  customer@demo.com   / <DEMO_PASSWORD>
 
 
 ================================================================================

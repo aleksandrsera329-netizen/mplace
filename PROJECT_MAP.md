@@ -8,10 +8,10 @@
 
 | Что | Где |
 |-----|-----|
-| Storefront UI | `index.html`, `assets/css/store.css` |
+| Storefront UI | `apps/web` (Next.js) |
 | Login UI | `login.html` |
-| Admin UI | `admin/index.html`, `assets/js/admin.js` |
-| Merchant UI | `merchant/index.html`, `assets/js/merchant.js` |
+| Admin UI | `apps/web/src/app/admin` |
+| Merchant UI | `apps/web/src/app/merchant` |
 | Mock data (legacy UI) | `assets/js/data.js` |
 | **API engine** | `apps/api/` |
 | Architecture | `ARCHITECTURE.md` |

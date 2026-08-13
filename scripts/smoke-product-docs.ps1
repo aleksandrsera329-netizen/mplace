@@ -11,7 +11,7 @@ for ($i = 1; $i -le 30; $i++) {
   }
 }
 
-$login = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType 'application/json' -Body '{"email":"merchant@demo.com","password":"123456"}'
+$login = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType "application/json" -Body (@{email="merchant@demo.com"; password=$env:DEMO_PASSWORD} | ConvertTo-Json)
 $token = $login.accessToken
 $h = @{ Authorization = "Bearer $token" }
 

@@ -35,7 +35,7 @@ npm run build
 curl http://127.0.0.1:3000/api/health
 
 # Login admin
-curl -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"superadmin@demo.com\",\"password\":\"123456\"}"
+curl -X POST http://127.0.0.1:3000/api/auth/login -H "Content-Type: application/json" -d "{\"email\":\"superadmin@demo.com\",\"password\":\"<DEMO_PASSWORD>\"}"
 
 # Me (paste token)
 curl http://127.0.0.1:3000/api/auth/me -H "Authorization: Bearer <token>"

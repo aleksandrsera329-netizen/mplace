@@ -16,6 +16,19 @@ export function getTenantContext(): TenantContextData | undefined {
   return TenantStorage.getStore();
 }
 
+/** Update the active request tenant after authentication has populated req.user. */
+export function setCurrentTenantId(
+  tenantId: string | null,
+  tenantSlug?: string,
+): void {
+  const store = TenantStorage.getStore();
+  if (!store) {
+    throw new Error('Tenant context is not initialized');
+  }
+  store.tenantId = tenantId;
+  if (tenantSlug !== undefined) store.tenantSlug = tenantSlug;
+}
+
 export function runWithTenant<T>(data: TenantContextData, fn: () => T): T {
   return TenantStorage.run(data, fn);
 }

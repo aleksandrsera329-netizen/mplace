@@ -1,6 +1,5 @@
 @import "tailwindcss";
 
-/* next-themes uses class="dark" on <html> */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

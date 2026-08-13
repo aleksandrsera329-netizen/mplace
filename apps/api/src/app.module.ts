@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { LoggerModule } from 'nestjs-pino';
@@ -45,6 +45,7 @@ import { TaxModule } from './tax/tax.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DocumentsModule } from './documents/documents.module';
 import { RefundsModule } from './refunds/refunds.module';
+import { TenantIsolationInterceptor } from './common/tenant/tenant-isolation.interceptor';
 
 @Module({
   imports: [
@@ -170,6 +171,10 @@ import { RefundsModule } from './refunds/refunds.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TenantIsolationInterceptor,
     },
   ],
 })

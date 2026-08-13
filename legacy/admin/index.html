@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mplace — Admin Panel</title>
+
+  <link rel="stylesheet" href="/assets/css/store-modern.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
+
+  <style>
+    .admin-layout {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      min-height: calc(100vh - 70px);
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    .admin-sidebar {
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 24px 16px;
+      position: sticky;
+      top: 70px;
+      height: calc(100vh - 70px);
+    }
+    .admin-sidebar .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 500;
+      margin-bottom: 4px;
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      font-size: 0.95rem;
+    }
+    .admin-sidebar .nav-item:hover { background: var(--card); color: var(--text); }
+    .admin-sidebar .nav-item.active { background: var(--primary); color: #000; font-weight: 600; }
+
+    .admin-content { padding: 28px 24px; }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 700; margin-top: 6px; color: var(--accent); }
+
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    th { background: var(--bg-secondary); color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; }
+    tr:hover td { background: var(--card-hover); }
+
+    .badge { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .badge-active, .badge-ACTIVE, .badge-APPROVED, .badge-PAID { background: #10b98133; color: #10b981; }
+    .badge-pending, .badge-PENDING { background: #f59e0b33; color: #f59e0b; }
+    .badge-suspended, .badge-SUSPENDED, .badge-BLOCKED, .badge-REJECTED { background: #ef444433; color: #ef4444; }
+    .badge-OPEN, .badge-APPEALED { background: #3b82f633; color: #3b82f6; }
+
+    .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .filters input, .filters select {
+      padding: 9px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    .filters input { min-width: 200px; }
+
+    .btn-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--primary);
+      color: #000;
+    }
+    .btn-sm.danger { background: #ef4444; color: #fff; }
+    .btn-sm.outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-sm:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .bulk-bar {
+      display: none;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px 14px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      align-items: center;
+    }
+    .bulk-bar.show { display: flex; }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 900px) {
+      .admin-layout { grid-template-columns: 1fr; }
+      .admin-sidebar {
+        position: fixed; left: -260px; top: 0; z-index: 60;
+        width: 240px; height: 100%; transition: left 0.3s;
+      }
+      .admin-sidebar.open { left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="store-header">
+  <div class="header-top">
+    <a class="logo" href="/">M<span>place</span> Energy</a>
+    <div class="header-actions">
+      <button class="theme-btn" id="themeToggle">🌙</button>
+      <div id="localeMount"></div>
+      <a class="icon-btn" href="/account.html">👤</a>
+    </div>
+  </div>
+</header>
+
+<div class="admin-layout">
+  <aside class="admin-sidebar" id="sidebar">
+    <button class="nav-item active" data-section="dashboard">📊 Dashboard</button>
+    <button class="nav-item" data-section="users">👥 Users</button>
+    <button class="nav-item" data-section="shops">🏪 Shops</button>
+    <button class="nav-item" data-section="orders">📦 Orders</button>
+    <button class="nav-item" data-section="disputes">⚖️ Disputes</button>
+    <button class="nav-item" data-section="payouts">💰 Payouts</button>
+    <button class="nav-item" data-section="audit">📜 Audit Log</button>
+  </aside>
+
+  <main class="admin-content">
+    <button class="mobile-filter-btn" id="mobileMenuBtn" style="display:none;margin-bottom:16px;">☰ Меню</button>
+
+    <!-- DASHBOARD -->
+    <section id="section-dashboard" class="section active">
+      <h2 style="margin-bottom:20px;">Dashboard</h2>
+      <div class="stats-grid" id="statsGrid"></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="section-users" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Users</h2>
+        <button class="btn-sm outline" onclick="exportCSV('users')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <input type="search" id="userSearch" placeholder="Email / имя…">
+        <select id="userRole">
+          <option value="">Все роли</option>
+          <option value="CUSTOMER">Customer</option>
+          <option value="MERCHANT">Merchant</option>
+          <option value="ADMIN">Admin</option>
+        </select>
+        <select id="userStatus">
+          <option value="">Все статусы</option>
+          <option value="ACTIVE">Active</option>
+          <option value="SUSPENDED">Suspended / Blocked</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+        <button class="btn-sm" onclick="loadUsers(true)">Найти</button>
+      </div>
+      <div class="bulk-bar" id="usersBulk">
+        <span id="usersSelectedCount">0 выбрано</span>
+        <button class="btn-sm danger" onclick="bulkUserStatus('SUSPENDED')">Block selected</button>
+        <button class="btn-sm" onclick="bulkUserStatus('ACTIVE')">Unblock selected</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="usersCheckAll" onchange="toggleAll('users')"></th>
+              <th>Email</th><th>Имя</th><th>Роль</th><th>Статус</th><th>Заказов</th><th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="usersPrev" disabled>← Назад</button>
+          <span id="usersInfo"></span>
+          <button class="btn-sm outline" id="usersNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHOPS -->
+    <section id="section-shops" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Shops</h2>
+        <button class="btn-sm outline" onclick="exportCSV('shops')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <input type="search" id="shopSearch" placeholder="Название / slug…">
+        <select id="shopStatus">
+          <option value="">Все статусы</option>
+          <option value="PENDING">Pending</option>
+          <option value="ACTIVE">Active</option>
+          <option value="SUSPENDED">Suspended</option>
+        </select>
+        <button class="btn-sm" onclick="loadShops(true)">Найти</button>
+      </div>
+      <div class="bulk-bar" id="shopsBulk">
+        <span id="shopsSelectedCount">0 выбрано</span>
+        <button class="btn-sm" onclick="bulkShopStatus('ACTIVE')">Approve selected</button>
+        <button class="btn-sm danger" onclick="bulkShopStatus('SUSPENDED')">Suspend selected</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="shopsCheckAll" onchange="toggleAll('shops')"></th>
+              <th>Магазин</th><th>Владелец</th><th>Статус</th><th>Товаров</th><th>Заказов</th><th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="shopsBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="shopsPrev" disabled>← Назад</button>
+          <span id="shopsInfo"></span>
+          <button class="btn-sm outline" id="shopsNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ORDERS -->
+    <section id="section-orders" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Orders</h2>
+        <button class="btn-sm outline" onclick="exportCSV('orders')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <input type="search" id="orderSearch" placeholder="Номер заказа…">
+        <select id="orderStatus">
+          <option value="">Все статусы</option>
+          <option value="NEW">New</option>
+          <option value="PAID">Paid</option>
+          <option value="SHIPPED">Shipped</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="CANCELLED">Cancelled</option>
+          <option value="REFUNDED">Refunded</option>
+        </select>
+        <button class="btn-sm" onclick="loadOrders(true)">Найти</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Номер</th><th>Покупатель</th><th>Магазин</th><th>Сумма</th><th>Статус</th><th>Дата</th>
+            </tr>
+          </thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="ordersPrev" disabled>← Назад</button>
+          <span id="ordersInfo"></span>
+          <button class="btn-sm outline" id="ordersNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- DISPUTES -->
+    <section id="section-disputes" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Disputes</h2>
+        <button class="btn-sm outline" onclick="exportCSV('disputes')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <select id="disputeStatus">
+          <option value="">Все статусы</option>
+          <option value="OPEN">Open</option>
+          <option value="APPEALED">Appealed</option>
+          <option value="RESOLVED_BUYER">Resolved Buyer</option>
+          <option value="RESOLVED_SELLER">Resolved Seller</option>
+          <option value="CLOSED">Closed</option>
+        </select>
+        <button class="btn-sm" onclick="loadDisputes(true)">Найти</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Заказ</th><th>Кто открыл</th><th>Статус</th><th>Дата</th><th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="disputesBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="disputesPrev" disabled>← Назад</button>
+          <span id="disputesInfo"></span>
+          <button class="btn-sm outline" id="disputesNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAYOUTS -->
+    <section id="section-payouts" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Payout Requests</h2>
+        <button class="btn-sm outline" onclick="exportCSV('payouts')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <select id="payoutStatus">
+          <option value="">Все статусы</option>
+          <option value="PENDING">Pending</option>
+          <option value="APPROVED">Approved</option>
+          <option value="REJECTED">Rejected</option>
+          <option value="PAID">Paid</option>
+        </select>
+        <button class="btn-sm" onclick="loadPayouts(true)">Найти</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Магазин</th><th>Сумма</th><th>Статус</th><th>Дата</th><th>Действия</th>
+            </tr>
+          </thead>
+          <tbody id="payoutsBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="payoutsPrev" disabled>← Назад</button>
+          <span id="payoutsInfo"></span>
+          <button class="btn-sm outline" id="payoutsNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- AUDIT LOG -->
+    <section id="section-audit" class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h2>Audit Log</h2>
+        <button class="btn-sm outline" onclick="exportCSV('audit')">Export CSV</button>
+      </div>
+      <div class="filters">
+        <input type="search" id="auditAction" placeholder="Action…">
+        <select id="auditEntity">
+          <option value="">Все сущности</option>
+          <option value="User">User</option>
+          <option value="Shop">Shop</option>
+          <option value="Order">Order</option>
+          <option value="Dispute">Dispute</option>
+          <option value="PayoutRequest">Payout</option>
+        </select>
+        <button class="btn-sm" onclick="loadAudit(true)">Найти</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Дата</th><th>Кто</th><th>Action</th><th>Entity</th><th>ID</th><th>Meta</th>
+            </tr>
+          </thead>
+          <tbody id="auditBody"></tbody>
+        </table>
+        <div class="pagination">
+          <button class="btn-sm outline" id="auditPrev" disabled>← Назад</button>
+          <span id="auditInfo"></span>
+          <button class="btn-sm outline" id="auditNext">Вперёд →</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/api.js"></script>
+<script>
+  const I = window.MplaceI18n;
+  let cursors = {};
+  let selected = { users: new Set(), shops: new Set() };
+
+  // Theme
+  const themeToggle = document.getElementById('themeToggle');
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('mplace_theme', t);
+    themeToggle.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  themeToggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  setTheme(localStorage.getItem('mplace_theme') || 'dark');
+
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+      const sec = btn.dataset.section;
+      document.getElementById('section-' + sec).classList.add('active');
+      if (sec === 'dashboard') loadDashboard();
+      if (sec === 'users') loadUsers(true);
+      if (sec === 'shops') loadShops(true);
+      if (sec === 'orders') loadOrders(true);
+      if (sec === 'disputes') loadDisputes(true);
+      if (sec === 'payouts') loadPayouts(true);
+      if (sec === 'audit') loadAudit(true);
+    };
+  });
+
+  document.getElementById('mobileMenuBtn')?.addEventListener('click', () => {
+    document.getElementById('sidebar').classList.toggle('open');
+  });
+
+  function getToken() {
+    return (window.MplaceApi && MplaceApi.getToken && MplaceApi.getToken())
+      || sessionStorage.getItem('mplace_token')
+      || localStorage.getItem('mplace_token')
+      || '';
+  }
+
+  async function adminFetch(path, opts = {}) {
+    const token = getToken();
+    const base = (window.MplaceApi && MplaceApi.getBase && MplaceApi.getBase()) || (location.origin + '/api');
+    const res = await fetch(base + '/admin' + path, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+        ...(opts.headers || {})
+      }
+    });
+    if (res.status === 401 || res.status === 403) throw new Error('forbidden');
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  }
+
+  function money(cents) {
+    if (I && I.formatMoney) return I.formatMoney(cents || 0);
+    return '$' + ((cents || 0) / 100).toFixed(2);
+  }
+
+  // Prefer global escapeHtml from api.js (Stage 21)
+  function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // ===== Dashboard =====
+  async function loadDashboard() {
+    try {
+      const data = await adminFetch('/dashboard').catch(() => adminFetch('/stats'));
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><div class="label">Customers</div><div class="value">${data.customers||0}</div></div>
+        <div class="stat-card"><div class="label">Merchants</div><div class="value">${data.merchants||0}</div></div>
+        <div class="stat-card"><div class="label">Products</div><div class="value">${data.products||0}</div></div>
+        <div class="stat-card"><div class="label">Orders</div><div class="value">${data.orders||0}</div></div>
+        <div class="stat-card"><div class="label">Pending Shops</div><div class="value">${data.pendingShops||0}</div></div>
+        <div class="stat-card"><div class="label">Open Disputes</div><div class="value">${data.openDisputes||0}</div></div>
+        <div class="stat-card"><div class="label">Today GMV</div><div class="value">${money(data.today?.gmvCents || data.todayTotalCents || 0)}</div></div>
+      `;
+    } catch(e) {
+      document.getElementById('statsGrid').innerHTML = '<div class="stat-card"><div class="label">Ошибка</div></div>';
+    }
+  }
+
+  // ===== Helpers =====
+  function toggleAll(type) {
+    const checked = document.getElementById(type + 'CheckAll').checked;
+    document.querySelectorAll(`#${type}Body input[type=checkbox]`).forEach(cb => {
+      cb.checked = checked;
+      if (checked) selected[type].add(cb.value);
+      else selected[type].delete(cb.value);
+    });
+    updateBulk(type);
+  }
+  function toggleOne(type, id, cb) {
+    if (cb.checked) selected[type].add(id);
+    else selected[type].delete(id);
+    updateBulk(type);
+  }
+  function updateBulk(type) {
+    const bar = document.getElementById(type + 'Bulk');
+    const count = selected[type].size;
+    document.getElementById(type + 'SelectedCount').textContent = count + ' выбрано';
+    bar.classList.toggle('show', count > 0);
+  }
+
+  // ===== Users =====
+  async function loadUsers(reset = false) {
+    if (reset) { cursors.users = null; selected.users.clear(); }
+    const q = new URLSearchParams({ limit: 20 });
+    if (cursors.users) q.set('cursor', cursors.users);
+    const search = document.getElementById('userSearch').value;
+    const role = document.getElementById('userRole').value;
+    const status = document.getElementById('userStatus').value;
+    if (search) q.set('search', search);
+    if (role) q.set('role', role);
+    if (status) q.set('status', status);
+
+    const data = await adminFetch('/users?' + q);
+    const e = escapeHtml;
+    document.getElementById('usersBody').innerHTML = data.items.map(u => `
+      <tr>
+        <td><input type="checkbox" value="${e(u.id)}" onchange="toggleOne('users','${e(u.id)}',this)"></td>
+        <td>${e(u.email)}</td>
+        <td>${e(u.name || '—')}</td>
+        <td>${e(u.role)}</td>
+        <td><span class="badge badge-${e(u.status)}">${e(u.status)}</span></td>
+        <td>${e(u._count?.orders || 0)}</td>
+        <td>
+          ${u.status !== 'SUSPENDED' && u.status !== 'INACTIVE'
+            ? `<button class="btn-sm danger" onclick="setUserStatus('${e(u.id)}','SUSPENDED')">Block</button>`
+            : `<button class="btn-sm" onclick="setUserStatus('${e(u.id)}','ACTIVE')">Unblock</button>`}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="7" style="text-align:center;opacity:.6">Нет данных</td></tr>';
+
+    cursors.users = data.nextCursor;
+    document.getElementById('usersNext').disabled = !data.hasMore;
+    document.getElementById('usersInfo').textContent = data.items.length + ' записей';
+    updateBulk('users');
+  }
+
+  async function setUserStatus(id, status) {
+    if (!confirm('Изменить статус?')) return;
+    await adminFetch('/users/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadUsers(true);
+  }
+  async function bulkUserStatus(status) {
+    if (!selected.users.size || !confirm(`Изменить статус у ${selected.users.size} пользователей?`)) return;
+    for (const id of selected.users) {
+      await adminFetch('/users/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    }
+    loadUsers(true);
+  }
+
+  // ===== Shops =====
+  async function loadShops(reset = false) {
+    if (reset) { cursors.shops = null; selected.shops.clear(); }
+    const q = new URLSearchParams({ limit: 20 });
+    if (cursors.shops) q.set('cursor', cursors.shops);
+    const search = document.getElementById('shopSearch').value;
+    const status = document.getElementById('shopStatus').value;
+    if (search) q.set('search', search);
+    if (status) q.set('status', status);
+
+    const data = await adminFetch('/shops?' + q);
+    const e = escapeHtml;
+    document.getElementById('shopsBody').innerHTML = data.items.map(s => `
+      <tr>
+        <td><input type="checkbox" value="${e(s.id)}" onchange="toggleOne('shops','${e(s.id)}',this)"></td>
+        <td><strong>${e(s.name)}</strong><br><small style="opacity:.6">${e(s.slug)}</small></td>
+        <td>${e(s.owner?.email || '—')}</td>
+        <td><span class="badge badge-${e(s.status)}">${e(s.status)}</span></td>
+        <td>${e(s._count?.products || 0)}</td>
+        <td>${e(s._count?.orders || 0)}</td>
+        <td>
+          ${s.status === 'PENDING' ? `<button class="btn-sm" onclick="setShopStatus('${e(s.id)}','ACTIVE')">Approve</button>` : ''}
+          ${s.status === 'ACTIVE' ? `<button class="btn-sm danger" onclick="setShopStatus('${e(s.id)}','SUSPENDED')">Suspend</button>` : ''}
+          ${s.status === 'SUSPENDED' ? `<button class="btn-sm" onclick="setShopStatus('${e(s.id)}','ACTIVE')">Activate</button>` : ''}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="7" style="text-align:center;opacity:.6">Нет данных</td></tr>';
+
+    cursors.shops = data.nextCursor;
+    document.getElementById('shopsNext').disabled = !data.hasMore;
+    document.getElementById('shopsInfo').textContent = data.items.length + ' записей';
+    updateBulk('shops');
+  }
+
+  async function setShopStatus(id, status) {
+    if (!confirm('Изменить статус магазина?')) return;
+    await adminFetch('/shops/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    loadShops(true);
+  }
+  async function bulkShopStatus(status) {
+    if (!selected.shops.size || !confirm(`Изменить статус у ${selected.shops.size} магазинов?`)) return;
+    for (const id of selected.shops) {
+      await adminFetch('/shops/' + id + '/status', { method: 'PATCH', body: JSON.stringify({ status }) });
+    }
+    loadShops(true);
+  }
+
+  // ===== Orders =====
+  async function loadOrders(reset = false) {
+    if (reset) cursors.orders = null;
+    const q = new URLSearchParams({ limit: 20 });
+    if (cursors.orders) q.set('cursor', cursors.orders);
+    const search = document.getElementById('orderSearch').value;
+    const status = document.getElementById('orderStatus').value;
+    if (search) q.set('search', search);
+    if (status) q.set('status', status);
+
+    const data = await adminFetch('/orders?' + q);
+    const e = escapeHtml;
+    document.getElementById('ordersBody').innerHTML = data.items.map(o => `
+      <tr>
+        <td><a href="/order.html?id=${e(o.id)}" style="color:var(--primary)">${e(o.orderNumber || o.id.slice(0,8))}</a></td>
+        <td>${e(o.customer?.email || o.customerEmail || '—')}</td>
+        <td>${e(o.shop?.name || '—')}</td>
+        <td>${e(money(o.totalCents))}</td>
+        <td><span class="badge badge-${e(o.status)}">${e(o.status)}</span></td>
+        <td>${e(new Date(o.createdAt).toLocaleDateString())}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет данных</td></tr>';
+
+    cursors.orders = data.nextCursor;
+    document.getElementById('ordersNext').disabled = !data.hasMore;
+    document.getElementById('ordersInfo').textContent = data.items.length + ' записей';
+  }
+
+  // ===== Disputes =====
+  async function loadDisputes(reset = false) {
+    if (reset) cursors.disputes = null;
+    const q = new URLSearchParams({ limit: 20 });
+    if (cursors.disputes) q.set('cursor', cursors.disputes);
+    const status = document.getElementById('disputeStatus').value;
+    if (status) q.set('status', status);
+
+    const data = await adminFetch('/disputes?' + q);
+    const e = escapeHtml;
+    document.getElementById('disputesBody').innerHTML = data.items.map(d => `
+      <tr>
+        <td>${e(d.id.slice(0,8))}</td>
+        <td>${e(d.order?.orderNumber || d.order?.id?.slice(0,8) || '—')}</td>
+        <td>${e(d.openedBy?.email || '—')}</td>
+        <td><span class="badge badge-${e(d.status)}">${e(d.status)}</span></td>
+        <td>${e(new Date(d.createdAt).toLocaleDateString())}</td>
+        <td>
+          ${['OPEN','APPEALED'].includes(d.status) ? `
+            <button class="btn-sm" onclick="resolveDispute('${e(d.id)}','RESOLVED_BUYER')">Buyer</button>
+            <button class="btn-sm" onclick="resolveDispute('${e(d.id)}','RESOLVED_SELLER')">Seller</button>
+          ` : '—'}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет данных</td></tr>';
+
+    cursors.disputes = data.nextCursor;
+    document.getElementById('disputesNext').disabled = !data.hasMore;
+    document.getElementById('disputesInfo').textContent = data.items.length + ' записей';
+  }
+
+  async function resolveDispute(id, resolution) {
+    const note = prompt('Комментарий:') || '';
+    await adminFetch('/disputes/' + id + '/resolve', {
+      method: 'PATCH',
+      body: JSON.stringify({ resolution, note })
+    });
+    loadDisputes(true);
+  }
+
+  // ===== Payouts =====
+  async function loadPayouts(reset = false) {
+    if (reset) cursors.payouts = null;
+    const q = new URLSearchParams({ limit: 20 });
+    if (cursors.payouts) q.set('cursor', cursors.payouts);
+    const status = document.getElementById('payoutStatus').value;
+    if (status) q.set('status', status);
+
+    const data = await adminFetch('/payouts?' + q);
+    const e = escapeHtml;
+    document.getElementById('payoutsBody').innerHTML = data.items.map(p => `
+      <tr>
+        <td>${e(p.id.slice(0,8))}</td>
+        <td>${e(p.shop?.name || '—')}<br><small>${e(p.shop?.owner?.email || '')}</small></td>
+        <td>${e(money(p.amountCents))}</td>
+        <td><span class="badge badge-${e(p.status)}">${e(p.status)}</span></td>
+        <td>${e(new Date(p.createdAt).toLocaleDateString())}</td>
+        <td>
+          ${p.status === 'PENDING' ? `
+            <button class="btn-sm" onclick="processPayout('${e(p.id)}','APPROVED')">Approve</button>
+            <button class="btn-sm danger" onclick="processPayout('${e(p.id)}','REJECTED')">Reject</button>
+          ` : p.status === 'APPROVED' ? `
+            <button class="btn-sm" onclick="processPayout('${e(p.id)}','PAID')">Mark Paid</button>
+          ` : '—'}
+        </td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет данных</td></tr>';
+
+    cursors.payouts = data.nextCursor;
+    document.getElementById('payoutsNext').disabled = !data.hasMore;
+    document.getElementById('payoutsInfo').textContent = data.items.length + ' записей';
+  }
+
+  async function processPayout(id, status) {
+    const note = prompt('Комментарий админа:') || '';
+    await adminFetch('/payouts/' + id + '/process', {
+      method: 'PATCH',
+      body: JSON.stringify({ status, adminNote: note })
+    });
+    loadPayouts(true);
+  }
+
+  // ===== Audit =====
+  async function loadAudit(reset = false) {
+    if (reset) cursors.audit = null;
+    const q = new URLSearchParams({ limit: 30 });
+    if (cursors.audit) q.set('cursor', cursors.audit);
+    const action = document.getElementById('auditAction').value;
+    const entity = document.getElementById('auditEntity').value;
+    if (action) q.set('action', action);
+    if (entity) q.set('entityType', entity);
+
+    const data = await adminFetch('/audit?' + q);
+    const e = escapeHtml;
+    document.getElementById('auditBody').innerHTML = data.items.map(a => `
+      <tr>
+        <td>${e(new Date(a.createdAt).toLocaleString())}</td>
+        <td>${e(a.actor?.email || 'system')}</td>
+        <td><strong>${e(a.action)}</strong></td>
+        <td>${e(a.entityType || '—')}</td>
+        <td>${e(a.entityId ? a.entityId.slice(0,8) : '—')}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${e(typeof a.meta === 'object' && a.meta ? JSON.stringify(a.meta).slice(0,120) : (a.meta || ''))}</td>
+      </tr>
+    `).join('') || '<tr><td colspan="6" style="text-align:center;opacity:.6">Нет записей</td></tr>';
+
+    cursors.audit = data.nextCursor;
+    document.getElementById('auditNext').disabled = !data.hasMore;
+    document.getElementById('auditInfo').textContent = data.items.length + ' записей';
+  }
+
+  // ===== CSV Export =====
+  function exportCSV(type) {
+    const table = document.querySelector(`#section-${type} table`);
+    if (!table) return;
+    let csv = [];
+    table.querySelectorAll('tr').forEach(row => {
+      const cols = [...row.querySelectorAll('th,td')].map(c => {
+        let t = c.innerText.replace(/"/g, '""');
+        return `"${t}"`;
+      });
+      csv.push(cols.join(','));
+    });
+    const blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `mplace-${type}-${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  }
+
+
+  // Cursor next buttons
+  ['users','shops','orders','disputes','payouts','audit'].forEach(type => {
+    const nextBtn = document.getElementById(type + 'Next');
+    if (nextBtn) nextBtn.onclick = () => {
+      if (type === 'users') loadUsers(false);
+      if (type === 'shops') loadShops(false);
+      if (type === 'orders') loadOrders(false);
+      if (type === 'disputes') loadDisputes(false);
+      if (type === 'payouts') loadPayouts(false);
+      if (type === 'audit') loadAudit(false);
+    };
+  });
+  // Init
+  async function init() {
+    if (!getToken()) {
+      location.href = '/login.html?email=superadmin@demo.com&next=/admin/';
+      return;
+    }
+    try {
+      await adminFetch('/dashboard').catch(() => adminFetch('/stats'));
+    } catch {
+      document.body.innerHTML = '<div style="padding:80px;text-align:center"><h2>Доступ запрещён</h2><p>Только для ADMIN / SUPER_ADMIN</p></div>';
+      return;
+    }
+    loadDashboard();
+  }
+  init();
+</script>
+</body>
+</html>

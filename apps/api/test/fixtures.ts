@@ -8,6 +8,8 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 export type E2EFixtures = {
+  tenantAId: string;
+  tenantBId: string;
   shopAId: string;
   shopBId: string;
   merchantAEmail: string;
@@ -59,10 +61,18 @@ export async function resetAndSeedFixtures(
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
+  const tenantA = await prisma.tenant.create({
+    data: { name: 'Tenant A', slug: 'tenant-a-e2e' },
+  });
+  const tenantB = await prisma.tenant.create({
+    data: { name: 'Tenant B', slug: 'tenant-b-e2e' },
+  });
+
   const shopA = await prisma.shop.create({
     data: {
       name: 'Shop A',
       slug: 'shop-a-e2e',
+      tenantId: tenantA.id,
       status: ShopStatus.ACTIVE,
       verified: true,
     },
@@ -71,6 +81,7 @@ export async function resetAndSeedFixtures(
     data: {
       name: 'Shop B',
       slug: 'shop-b-e2e',
+      tenantId: tenantB.id,
       status: ShopStatus.ACTIVE,
       verified: true,
     },
@@ -98,6 +109,7 @@ export async function resetAndSeedFixtures(
       role: UserRole.MERCHANT,
       status: UserStatus.ACTIVE,
       shopId: shopA.id,
+      tenantId: tenantA.id,
     },
   });
   await prisma.user.create({
@@ -108,6 +120,7 @@ export async function resetAndSeedFixtures(
       role: UserRole.MERCHANT,
       status: UserStatus.ACTIVE,
       shopId: shopB.id,
+      tenantId: tenantB.id,
     },
   });
   await prisma.user.create({
@@ -117,6 +130,7 @@ export async function resetAndSeedFixtures(
       name: 'Customer A',
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE,
+      tenantId: tenantA.id,
     },
   });
   await prisma.user.create({
@@ -126,6 +140,7 @@ export async function resetAndSeedFixtures(
       name: 'Customer B',
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE,
+      tenantId: tenantB.id,
     },
   });
 
@@ -136,6 +151,7 @@ export async function resetAndSeedFixtures(
   const productA = await prisma.product.create({
     data: {
       shopId: shopA.id,
+      tenantId: tenantA.id,
       categoryId: cat.id,
       name: 'Product A',
       slug: 'product-a',
@@ -147,6 +163,7 @@ export async function resetAndSeedFixtures(
   const productB = await prisma.product.create({
     data: {
       shopId: shopB.id,
+      tenantId: tenantB.id,
       categoryId: cat.id,
       name: 'Product B',
       slug: 'product-b',
@@ -157,6 +174,8 @@ export async function resetAndSeedFixtures(
   });
 
   return {
+    tenantAId: tenantA.id,
+    tenantBId: tenantB.id,
     shopAId: shopA.id,
     shopBId: shopB.id,
     merchantAEmail,

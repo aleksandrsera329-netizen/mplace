@@ -16,7 +16,7 @@ describe('Prisma Tenant Extension (isolation)', () => {
     expect(hasTenantField('Product')).toBe(true);
     expect(hasTenantField('Shop')).toBe(true);
     expect(hasTenantField('User')).toBe(true);
-    expect(hasTenantField('RefreshToken')).toBe(true);
+    expect(hasTenantField('RefreshToken')).toBe(false);
     expect(hasTenantField('Document')).toBe(true);
     expect(hasTenantField('Notification')).toBe(true);
     expect(hasTenantField('TaxRate')).toBe(true);

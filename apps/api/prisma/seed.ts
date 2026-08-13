@@ -8,6 +8,7 @@ import {
   UserStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 const prisma = new PrismaClient();
 
@@ -46,7 +47,15 @@ async function seedRolePermissions() {
 }
 
 async function main() {
-  const passwordHash = await bcrypt.hash('123456', 12);
+  const demoTenant = await prisma.tenant.upsert({
+    where: { slug: 'mplace-demo' },
+    update: { name: 'Mplace Demo' },
+    create: { name: 'Mplace Demo', slug: 'mplace-demo', status: 'ACTIVE', plan: 'BUSINESS' },
+  });
+
+  const demoPassword =
+    process.env.DEMO_PASSWORD || randomBytes(18).toString('base64url');
+  const passwordHash = await bcrypt.hash(demoPassword, 12);
 
   // clean demo data for clean seed (keep schema) — order respects FKs
   const wipe = async (fn: () => Promise<unknown>) => {
@@ -96,6 +105,7 @@ async function main() {
     data: {
       name: 'DrillTech Supply',
       slug: 'drilltech-supply',
+      tenantId: demoTenant.id,
       description: 'BHA, bits and downhole tools for drilling contractors',
       status: ShopStatus.ACTIVE,
       verified: true,
@@ -105,6 +115,7 @@ async function main() {
     data: {
       name: 'Pipe & Valve Co',
       slug: 'pipe-valve-co',
+      tenantId: demoTenant.id,
       description: 'Pipeline valves, flanges and fittings API / ASME',
       status: ShopStatus.ACTIVE,
       verified: true,
@@ -114,6 +125,7 @@ async function main() {
     data: {
       name: 'FieldSafe PPE',
       slug: 'fieldsafe-ppe',
+      tenantId: demoTenant.id,
       description: 'HSE PPE and field safety for oil & gas sites',
       status: ShopStatus.ACTIVE,
       verified: true,
@@ -138,6 +150,7 @@ async function main() {
       name: 'DrillTech Merchant',
       role: UserRole.MERCHANT,
       status: UserStatus.ACTIVE,
+      tenantId: demoTenant.id,
       shopId: drillTech.id,
     },
   });
@@ -149,6 +162,7 @@ async function main() {
       name: 'PipeValve Owner',
       role: UserRole.MERCHANT,
       status: UserStatus.ACTIVE,
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
     },
   });
@@ -160,6 +174,7 @@ async function main() {
       name: 'Procurement Buyer',
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE,
+      tenantId: demoTenant.id,
     },
   });
 
@@ -170,6 +185,7 @@ async function main() {
       name: 'Field Engineer',
       role: UserRole.CUSTOMER,
       status: UserStatus.ACTIVE,
+      tenantId: demoTenant.id,
     },
   });
 
@@ -194,6 +210,7 @@ async function main() {
 
   const catalog = [
     {
+      tenantId: demoTenant.id,
       shopId: drillTech.id,
       categoryId: drilling.id,
       name: 'PDC Drill Bit 8-1/2"',
@@ -207,6 +224,7 @@ async function main() {
         'Matrix PDC bit 8-1/2" for medium-hard formations. API pin connection. Oilfield drilling BHA.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: drillTech.id,
       categoryId: drilling.id,
       name: 'Mud Motor 6-3/4" 5:6',
@@ -220,6 +238,7 @@ async function main() {
         'Positive displacement mud motor 6-3/4", lobe 5:6, for directional drilling applications.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
       categoryId: pipeline.id,
       name: 'Gate Valve 6" Class 600',
@@ -233,6 +252,7 @@ async function main() {
         'API 600 cast steel gate valve, RF flanged, Class 600, carbon steel body for crude/product lines.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
       categoryId: pipeline.id,
       name: 'Ball Valve 4" Full Bore',
@@ -246,6 +266,7 @@ async function main() {
         'Full-bore trunnion ball valve 4", fire-safe design, suitable for gas transmission manifolds.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
       categoryId: pipeline.id,
       name: 'Weld Neck Flange 8" Sch 40',
@@ -258,6 +279,7 @@ async function main() {
       description: 'ASME B16.5 WN flange 8" Class 150, A105, raised face.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: fieldSafe.id,
       categoryId: ppe.id,
       name: 'FR Coverall CAT2 (M–XXL)',
@@ -271,6 +293,7 @@ async function main() {
         'Flame-resistant coverall CAT2, antistatic, for oil & gas process units and wellsites.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: fieldSafe.id,
       categoryId: ppe.id,
       name: 'H2S Escape Respirator Kit',
@@ -284,6 +307,7 @@ async function main() {
         'Emergency escape breathing apparatus for H2S-risk zones. Field HSE standard kit.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: drillTech.id,
       categoryId: pumps.id,
       name: 'Centrifugal Process Pump 4x3-10',
@@ -297,6 +321,7 @@ async function main() {
         'ANSI process centrifugal pump for water injection / produced water transfer skids.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
       categoryId: instruments.id,
       name: 'Pressure Transmitter 0–100 bar',
@@ -310,6 +335,7 @@ async function main() {
         'Industrial pressure transmitter 0–100 bar, 4–20 mA HART, ATEX zone options on request.',
     },
     {
+      tenantId: demoTenant.id,
       shopId: fieldSafe.id,
       categoryId: chemicals.id,
       name: 'Drilling Fluid Additive Pack (1 t)',
@@ -349,6 +375,7 @@ async function main() {
     data: {
       orderNumber: 'OG-1001',
       customerId: customer.id,
+      tenantId: demoTenant.id,
       shopId: drillTech.id,
       status: OrderStatus.PROCESSING,
       subtotalCents: p0.priceCents,
@@ -375,6 +402,7 @@ async function main() {
     data: {
       orderNumber: 'OG-1002',
       customerId: customer.id,
+      tenantId: demoTenant.id,
       shopId: pipeValve.id,
       status: OrderStatus.SHIPPED,
       subtotalCents: p1.priceCents * 2,
@@ -416,9 +444,10 @@ async function main() {
 
   // eslint-disable-next-line no-console
   console.log('Seed OK (Oil & Gas):', {
-    admin: 'superadmin@demo.com / 123456',
-    merchant: 'merchant@demo.com / 123456',
-    customer: 'customer@demo.com / 123456',
+    admin: 'superadmin@demo.com',
+    merchant: 'merchant@demo.com',
+    customer: 'customer@demo.com',
+    demoPassword,
     products: createdProducts.length,
     shops: 3,
     categories: 6,

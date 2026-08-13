@@ -11,7 +11,7 @@ Multi-vendor marketplace:
 
 | Роль | UI | Backend scope |
 |------|-----|---------------|
-| **Customer** | `index.html` (storefront) | public catalog, cart, checkout, own orders |
+| **Customer** | `apps/web` (Next.js storefront) | public catalog, cart, checkout, own orders |
 | **Merchant** | `merchant/` | own shop, products, orders, payouts |
 | **Admin** | `admin/` | platform-wide catalog, vendors, commissions, support, settings |
 

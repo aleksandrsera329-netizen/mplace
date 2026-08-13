@@ -175,6 +175,40 @@ describe('Security (e2e)', () => {
       .expect(403);
   });
 
+  it('enforces tenant isolation for authenticated requests and ignores forged tenant headers', async () => {
+    const tokenA = await login(fx.merchantAEmail, fx.password);
+    const tokenB = await login(fx.merchantBEmail, fx.password);
+
+    // No tenant header: authenticated user tenant is taken from the verified JWT.
+    await request(app.getHttpServer())
+      .get(`/api/products/${fx.productAId}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get(`/api/products/${fx.productBId}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(404);
+
+    // Explicitly asking for another tenant must never widen access.
+    await request(app.getHttpServer())
+      .get(`/api/products/${fx.productAId}`)
+      .set('Authorization', `Bearer ${tokenB}`)
+      .set('X-Tenant-Id', fx.tenantAId)
+      .expect((res) => {
+        expect([401, 403, 404]).toContain(res.status);
+      });
+
+    // Tenant B cannot enumerate Tenant A's products through the listing endpoint.
+    const listB = await request(app.getHttpServer())
+      .get('/api/products')
+      .set('Authorization', `Bearer ${tokenB}`)
+      .expect(200);
+    const idsB = (listB.body.items || listB.body).map((item: { id: string }) => item.id);
+    expect(idsB).not.toContain(fx.productAId);
+    expect(idsB).toContain(fx.productBId);
+  });
+
   it('webhook/dev-confirm is idempotent and stock does not go negative', async () => {
     const before = await prisma.product.findUniqueOrThrow({
       where: { id: fx.productAId },

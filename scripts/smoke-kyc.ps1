@@ -4,7 +4,7 @@ for ($i = 1; $i -le 30; $i++) {
   try { Invoke-RestMethod "$base/health" -TimeoutSec 3 | Out-Null; break } catch { Start-Sleep 3 }
 }
 
-$mLogin = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType 'application/json' -Body '{"email":"merchant@demo.com","password":"123456"}'
+$mLogin = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType "application/json" -Body (@{email="merchant@demo.com"; password=$env:DEMO_PASSWORD} | ConvertTo-Json)
 $mToken = $mLogin.accessToken
 $shopId = $mLogin.user.shopId
 Write-Output "shopId=$shopId"
@@ -45,7 +45,7 @@ Write-Output "signed stream bytes=$($bytes.Length) OK"
 $list = Invoke-RestMethod -Uri "$base/shops/$shopId/kyc" -Headers @{ Authorization = "Bearer $mToken" }
 Write-Output "list count=$($list.Count) status0=$($list[0].status)"
 
-$aLogin = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType 'application/json' -Body '{"email":"superadmin@demo.com","password":"123456"}'
+$aLogin = Invoke-RestMethod -Uri "$base/auth/login" -Method POST -ContentType "application/json" -Body (@{email="superadmin@demo.com"; password=$env:DEMO_PASSWORD} | ConvertTo-Json)
 $aToken = $aLogin.accessToken
 $aH = @{ Authorization = "Bearer $aToken"; 'Content-Type' = 'application/json' }
 

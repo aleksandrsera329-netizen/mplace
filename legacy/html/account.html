@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mplace — Личный кабинет</title>
+
+  <link rel="stylesheet" href="/assets/css/store-modern.css" />
+  <link rel="stylesheet" href="/assets/css/locale.css" />
+
+  <style>
+    .account-layout {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 900px) {
+      .account-layout { grid-template-columns: 1fr; }
+    }
+
+    .sidebar {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      height: fit-content;
+      position: sticky;
+      top: 90px;
+    }
+    .user-info {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 auto 10px;
+    }
+    .user-name { font-weight: 600; font-size: 1.05rem; }
+    .user-email { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+    .user-role { 
+      display: inline-block; 
+      margin-top: 8px; 
+      padding: 2px 8px; 
+      background: var(--bg); 
+      border-radius: 6px; 
+      font-size: 0.75rem; 
+      color: var(--text-muted);
+    }
+
+    .nav-item {
+      display: block;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 500;
+      margin-bottom: 2px;
+      transition: all 0.15s;
+    }
+    .nav-item:hover, .nav-item.active {
+      background: var(--primary);
+      color: #000;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+    .stat-card .label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; }
+    .stat-card .value { font-size: 1.6rem; font-weight: 700; margin-top: 6px; color: var(--accent); }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card h3 a { font-size: 0.85rem; color: var(--primary); text-decoration: none; }
+
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .list-item:last-child { border-bottom: none; }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-NEW, .badge-PENDING, .badge-OPEN { background: #f59e0b33; color: #f59e0b; }
+    .badge-PAID, .badge-SHIPPED { background: #3b82f633; color: #3b82f6; }
+    .badge-COMPLETED, .badge-AWARDED { background: #10b98133; color: #10b981; }
+    .badge-CANCELLED, .badge-CLOSED { background: #6b728033; color: #9ca3af; }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .quick-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    .quick-btn:hover {
+      border-color: var(--primary);
+      background: var(--card-hover);
+      transform: translateY(-2px);
+    }
+    .quick-btn span { display: block; font-size: 1.5rem; margin-bottom: 6px; }
+
+    .btn {
+      background: var(--primary);
+      color: #000;
+      border: none;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 0.9rem;
+    }
+    .btn.outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<header class="store-header">
+  <div class="header-top">
+    <a class="logo" href="/">M<span>place</span> Energy</a>
+    <div class="header-actions">
+      <button class="theme-btn" id="themeToggle">🌙</button>
+      <div id="localeMount"></div>
+      <a class="icon-btn" href="/cart.html">🛒</a>
+    </div>
+  </div>
+</header>
+
+<div class="account-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="user-info">
+      <div class="avatar" id="avatar">?</div>
+      <div class="user-name" id="userName">Загрузка…</div>
+      <div class="user-email" id="userEmail"></div>
+      <div class="user-role" id="userRole"></div>
+      <button type="button" class="btn outline" style="width:100%;margin-top:12px;font-size:0.85rem;" onclick="openProfileModal()">
+        Редактировать профиль
+      </button>
+    </div>
+
+    <nav>
+      <a class="nav-item active" href="/account.html">Обзор</a>
+      <a class="nav-item" href="/orders.html">Мои заказы</a>
+      <a class="nav-item" href="/rfqs.html">Мои RFQ</a>
+      <a class="nav-item" href="/wishlist.html">♥ Избранное</a>
+      <a class="nav-item" href="/rfq-create.html">Создать RFQ</a>
+      <a class="nav-item" href="/">Каталог</a>
+      <a class="nav-item" href="#" onclick="logout(); return false;" style="margin-top:12px;color:#ef4444;">Выйти</a>
+    </nav>
+  </aside>
+
+  <!-- MAIN -->
+  <main>
+    <h1 style="margin:0 0 6px;font-size:1.5rem;">Личный кабинет</h1>
+    <div style="color:var(--text-muted);margin-bottom:24px;" id="welcomeText">Добро пожаловать!</div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <a class="quick-btn" href="/">
+        <span>🛒</span>
+        Каталог
+      </a>
+      <a class="quick-btn" href="/rfq-create.html">
+        <span>📝</span>
+        Создать RFQ
+      </a>
+      <a class="quick-btn" href="/orders.html">
+        <span>📦</span>
+        Мои заказы
+      </a>
+      <a class="quick-btn" href="/rfqs.html">
+        <span>📨</span>
+        Мои RFQ
+      </a>
+      <a class="quick-btn" href="/wishlist.html">
+        <span>♥</span>
+        Избранное
+      </a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="label">Загрузка…</div></div>
+    </div>
+
+    <!-- Two columns -->
+    <div class="grid-2">
+      <!-- Recent Orders -->
+      <div class="card">
+        <h3>
+          Последние заказы
+          <a href="/orders.html">Все →</a>
+        </h3>
+        <div id="recentOrders">Загрузка…</div>
+      </div>
+
+      <!-- Recent RFQs -->
+      <div class="card">
+        <h3>
+          Мои RFQ
+          <a href="/rfqs.html">Все →</a>
+        </h3>
+        <div id="recentRfqs">Загрузка…</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profileModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:100;">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:min(440px,95%);padding:24px;">
+    <h3 style="margin:0 0 18px;">Редактировать профиль</h3>
+    <form id="profileForm" onsubmit="saveProfile(event)">
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Имя</label>
+        <input type="text" id="profileName" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Телефон</label>
+        <input type="tel" id="profilePhone" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.85rem;color:var(--text-muted);margin-bottom:5px;">Компания</label>
+        <input type="text" id="profileCompany" style="width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);">
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button type="button" class="btn outline" onclick="closeProfileModal()">Отмена</button>
+        <button type="submit" class="btn">Сохранить</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/assets/js/i18n.js"></script>
+<script src="/assets/js/api.js"></script>
+<script>
+  const I = window.MplaceI18n;
+  let currentUser = null;
+
+  // Theme
+  const themeToggle = document.getElementById('themeToggle');
+  function setTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    localStorage.setItem('mplace_theme', t);
+    themeToggle.textContent = t === 'dark' ? '☀️' : '🌙';
+  }
+  themeToggle.onclick = () => setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  setTheme(localStorage.getItem('mplace_theme') || 'dark');
+  if (I && I.mountSwitcher) I.mountSwitcher('#localeMount');
+
+  function getToken() {
+    return (window.MplaceApi && MplaceApi.getToken && MplaceApi.getToken())
+      || sessionStorage.getItem('mplace_token')
+      || localStorage.getItem('mplace_token')
+      || '';
+  }
+
+  function money(cents) {
+    if (I && I.formatMoney) return I.formatMoney(cents || 0);
+    return '$' + ((cents || 0) / 100).toFixed(2);
+  }
+
+  // Stage 21: full HTML escape (prefer global from api.js)
+  function esc(s) {
+    if (typeof escapeHtml === 'function') return escapeHtml(s);
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  async function api(path, opts = {}) {
+    const token = getToken();
+    const base = (window.MplaceApi && MplaceApi.getBase && MplaceApi.getBase()) || (location.origin + '/api');
+    const res = await fetch(base + path, {
+      ...opts,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + token,
+        ...(opts.headers || {})
+      }
+    });
+    if (res.status === 401 || res.status === 403) {
+      throw new Error('Unauthorized');
+    }
+    if (!res.ok) {
+      let err = await res.text();
+      try {
+        const j = JSON.parse(err);
+        err = Array.isArray(j.message) ? j.message.join(', ') : (j.message || err);
+      } catch (_) {}
+      throw new Error(typeof err === 'string' ? err : JSON.stringify(err));
+    }
+    return res.json();
+  }
+
+  function logout() {
+    if (window.MplaceApi && MplaceApi.clearSession) {
+      MplaceApi.clearSession();
+    } else {
+      sessionStorage.removeItem('mplace_token');
+      sessionStorage.removeItem('mplace_user');
+      localStorage.removeItem('mplace_token');
+    }
+    location.href = '/login.html';
+  }
+
+  function openProfileModal() {
+    if (!currentUser) return;
+    document.getElementById('profileName').value = currentUser.name || '';
+    document.getElementById('profilePhone').value = currentUser.phone || '';
+    document.getElementById('profileCompany').value = currentUser.company || '';
+    document.getElementById('profileModal').style.display = 'flex';
+  }
+
+  function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+  }
+
+  document.getElementById('profileModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'profileModal') closeProfileModal();
+  });
+
+  async function saveProfile(e) {
+    e.preventDefault();
+    const payload = {
+      name: document.getElementById('profileName').value.trim(),
+      phone: document.getElementById('profilePhone').value.trim() || undefined,
+      company: document.getElementById('profileCompany').value.trim() || undefined,
+    };
+    if (!payload.name) {
+      alert('Имя обязательно');
+      return;
+    }
+    try {
+      await api('/auth/me', {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      });
+      closeProfileModal();
+      await loadDashboard();
+      alert('Профиль обновлён');
+    } catch (err) {
+      alert('Ошибка: ' + err.message);
+    }
+  }
+
+  async function loadDashboard() {
+    try {
+      const [me, ordersData, rfqsData] = await Promise.all([
+        api('/auth/me'),
+        api('/orders?limit=5').catch(() => ({ items: [] })),
+        api('/rfq?limit=5').catch(() => ({ items: [] })),
+      ]);
+
+      const user = me.user || me;
+      currentUser = user;
+      const name = user.name || (user.email ? user.email.split('@')[0] : '') || 'Пользователь';
+      const email = user.email || '';
+      const role = user.role || 'CUSTOMER';
+
+      document.getElementById('avatar').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('userName').textContent = name;
+      document.getElementById('userEmail').textContent = email;
+      document.getElementById('userRole').textContent = role;
+      document.getElementById('welcomeText').textContent = 'Добро пожаловать, ' + name + '!';
+
+      const orders = ordersData.items || (Array.isArray(ordersData) ? ordersData : []);
+      const totalSpent = orders.reduce((s, o) => s + (o.totalCents || 0), 0);
+      const activeOrders = orders.filter(o =>
+        ['NEW', 'PENDING_PAYMENT', 'PAID', 'SHIPPED', 'PROCESSING'].includes(o.status)
+      ).length;
+      const rfqs = rfqsData.items || (Array.isArray(rfqsData) ? rfqsData : []);
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card">
+          <div class="label">Всего заказов</div>
+          <div class="value">${orders.length}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Сумма заказов</div>
+          <div class="value">${money(totalSpent)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Активные</div>
+          <div class="value">${activeOrders}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Мои RFQ</div>
+          <div class="value">${rfqs.length}</div>
+        </div>
+      `;
+
+      document.getElementById('recentOrders').innerHTML = orders.length
+        ? orders.map(o => `
+            <div class="list-item">
+              <div>
+                <a href="/order.html?id=${esc(o.id)}" style="color:var(--primary);font-weight:600;">
+                  ${esc(o.orderNumber || String(o.id).slice(0, 8))}
+                </a>
+                <div style="font-size:0.8rem;opacity:0.7;">${new Date(o.createdAt).toLocaleDateString('ru-RU')}</div>
+              </div>
+              <div style="text-align:right;">
+                <div>${money(o.totalCents)}</div>
+                <span class="badge badge-${esc(o.status)}">${esc(o.status)}</span>
+              </div>
+            </div>
+          `).join('')
+        : '<div style="opacity:0.6;padding:16px 0;text-align:center;">Заказов пока нет</div>';
+
+      document.getElementById('recentRfqs').innerHTML = rfqs.length
+        ? rfqs.map(r => `
+            <div class="list-item">
+              <div>
+                <a href="/rfq.html?id=${esc(r.id)}" style="color:var(--primary);font-weight:600;">
+                  ${esc(r.title || r.number || String(r.id).slice(0, 8))}
+                </a>
+                <div style="font-size:0.8rem;opacity:0.7;">${new Date(r.createdAt).toLocaleDateString('ru-RU')}</div>
+              </div>
+              <span class="badge badge-${esc(r.status)}">${esc(r.status)}</span>
+            </div>
+          `).join('')
+        : '<div style="opacity:0.6;padding:16px 0;text-align:center;">RFQ пока нет</div>';
+
+    } catch (e) {
+      console.error(e);
+      if (String(e.message).includes('401') || String(e.message).includes('Unauthorized')) {
+        location.href = '/login.html?next=/account.html';
+      } else {
+        document.getElementById('welcomeText').textContent = 'Ошибка загрузки: ' + e.message;
+      }
+    }
+  }
+
+  // Init
+  if (!getToken()) {
+    location.href = '/login.html?email=customer@demo.com&next=/account.html';
+  } else {
+    loadDashboard();
+  }
+</script>
+</body>
+</html>

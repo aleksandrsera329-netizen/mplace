@@ -77,7 +77,7 @@ Production nginx (`nginx.conf`) proxies `/` → Next.js `web` service. Legacy st
 
 | File | Purpose | Next equivalent |
 |------|---------|-----------------|
-| `index.html` | Old catalog | `/` |
+| `apps/web/src/app/page.tsx` | Next.js catalog | `/` |
 | `product.html` | Old PDP | `/product/[id]` |
 | `cart.html` / `checkout.html` | Old cart/checkout | `/cart`, `/checkout` |
 | `login.html` | Old login | `/login` |
@@ -85,8 +85,8 @@ Production nginx (`nginx.conf`) proxies `/` → Next.js `web` service. Legacy st
 | `orders.html` / `order.html` | Old orders | `/orders` |
 | `wishlist.html` | Old wishlist | `/wishlist` |
 | `rfqs.html`, `rfq.html`, `rfq-create.html`, `rfq-offer.html` | Old RFQ UI | `/rfq/*` |
-| `merchant.html`, `merchant-*.html`, `merchant/index.html` | Old merchant SPA | `/merchant/*` |
-| `admin/index.html` + `assets/js/admin.js` | Old admin SPA | `/admin/*` |
+| `apps/web/src/app/merchant/*` | Next.js merchant cabinet | `/merchant/*` |
+| `apps/web/src/app/admin/*` | Next.js admin cabinet | `/admin/*` |
 | `assets/js/*` | Shared legacy API client / i18n / XSS helpers | `apps/web/src/lib/api.ts` |
 
 **Policy:** do not add new features to legacy HTML. Prefer Next. Legacy may be deleted after pilot (Stage 30) once smoke-checked.
