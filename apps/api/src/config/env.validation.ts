@@ -121,15 +121,25 @@ export function validateEnv(
   }
 
   // ── Production fail-fast (no defaults, no weak secrets) ───────────
+  // ALLOW_PILOT=true — cheap public demo (Neon/Render/Vercel) without Stripe/Redis/Meili.
+  // Still requires strong JWT + real DATABASE_URL. Do not use for real money.
+  const pilotMode = ['true', '1', 'yes'].includes(
+    String(config.ALLOW_PILOT ?? process.env.ALLOW_PILOT ?? '')
+      .toLowerCase()
+      .trim(),
+  );
+
   if (nodeEnv === 'production') {
-    const required = [
-      'JWT_SECRET',
-      'DATABASE_URL',
-      'REDIS_URL',
-      'MEILI_MASTER_KEY',
-      'STRIPE_SECRET_KEY',
-      'STRIPE_WEBHOOK_SECRET',
-    ] as const;
+    const required = pilotMode
+      ? (['JWT_SECRET', 'DATABASE_URL'] as const)
+      : ([
+          'JWT_SECRET',
+          'DATABASE_URL',
+          'REDIS_URL',
+          'MEILI_MASTER_KEY',
+          'STRIPE_SECRET_KEY',
+          'STRIPE_WEBHOOK_SECRET',
+        ] as const);
 
     const missing = required.filter((key) => {
       const fromConfig = config[key];
@@ -157,11 +167,13 @@ export function validateEnv(
       );
     }
 
-    const meili = String(
-      config.MEILI_MASTER_KEY ?? process.env.MEILI_MASTER_KEY ?? '',
-    );
-    if (WEAK_MEILI.has(meili) || meili.length < 16) {
-      fail('MEILI_MASTER_KEY is using a default or weak value');
+    if (!pilotMode) {
+      const meili = String(
+        config.MEILI_MASTER_KEY ?? process.env.MEILI_MASTER_KEY ?? '',
+      );
+      if (WEAK_MEILI.has(meili) || meili.length < 16) {
+        fail('MEILI_MASTER_KEY is using a default or weak value');
+      }
     }
 
     const pgPass = String(
@@ -182,27 +194,29 @@ export function validateEnv(
       );
     }
 
-    const paymentProvider = String(
-      config.PAYMENT_PROVIDER ?? process.env.PAYMENT_PROVIDER ?? 'stripe',
-    ).toLowerCase();
-    if (paymentProvider === 'dev') {
-      fail(
-        'PAYMENT_PROVIDER=dev is forbidden in production — use stripe (or a real provider)',
+    if (!pilotMode) {
+      const paymentProvider = String(
+        config.PAYMENT_PROVIDER ?? process.env.PAYMENT_PROVIDER ?? 'stripe',
+      ).toLowerCase();
+      if (paymentProvider === 'dev') {
+        fail(
+          'PAYMENT_PROVIDER=dev is forbidden in production — use stripe (or a real provider)',
+        );
+      }
+
+      const allowDev = String(
+        config.ALLOW_DEV_PAYMENTS ?? process.env.ALLOW_DEV_PAYMENTS ?? '',
+      ).toLowerCase();
+      if (allowDev === 'true' || allowDev === '1') {
+        fail('ALLOW_DEV_PAYMENTS must not be true in production');
+      }
+
+      const stripeKey = String(
+        config.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY ?? '',
       );
-    }
-
-    const allowDev = String(
-      config.ALLOW_DEV_PAYMENTS ?? process.env.ALLOW_DEV_PAYMENTS ?? '',
-    ).toLowerCase();
-    if (allowDev === 'true' || allowDev === '1') {
-      fail('ALLOW_DEV_PAYMENTS must not be true in production');
-    }
-
-    const stripeKey = String(
-      config.STRIPE_SECRET_KEY ?? process.env.STRIPE_SECRET_KEY ?? '',
-    );
-    if (!stripeKey.startsWith('sk_')) {
-      fail('STRIPE_SECRET_KEY must be a live/test Stripe secret (sk_...)');
+      if (!stripeKey.startsWith('sk_')) {
+        fail('STRIPE_SECRET_KEY must be a live/test Stripe secret (sk_...)');
+      }
     }
   }
 

@@ -1,33 +1,35 @@
-# Render free-tier blueprint for Mplace
-# Deploy: https://dashboard.render.com/select-repo?type=blueprint
-# Or: New → Blueprint → connect this GitHub repo
+# Render Blueprint — Mplace API only
+# Dashboard: New → Blueprint → this repo
+# Set DATABASE_URL manually to your Neon connection string (Dashboard → Environment)
 
 services:
   - type: web
-    name: mplace
+    name: mplace-api
     runtime: docker
     plan: free
+    region: frankfurt
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/health
+    # Free tier: may sleep after inactivity (cold start 30–60s)
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: "10000"
-      - key: DATABASE_URL
-        value: file:/data/mplace.db
-      - key: FRONTEND_DIR
-        value: /app/frontend
+        value: "3000"
+      - key: ALLOW_PILOT
+        value: "true"
       - key: PAYMENT_PROVIDER
         value: dev
       - key: ALLOW_DEV_PAYMENTS
-        value: "false"
+        value: "true"
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 15m
+      # Paste Neon URL in Render Dashboard after first deploy if blank:
+      - key: DATABASE_URL
+        sync: false
+      # After you know frontend URL (Vercel / sana.tmweb.ru):
       - key: CORS_ORIGINS
-        value: "*"
-      - key: SERVE_FRONTEND
-        value: "true"
+        value: https://sana.tmweb.ru,https://www.sana.tmweb.ru,http://localhost:3000,http://127.0.0.1:3000

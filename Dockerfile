@@ -45,7 +45,6 @@ WORKDIR /app/apps/api
 
 EXPOSE 3000
 
-# Production: migrations run via compose service `migrate` (or CI job).
-# Never: prisma db push / prisma db seed on start.
-# Alternative one-shot: ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/src/main.js"]
+# Render / single-container: migrate then start.
+# Compose can override CMD to skip entrypoint if needed.
+ENTRYPOINT ["./docker-entrypoint.sh"]
