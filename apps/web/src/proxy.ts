@@ -16,11 +16,12 @@ export function proxy(request: NextRequest) {
     "object-src 'none'",
     "frame-ancestors 'none'",
     "form-action 'self'",
-    `script-src 'self' 'nonce-${value}' 'strict-dynamic' https://js.stripe.com`,
-    `style-src 'self' 'nonce-${value}'`,
-    "img-src 'self' data: https: blob:",
+    // Note: 'unsafe-inline' kept for Next/Tailwind runtime; local API on :3001 is HTTP
+    `script-src 'self' 'nonce-${value}' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https: http: blob:",
     "font-src 'self' data: https:",
-    "connect-src 'self' https: wss:",
+    "connect-src 'self' http://127.0.0.1:* http://localhost:* https: wss: ws:",
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com",
     "worker-src 'self' blob:",
   ].join('; ');
