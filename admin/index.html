@@ -779,7 +779,7 @@
   // Init
   async function init() {
     if (!getToken()) {
-      location.href = '/login.html?email=superadmin@demo.com&next=/admin/';
+      location.href = '/login.html?next=/admin/';
       return;
     }
     try {

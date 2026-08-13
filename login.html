@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
-<html lang="ru">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mplace Energy — Login</title>
+  <title>Mplace Energy — Sign in</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="assets/css/store.css" />
@@ -25,8 +25,9 @@
     .login-logo { background: transparent !important; border-bottom: 1px solid var(--border); padding: 24px; text-align: center; }
     .login-logo h1 { color: var(--text) !important; font-weight: 800; letter-spacing: -0.03em; }
     .login-logo h1 span { color: var(--primary); }
-    .login-logo p, .login-body h3, .login-hints, .login-footer a, .form-group label { color: var(--text-muted) !important; }
+    .login-logo p, .login-body h3, .login-footer a, .form-group label { color: var(--text-muted) !important; }
     .login-body h3 { color: var(--text) !important; font-weight: 700; }
+    .login-body { padding: 24px; }
     .form-control {
       background: var(--bg) !important; border: 1px solid var(--border) !important;
       color: var(--text) !important; border-radius: 10px !important;
@@ -35,46 +36,49 @@
       background: var(--primary) !important; color: #000 !important; border: none !important;
       font-weight: 800 !important; border-radius: 12px !important;
     }
-    .login-hints { background: var(--bg) !important; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-    .login-hints code { color: var(--primary); }
-    .login-footer { border-top: 1px solid var(--border) !important; background: transparent !important; }
+    .login-footer { border-top: 1px solid var(--border) !important; background: transparent !important; padding: 16px 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .login-note {
+      margin-top: 16px; padding: 12px; border-radius: 12px; border: 1px solid var(--border);
+      font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;
+    }
+    .login-error { display: none; color: #f87171; margin-bottom: 12px; font-size: 0.9rem; }
+    .login-error.show { display: block; }
   </style>
 </head>
 <body data-theme="dark">
   <div class="login-page">
-    <div class="login-locale" id="localeMount"></div>
+    <div class="login-locale" id="localeMount" style="position:absolute;top:16px;right:16px"></div>
     <div class="login-box">
       <div class="login-logo">
         <h1>M<span>place</span> Energy</h1>
         <p data-i18n="app.tagline">Oil & Gas B2B Marketplace</p>
       </div>
       <div class="login-body">
-        <h3 data-i18n="login.title">Login</h3>
+        <h3 data-i18n="login.title">Sign in</h3>
         <div id="loginError" class="login-error"></div>
         <form id="loginForm">
           <div class="form-group">
             <label for="email" data-i18n="login.email">Email</label>
-            <input class="form-control" type="email" id="email" name="email" required placeholder="superadmin@demo.com" autocomplete="username" />
+            <input class="form-control" type="email" id="email" name="email" required placeholder="you@company.com" autocomplete="username" />
           </div>
           <div class="form-group">
             <label for="password" data-i18n="login.password">Password</label>
-            <input class="form-control" type="password" id="password" name="password" required placeholder="••••••" autocomplete="current-password" />
+            <input class="form-control" type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password" />
           </div>
-          <div class="form-check">
+          <div class="form-check" style="margin:12px 0">
             <input type="checkbox" id="remember" />
-            <label for="remember" data-i18n="login.remember">Remember Me</label>
+            <label for="remember" data-i18n="login.remember">Remember me</label>
           </div>
-          <button type="submit" class="btn btn-primary btn-block" id="loginBtn" data-i18n="login.submit">Login</button>
+          <button type="submit" class="btn btn-primary btn-block" id="loginBtn" data-i18n="login.submit">Sign in</button>
         </form>
-        <div class="login-hints">
-          <div><strong data-i18n="login.adminHint">ADMIN</strong><br /><span data-i18n="login.username">Username</span>: <code>superadmin@demo.com</code><br /><span data-i18n="login.passwordLabel">Password</span>: <code>123456</code></div>
-          <div style="margin-top:10px"><strong data-i18n="login.merchantHint">MERCHANT</strong><br /><span data-i18n="login.username">Username</span>: <code>merchant@demo.com</code><br /><span data-i18n="login.passwordLabel">Password</span>: <code>123456</code></div>
-          <div style="margin-top:10px;color:#888">API: <code id="apiBaseHint">http://127.0.0.1:3000/api</code></div>
+        <div class="login-note">
+          Public demo is browse-only. For a full walkthrough (seller desk, admin, RFQ awards), use
+          <a href="request-demo.html" style="color:var(--primary)">Request Private Demo</a>.
         </div>
       </div>
       <div class="login-footer">
-        <a href="index.html" data-i18n="login.storeFront">← Store front</a>
-        <a href="#" id="regMerchant" data-i18n="login.registerMerchant">Register as merchant</a>
+        <a href="index.html" data-i18n="login.storeFront">← Catalog</a>
+        <a href="request-demo.html">Private demo</a>
       </div>
     </div>
   </div>
@@ -82,20 +86,24 @@
   <script src="assets/js/api.js"></script>
   <script>
     const I = window.MplaceI18n;
+    if (!localStorage.getItem('mplace_lang')) I.setLang('en');
     I.mountSwitcher('#localeMount', { className: 'light' });
+    I.applyDocument();
 
     const form = document.getElementById('loginForm');
     const err = document.getElementById('loginError');
     const btn = document.getElementById('loginBtn');
     const params = new URLSearchParams(location.search);
-    if (params.get('email')) document.getElementById('email').value = params.get('email');
-    document.getElementById('apiBaseHint').textContent = MplaceApi.getBase();
+    // Do not prefill demo accounts publicly
+    if (params.get('email') && !/@demo\.com$/i.test(params.get('email'))) {
+      document.getElementById('email').value = params.get('email');
+    }
 
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
       err.classList.remove('show');
       btn.disabled = true;
-      btn.textContent = I.t('login.signing');
+      btn.textContent = I.t('login.signing') || 'Signing in…';
       const email = document.getElementById('email').value.trim().toLowerCase();
       const password = document.getElementById('password').value;
       try {
@@ -117,26 +125,12 @@
       } catch (ex) {
         err.textContent =
           ex.status === 0 || /Failed to fetch|NetworkError|API offline/i.test(ex.message)
-            ? I.t('login.errorApi')
-            : I.t('login.errorCreds');
+            ? (I.t('login.errorApi') || 'Service unavailable. Try again shortly.')
+            : (I.t('login.errorCreds') || 'Invalid email or password.');
         err.classList.add('show');
         btn.disabled = false;
-        btn.textContent = I.t('login.submit');
+        btn.textContent = I.t('login.submit') || 'Sign in';
       }
-    });
-
-    document.getElementById('regMerchant').onclick = (e) => {
-      e.preventDefault();
-      alert(I.getLang() === 'ru'
-        ? 'Демо: регистрация через API POST /auth/register/merchant'
-        : I.getLang() === 'ar'
-          ? 'تجريبي: التسجيل عبر POST /auth/register/merchant'
-          : 'Demo: register via POST /auth/register/merchant');
-    };
-
-    window.addEventListener('mplace:locale', () => {
-      I.applyDocument();
-      if (!btn.disabled) btn.textContent = I.t('login.submit');
     });
   </script>
 </body>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Request Private Demo — Mplace Energy</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/store.css" />
+  <style>
+    body { font-family: Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; }
+    .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px 64px; }
+    .logo { font-weight: 800; font-size: 1.25rem; text-decoration: none; color: var(--text); }
+    .logo span { color: var(--primary); }
+    h1 { letter-spacing: -0.03em; margin: 24px 0 8px; }
+    .lead { color: var(--text-muted); line-height: 1.55; margin-bottom: 24px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px;
+    }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin: 12px 0 6px; }
+    input, textarea, select {
+      width: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit;
+    }
+    textarea { min-height: 110px; resize: vertical; }
+    .btn {
+      margin-top: 18px; width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: var(--primary); color: #000; font-weight: 800; font-size: 1rem; cursor: pointer;
+    }
+    .back { display: inline-block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-weight: 600; }
+    .back:hover { color: var(--primary); }
+    .ok { display: none; padding: 16px; border-radius: 12px; background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.35); margin-top: 16px; }
+    .ok.show { display: block; }
+    ul { color: var(--text-muted); line-height: 1.5; padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a class="logo" href="index.html">M<span>place</span> Energy</a>
+    <h1>Request Private Demo</h1>
+    <p class="lead">
+      Get a guided walkthrough of the full B2B stack: multi-vendor catalog, RFQ to award,
+      seller desk and platform admin. Credentials are issued only for scheduled demos (NDA available).
+    </p>
+
+    <div class="card">
+      <p style="margin:0 0 8px;font-weight:700">What you’ll see</p>
+      <ul>
+        <li>Buyer catalog, cart and RFQ flow</li>
+        <li>Supplier quotes and inventory</li>
+        <li>Admin: shops, orders, payouts, support</li>
+      </ul>
+
+      <form id="demoForm">
+        <label for="name">Full name</label>
+        <input id="name" name="name" required placeholder="Your name" autocomplete="name" />
+
+        <label for="email">Work email</label>
+        <input id="email" name="email" type="email" required placeholder="you@company.com" autocomplete="email" />
+
+        <label for="company">Company</label>
+        <input id="company" name="company" placeholder="Organization" autocomplete="organization" />
+
+        <label for="role">Role</label>
+        <select id="role" name="role">
+          <option value="buyer">Buyer / investor</option>
+          <option value="operator">Operator / procurement</option>
+          <option value="vendor">Vendor / supplier</option>
+          <option value="other">Other</option>
+        </select>
+
+        <label for="message">Notes (optional)</label>
+        <textarea id="message" name="message" placeholder="Preferred time zone, focus areas…"></textarea>
+
+        <button class="btn" type="submit">Send request</button>
+      </form>
+      <div class="ok" id="ok">
+        Thanks — your request is ready to send. If your mail client opened, hit send.
+        You can also email <strong>aleksandrsera329@gmail.com</strong> with the same details.
+      </div>
+    </div>
+
+    <a class="back" href="index.html">← Back to public catalog</a>
+  </div>
+  <script>
+    document.getElementById('demoForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const company = document.getElementById('company').value.trim();
+      const role = document.getElementById('role').value;
+      const message = document.getElementById('message').value.trim();
+      const subject = encodeURIComponent('Mplace Private Demo — ' + (company || name));
+      const body = encodeURIComponent(
+        'Name: ' + name + '\nEmail: ' + email + '\nCompany: ' + company +
+        '\nRole: ' + role + '\n\n' + message +
+        '\n\n— sent from mplace public demo'
+      );
+      document.getElementById('ok').classList.add('show');
+      window.location.href = 'mailto:aleksandrsera329@gmail.com?subject=' + subject + '&body=' + body;
+    });
+  </script>
+</body>
+</html>

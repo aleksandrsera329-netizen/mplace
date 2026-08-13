@@ -3,7 +3,7 @@
   const user = JSON.parse(sessionStorage.getItem('mplace_user') || 'null');
   const role = String(user?.role || '').toUpperCase();
   if (!user || role !== 'MERCHANT' || !sessionStorage.getItem('mplace_token')) {
-    location.href = '../login.html?email=merchant@demo.com';
+    location.href = '../login.html?next=/merchant.html';
     return;
   }
 

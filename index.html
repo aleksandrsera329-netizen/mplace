@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
-<html lang="ru" data-theme="dark">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mplace Energy — Oil & Gas B2B</title>
+  <title>Mplace Energy — Oil & Gas B2B Marketplace</title>
+  <meta name="description" content="B2B marketplace for oil & gas procurement: drilling, pipeline, PPE, pumps and field equipment." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -36,134 +37,141 @@
       border: 1px solid var(--border); background: var(--bg); color: var(--text);
       width: 28px; height: 28px; cursor: pointer; border-radius: 8px;
     }
-    .api-badge {
-      font-size: 11px; background: var(--card); color: var(--success);
-      border: 1px solid var(--border); padding: 4px 10px; border-radius: 99px;
-    }
-    .api-badge.down { color: var(--danger); }
-    .header-links {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    }
+    .header-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .ha-link {
       color: var(--text-muted); font-size: 0.82rem; font-weight: 600;
-      padding: 6px 8px; border-radius: 10px;
+      padding: 6px 8px; border-radius: 10px; text-decoration: none;
     }
     .ha-link:hover { color: var(--primary); background: var(--primary-soft); }
     .ha-link strong { display: block; color: var(--text); font-size: 0.88rem; }
-    .product-image img {
-      max-height: 100px; max-width: 100%; object-fit: contain;
+    .product-image img { max-height: 100px; max-width: 100%; object-fit: contain; }
+    .hero-demo {
+      margin: 0 0 20px; padding: 28px 24px; border-radius: 16px;
+      border: 1px solid var(--border); background:
+        linear-gradient(135deg, rgba(245,158,11,.12), transparent 55%),
+        var(--card);
+    }
+    .hero-demo h1 {
+      margin: 0 0 8px; font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+      letter-spacing: -0.03em; line-height: 1.2;
+    }
+    .hero-demo p { margin: 0 0 16px; color: var(--text-muted); max-width: 52ch; line-height: 1.5; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .btn-demo {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 18px; border-radius: 12px; font-weight: 800; text-decoration: none;
+      background: var(--primary); color: #000; border: none; cursor: pointer;
+    }
+    .btn-demo.secondary {
+      background: transparent; color: var(--text); border: 1px solid var(--border);
     }
   </style>
 </head>
 <body>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-  <!-- ========== HEADER ========== -->
   <header class="store-header">
     <div class="header-top">
       <a class="logo" href="index.html">M<span>place</span> Energy</a>
 
       <div class="header-actions">
-        <button type="button" class="theme-btn" id="themeToggle" title="Тема">🌙</button>
+        <button type="button" class="theme-btn" id="themeToggle" title="Theme">🌙</button>
         <div id="localeMount"></div>
-        <span class="api-badge" id="apiBadge" data-i18n="api.loading">API …</span>
         <div class="header-links">
-          <a class="ha-link" href="/orders.html">
-            <span>Заявки</span>
-            <strong data-i18n="nav.orders">Мои заявки</strong>
+          <a class="ha-link" href="index.html">
+            <span>Catalog</span>
+            <strong data-i18n="nav.storefront">Browse</strong>
           </a>
-          <a class="ha-link" href="/rfqs.html">
+          <a class="ha-link" href="rfq-create.html">
             <span>RFQ</span>
-            <strong>Запросы</strong>
+            <strong>Request quote</strong>
           </a>
-          <a class="ha-link" href="/account.html" id="accountLink">
-            <span id="helloLine" data-i18n="hello.signIn">Войти</span>
-            <strong data-i18n="nav.account">Аккаунт</strong>
+          <a class="ha-link" href="login.html" id="accountLink">
+            <span id="helloLine" data-i18n="hello.signIn">Sign in</span>
+            <strong data-i18n="nav.account">Account</strong>
           </a>
-          <a class="ha-link" href="login.html?email=merchant@demo.com">
-            <span data-i18n="nav.sell">Sell</span>
-            <strong data-i18n="nav.sellOn">on Mplace</strong>
-          </a>
-          <a class="ha-link" href="login.html?email=superadmin@demo.com">
-            <strong data-i18n="nav.admin">Admin</strong>
+          <a class="ha-link" href="request-demo.html">
+            <span>Sales</span>
+            <strong>Private demo</strong>
           </a>
         </div>
         <button type="button" class="cart-btn" id="cartBtn">
-          🛒 <span data-i18n="nav.cart">Корзина</span>
+          🛒 <span data-i18n="nav.cart">Cart</span>
           <span class="cart-count" id="cartCount">0</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- ========== MAIN LAYOUT ========== -->
   <div class="layout">
-
-    <!-- LEFT SIDEBAR -->
     <aside class="sidebar" id="sidebar">
-      <h3 data-i18n="search.title">Поиск</h3>
-      <input type="search" class="search-box" id="searchInput" placeholder="Название, SKU..." data-i18n-placeholder="search.placeholder" />
+      <h3 data-i18n="search.title">Search</h3>
+      <input type="search" class="search-box" id="searchInput" placeholder="Valves, pumps, PPE, drilling…" data-i18n-placeholder="search.placeholder" />
 
-      <h3 data-i18n="search.category">Категории</h3>
+      <h3 data-i18n="search.category">Categories</h3>
       <div class="filter-group" id="categoryFilters">
-        <label><input type="radio" name="category" value="" checked /> <span data-i18n="search.allCategories">Все категории</span></label>
+        <label><input type="radio" name="category" value="" checked /> <span data-i18n="search.allCategories">All categories</span></label>
       </div>
 
-      <h3 data-i18n="search.vendors">Поставщики</h3>
+      <h3 data-i18n="search.vendors">Suppliers</h3>
       <div class="filter-group" id="vendorFilters">
-        <label><input type="radio" name="vendor" value="" checked /> <span data-i18n="search.allVendors">Все поставщики</span></label>
+        <label><input type="radio" name="vendor" value="" checked /> <span data-i18n="search.allVendors">All suppliers</span></label>
       </div>
 
-      <h3 data-i18n="search.stock">Наличие</h3>
+      <h3 data-i18n="search.stock">Availability</h3>
       <div class="filter-group">
-        <label><input type="checkbox" id="inStockOnly" /> <span data-i18n="search.inStockOnly">Только в наличии</span></label>
+        <label><input type="checkbox" id="inStockOnly" /> <span data-i18n="search.inStockOnly">In stock only</span></label>
       </div>
 
-      <h3 data-i18n="search.sort">Сортировка</h3>
+      <h3 data-i18n="search.sort">Sort</h3>
       <select class="filter-select" id="sortSelect">
-        <option value="default" data-i18n="search.sortDefault">По умолчанию</option>
-        <option value="price-asc" data-i18n="search.sortPriceAsc">Цена ↑</option>
-        <option value="price-desc" data-i18n="search.sortPriceDesc">Цена ↓</option>
-        <option value="name" data-i18n="search.sortName">Название</option>
-        <option value="stock" data-i18n="search.sortStock">Остаток</option>
+        <option value="default" data-i18n="search.sortDefault">Default</option>
+        <option value="price-asc" data-i18n="search.sortPriceAsc">Price ↑</option>
+        <option value="price-desc" data-i18n="search.sortPriceDesc">Price ↓</option>
+        <option value="name" data-i18n="search.sortName">Name</option>
+        <option value="stock" data-i18n="search.sortStock">Stock</option>
       </select>
 
-      <button type="button" class="btn-add" style="width:100%; margin-top:20px;" id="applyFiltersBtn" data-i18n="search.apply">Применить</button>
-      <button type="button" class="btn-remove" id="resetFiltersBtn" style="width:100%; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600;">Сбросить всё</button>
+      <button type="button" class="btn-add" style="width:100%; margin-top:20px;" id="applyFiltersBtn" data-i18n="search.apply">Apply</button>
+      <button type="button" class="btn-remove" id="resetFiltersBtn" style="width:100%; margin-top:10px; padding:12px; border:1px solid var(--border); border-radius:12px; background:transparent; color:var(--text-muted); cursor:pointer; font-weight:600;">Reset</button>
     </aside>
 
-    <!-- PRODUCTS AREA -->
     <main>
-      <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ Фильтры</button>
+      <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ Filters</button>
 
-      <div class="products-header">
+      <section class="hero-demo">
+        <h1 data-i18n="hero.title">Oil & Gas Procurement Marketplace</h1>
+        <p data-i18n="hero.sub">B2B platform for drilling, pipeline, PPE, pumps and field equipment — multi-vendor catalog, RFQ and order flow.</p>
+        <div class="hero-actions">
+          <a class="btn-demo" href="#catalog" data-i18n="hero.cta">Browse Catalog</a>
+          <a class="btn-demo secondary" href="request-demo.html">Request Private Demo</a>
+          <a class="btn-demo secondary" href="rfq-create.html">Create RFQ</a>
+        </div>
+      </section>
+
+      <div class="products-header" id="catalog">
         <h2>
-          <span data-i18n="section.products">Оборудование и материалы</span>
+          <span data-i18n="section.products">Equipment & materials</span>
           <span id="prodCount" style="font-size:1rem; font-weight:400; opacity:0.7; margin-left:8px;"></span>
         </h2>
       </div>
 
       <div class="products-grid" id="productsGrid">
-        <p data-i18n="common.loading">Загрузка…</p>
+        <p data-i18n="common.loading">Loading…</p>
       </div>
     </main>
   </div>
 
-  <div style="position:fixed;bottom:10px;left:10px;z-index:40;font-size:11px;opacity:.55;color:var(--text-muted);pointer-events:none;font-family:ui-monospace,monospace">
-    design: premium · build c377cee+
-  </div>
-
-  <!-- CART DRAWER -->
   <div class="cart-backdrop" id="cartBackdrop"></div>
   <aside class="cart-drawer" id="cartDrawer">
     <div class="cart-head">
-      <strong data-i18n="cart.title">Ваша заявка</strong>
+      <strong data-i18n="cart.title">Your order list</strong>
       <button type="button" id="closeCart" style="border:none;background:none;font-size:24px;cursor:pointer;color:var(--text)">&times;</button>
     </div>
     <div class="cart-body" id="cartBody"></div>
     <div class="cart-foot">
-      <div class="total"><span data-i18n="cart.total">Итого</span>: <span id="cartTotal">—</span></div>
-      <a class="btn-add" href="cart.html" style="display:block;text-align:center;text-decoration:none;" data-i18n="cart.checkout">Оформить заявку</a>
+      <div class="total"><span data-i18n="cart.total">Total</span>: <span id="cartTotal">—</span></div>
+      <a class="btn-add" href="cart.html" style="display:block;text-align:center;text-decoration:none;" data-i18n="cart.checkout">Proceed to checkout</a>
     </div>
   </aside>
 
@@ -171,12 +179,14 @@
   <script src="assets/js/api.js"></script>
   <script>
     const I = window.MplaceI18n;
-    const icons = ['🛢️', '⚙️', '🔧', '🦺', '🚰', '📡', '🧪', '🏗️', '🔩', '🏭'];
+    // Public demo: force English unless user already chose a language
+    if (!localStorage.getItem('mplace_lang')) I.setLang('en');
+    if (!localStorage.getItem('mplace_currency')) I.setCurrency('USD');
+
     let allProducts = [];
     let allCategories = [];
     let allShops = [];
 
-    // ===== Theme =====
     const themeToggle = document.getElementById('themeToggle');
     function setTheme(theme) {
       document.documentElement.setAttribute('data-theme', theme);
@@ -189,357 +199,141 @@
     });
     setTheme(localStorage.getItem('mplace_theme') || 'dark');
 
-    // ===== Mobile Sidebar =====
     const sidebar = document.getElementById('sidebar');
     const sidebarBackdrop = document.getElementById('sidebarBackdrop');
     const mobileFilterBtn = document.getElementById('mobileFilterBtn');
-
     function openSidebar(open) {
       if (!sidebar) return;
       sidebar.classList.toggle('open', open);
       if (sidebarBackdrop) sidebarBackdrop.classList.toggle('open', open);
-      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    if (mobileFilterBtn) mobileFilterBtn.addEventListener('click', () => openSidebar(true));
+    if (sidebarBackdrop) sidebarBackdrop.addEventListener('click', () => openSidebar(false));
+
+    function money(cents) {
+      return I.formatMoney ? I.formatMoney(cents) : ('$' + (cents / 100).toFixed(2));
     }
 
-    if (mobileFilterBtn) {
-      mobileFilterBtn.addEventListener('click', () => openSidebar(true));
-    }
-    if (sidebarBackdrop) {
-      sidebarBackdrop.addEventListener('click', () => openSidebar(false));
+    function productCard(p) {
+      const shop = p.shop?.name || p.shopName || 'Supplier';
+      const img = p.imageUrl || '/assets/img/products/drill-bit.svg';
+      return `
+        <article class="product-card">
+          <a class="product-image" href="product.html?id=${encodeURIComponent(p.id)}">
+            <img src="${img}" alt="" loading="lazy" />
+          </a>
+          <div class="product-body">
+            <a href="product.html?id=${encodeURIComponent(p.id)}"><h3>${escapeHtml(p.name)}</h3></a>
+            <div class="product-meta">${escapeHtml(shop)} · stock ${p.stock ?? 0}</div>
+            <div class="product-price">${money(p.priceCents)}</div>
+            <button type="button" class="btn-add" data-id="${p.id}">${I.t('product.addToCart')}</button>
+          </div>
+        </article>`;
     }
 
-    // ===== Cart =====
+    function escapeHtml(s) {
+      return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function applyFilters() {
+      const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const cat = document.querySelector('input[name="category"]:checked')?.value || '';
+      const vend = document.querySelector('input[name="vendor"]:checked')?.value || '';
+      const inStock = document.getElementById('inStockOnly').checked;
+      const sort = document.getElementById('sortSelect').value;
+      let list = allProducts.slice();
+      if (q) list = list.filter((p) => (p.name + ' ' + (p.sku || '') + ' ' + (p.description || '')).toLowerCase().includes(q));
+      if (cat) list = list.filter((p) => (p.categoryId || p.category?.id) === cat);
+      if (vend) list = list.filter((p) => (p.shopId || p.shop?.id) === vend);
+      if (inStock) list = list.filter((p) => (p.stock || 0) > 0);
+      if (sort === 'price-asc') list.sort((a, b) => a.priceCents - b.priceCents);
+      if (sort === 'price-desc') list.sort((a, b) => b.priceCents - a.priceCents);
+      if (sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+      if (sort === 'stock') list.sort((a, b) => (b.stock || 0) - (a.stock || 0));
+      document.getElementById('prodCount').textContent = '(' + list.length + ')';
+      document.getElementById('productsGrid').innerHTML = list.length
+        ? list.map(productCard).join('')
+        : '<p>No products match your filters.</p>';
+    }
+
+    async function refreshCart() {
+      try {
+        const cart = await MplaceApi.getCart();
+        const items = cart.items || [];
+        const count = items.reduce((n, it) => n + (it.quantity || 0), 0);
+        document.getElementById('cartCount').textContent = String(count);
+        const body = document.getElementById('cartBody');
+        if (!items.length) {
+          body.innerHTML = '<p class="text-muted">' + I.t('cart.empty') + '</p>';
+          document.getElementById('cartTotal').textContent = '—';
+          return;
+        }
+        body.innerHTML = items.map((it) => `
+          <div class="cart-item">
+            <div style="flex:1">
+              <strong>${escapeHtml(it.product?.name || it.productName || 'Item')}</strong>
+              <div>× ${it.quantity}</div>
+            </div>
+            <div>${money(it.lineTotalCents || (it.unitPriceCents || 0) * it.quantity)}</div>
+          </div>`).join('');
+        const total = items.reduce((n, it) => n + (it.lineTotalCents || 0), 0);
+        document.getElementById('cartTotal').textContent = money(total);
+      } catch (_) {
+        document.getElementById('cartCount').textContent = '0';
+      }
+    }
+
     function openCart(open) {
       document.getElementById('cartDrawer').classList.toggle('open', open);
       document.getElementById('cartBackdrop').classList.toggle('open', open);
     }
-    document.getElementById('cartBtn').addEventListener('click', () => {
-      openCart(true);
-      refreshCart();
-    });
+    document.getElementById('cartBtn').addEventListener('click', () => openCart(true));
     document.getElementById('closeCart').addEventListener('click', () => openCart(false));
     document.getElementById('cartBackdrop').addEventListener('click', () => openCart(false));
-
-    async function refreshCart() {
-      try {
-        const cart = await MplaceApi.cart();
-        document.getElementById('cartCount').textContent = cart.itemCount || 0;
-        document.getElementById('cartTotal').textContent = I.formatMoney(cart.subtotalCents || 0);
-
-        const body = document.getElementById('cartBody');
-        if (!cart.items?.length) {
-          body.innerHTML = `<p style="opacity:0.6; text-align:center; margin-top:40px;">${I.t('cart.empty')}</p>`;
-          return;
-        }
-        body.innerHTML = cart.items.map((item) => {
-          const unit = item.product?.priceCents ?? item.priceCents ?? 0;
-          const e = escapeHtml;
-          return `
-          <div class="cart-item">
-            <div style="flex:1">
-              <div style="font-weight:600">${e(item.product?.name || 'Товар')}</div>
-              <div style="font-size:13px; opacity:0.7">${e(item.product?.shop?.name || '')} · ${e(I.formatMoney(unit))}</div>
-              <div style="margin-top:6px">
-                <button type="button" class="qty-btn" data-dec="${e(item.id)}">−</button>
-                <span style="margin:0 8px">${e(item.quantity)}</span>
-                <button type="button" class="qty-btn" data-inc="${e(item.id)}">+</button>
-              </div>
-            </div>
-            <div style="font-weight:700;color:var(--accent)">${e(I.formatMoney(unit * item.quantity))}</div>
-          </div>`;
-        }).join('');
-      } catch (e) {
-        document.getElementById('cartCount').textContent = '0';
-        console.warn('Cart error', e);
-      }
-    }
-
-    document.getElementById('cartBody').addEventListener('click', async (e) => {
-      const dec = e.target.closest('[data-dec]');
-      const inc = e.target.closest('[data-inc]');
-      if (!dec && !inc) return;
-      try {
-        const cart = await MplaceApi.cart();
-        const id = (dec || inc).dataset.dec || (dec || inc).dataset.inc;
-        const item = cart.items.find((i) => i.id === id);
-        if (!item) return;
-        await MplaceApi.updateCartItem(id, dec ? item.quantity - 1 : item.quantity + 1);
-        await refreshCart();
-      } catch (ex) {
-        alert(ex.message);
-      }
-    });
-
-    // ===== Render products =====
-    function productImageHtml(p, i) {
-      const fallback = icons[i % icons.length];
-      if (p.imageUrl) {
-        // Validate URL protocol — block javascript:
-        const raw = String(p.imageUrl || '');
-        const safeUrl = /^(https?:|\/|data:image\/)/i.test(raw) ? escapeAttr(raw) : '';
-        if (!safeUrl) return fallback;
-        return `<img src="${safeUrl}" alt="${escapeAttr(p.name || '')}" loading="lazy" onerror="this.style.display='none'" />`;
-      }
-      return fallback;
-    }
-
-    function renderProducts(products) {
-      const grid = document.getElementById('productsGrid');
-      document.getElementById('prodCount').textContent = `(${products.length})`;
-
-      if (!products.length) {
-        grid.innerHTML = `
-          <div class="empty-state" style="grid-column: 1 / -1;">
-            <div class="icon">🔍</div>
-            <h3 style="margin-bottom: 8px; font-size: 1.3rem;">Ничего не найдено</h3>
-            <p style="color: var(--text-muted); margin-bottom: 20px;">Попробуйте изменить фильтры или поисковый запрос</p>
-            <button type="button" class="btn-add" id="emptyResetBtn">Сбросить фильтры</button>
-          </div>
-        `;
-        document.getElementById('emptyResetBtn')?.addEventListener('click', resetFilters);
-        return;
-      }
-
-      grid.innerHTML = products.map((p, i) => {
-        const e = escapeHtml;
-        const stockClass = p.stock > 10 ? 'stock-ok' : 'stock-low';
-        const stockText = p.stock > 0
-          ? (I.t('product.stock', { n: p.stock }) || `В наличии: ${p.stock}`)
-          : 'Нет в наличии';
-        const lowBadge = p.stock < 8 && p.stock > 0
-          ? '<span class="product-badge">Мало</span>'
-          : (p.status === 'ACTIVE' ? '<span class="product-badge">Live</span>' : '');
-
-        const href = '/product.html?id=' + encodeURIComponent(p.slug || p.id);
-        return `
-          <article class="product-card" style="cursor:pointer" onclick="location.href='${escapeAttr(href)}'">
-            <div class="product-image">
-              ${productImageHtml(p, i)}
-              ${lowBadge}
-            </div>
-            <div class="product-body">
-              <div class="product-category">${e(p.category?.name || I.t('common.general') || '')}</div>
-              <h3 class="product-title">${e(p.name)}</h3>
-              <div class="product-meta">
-                ${e(p.shop?.name || '')} · <span class="${stockClass}">${e(stockText)}</span>
-              </div>
-              <div class="product-footer">
-                <div class="product-price">${I.formatMoney(p.priceCents)}</div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <button type="button" class="btn-add btn-wish" data-id="${escapeAttr(p.id)}" title="В избранное" onclick="event.stopPropagation(); toggleWishlist(this)" style="min-width:40px;padding:8px 10px;">♡</button>
-                  <button type="button" class="btn-add" data-id="${escapeAttr(p.id)}" onclick="event.stopPropagation()">${e(I.t('product.addToCart') || 'В заявку')}</button>
-                </div>
-              </div>
-            </div>
-          </article>
-        `;
-      }).join('');
-    }
-
-    // ===== Filters (smart search + URL sync) =====
-    function applyFilters() {
-      const search = document.getElementById('searchInput').value.toLowerCase().trim();
-      const category = document.querySelector('input[name="category"]:checked')?.value || '';
-      const vendor = document.querySelector('input[name="vendor"]:checked')?.value || '';
-      const inStockOnly = document.getElementById('inStockOnly')?.checked || false;
-      const sort = document.getElementById('sortSelect')?.value || 'default';
-
-      let filtered = [...allProducts];
-
-      if (search) {
-        filtered = filtered.filter((p) => {
-          const name = (p.name || '').toLowerCase();
-          const desc = (p.description || '').toLowerCase();
-          const sku = (p.sku || '').toLowerCase();
-          const shop = (p.shop?.name || '').toLowerCase();
-          const cat = (p.category?.name || '').toLowerCase();
-          return name.includes(search) || desc.includes(search) || sku.includes(search) ||
-            shop.includes(search) || cat.includes(search);
-        });
-      }
-
-      if (category) {
-        filtered = filtered.filter((p) => p.categoryId === category || p.category?.id === category);
-      }
-      if (vendor) {
-        filtered = filtered.filter((p) => p.shopId === vendor || p.shop?.id === vendor);
-      }
-      if (inStockOnly) {
-        filtered = filtered.filter((p) => p.stock > 0);
-      }
-
-      if (sort === 'price-asc') filtered.sort((a, b) => a.priceCents - b.priceCents);
-      if (sort === 'price-desc') filtered.sort((a, b) => b.priceCents - a.priceCents);
-      if (sort === 'name') filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      if (sort === 'stock') filtered.sort((a, b) => b.stock - a.stock);
-
-      renderProducts(filtered);
-      updateUrlParams({ search, category, vendor, inStockOnly, sort });
-      refreshWishSet();
-
-      if (window.innerWidth <= 900) {
-        openSidebar(false);
-      }
-    }
-
-    function updateUrlParams(params) {
-      const url = new URL(window.location.href);
-      if (params.search) url.searchParams.set('q', params.search);
-      else url.searchParams.delete('q');
-      if (params.category) url.searchParams.set('category', params.category);
-      else url.searchParams.delete('category');
-      if (params.vendor) url.searchParams.set('vendor', params.vendor);
-      else url.searchParams.delete('vendor');
-      if (params.inStockOnly) url.searchParams.set('instock', '1');
-      else url.searchParams.delete('instock');
-      if (params.sort && params.sort !== 'default') url.searchParams.set('sort', params.sort);
-      else url.searchParams.delete('sort');
-      window.history.replaceState({}, '', url);
-    }
-
-    function loadFiltersFromUrl() {
-      const params = new URLSearchParams(window.location.search);
-      const q = params.get('q');
-      if (q) document.getElementById('searchInput').value = q;
-
-      const category = params.get('category');
-      if (category) {
-        document.querySelectorAll('input[name="category"]').forEach((el) => {
-          if (el.value === category) el.checked = true;
-        });
-      }
-
-      const vendor = params.get('vendor');
-      if (vendor) {
-        document.querySelectorAll('input[name="vendor"]').forEach((el) => {
-          if (el.value === vendor) el.checked = true;
-        });
-      }
-
-      if (params.get('instock') === '1') {
-        document.getElementById('inStockOnly').checked = true;
-      }
-
-      const sort = params.get('sort');
-      if (sort) document.getElementById('sortSelect').value = sort;
-    }
-
-    function resetFilters() {
+    document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
+    document.getElementById('resetFiltersBtn').addEventListener('click', () => {
       document.getElementById('searchInput').value = '';
-      document.querySelectorAll('input[name="category"]').forEach((el) => {
-        el.checked = el.value === '';
-      });
-      document.querySelectorAll('input[name="vendor"]').forEach((el) => {
-        el.checked = el.value === '';
-      });
       document.getElementById('inStockOnly').checked = false;
       document.getElementById('sortSelect').value = 'default';
+      const c = document.querySelector('input[name="category"][value=""]');
+      const v = document.querySelector('input[name="vendor"][value=""]');
+      if (c) c.checked = true;
+      if (v) v.checked = true;
       applyFilters();
-    }
-
-    document.getElementById('applyFiltersBtn').addEventListener('click', applyFilters);
-    document.getElementById('resetFiltersBtn')?.addEventListener('click', resetFilters);
-    document.getElementById('sortSelect').addEventListener('change', applyFilters);
-    document.getElementById('inStockOnly').addEventListener('change', applyFilters);
-
-    let searchTimeout = null;
-    document.getElementById('searchInput')?.addEventListener('input', () => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => applyFilters(), 350);
+    });
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') applyFilters();
     });
 
-    // ===== Wishlist toggle (catalog cards) =====
-    const wishSet = new Set();
-    async function refreshWishSet() {
-      try {
-        if (!MplaceApi.getToken || !MplaceApi.getToken()) return;
-        const data = await MplaceApi.request('/wishlist');
-        const items = Array.isArray(data) ? data : (data.items || []);
-        wishSet.clear();
-        items.forEach((it) => {
-          const id = it.productId || it.product?.id;
-          if (id) wishSet.add(id);
-        });
-        document.querySelectorAll('.btn-wish').forEach((btn) => {
-          const on = wishSet.has(btn.dataset.id);
-          btn.textContent = on ? '♥' : '♡';
-          btn.style.color = on ? '#ef4444' : '';
-        });
-      } catch (_) { /* guest / offline */ }
-    }
-
-    async function toggleWishlist(btn) {
-      const productId = btn?.dataset?.id;
-      if (!productId) return;
-      if (!MplaceApi.getToken || !MplaceApi.getToken()) {
-        location.href = '/login.html?email=customer@demo.com&next=/';
-        return;
-      }
-      btn.disabled = true;
-      try {
-        if (wishSet.has(productId)) {
-          await MplaceApi.request('/wishlist/' + productId, { method: 'DELETE' });
-          wishSet.delete(productId);
-          btn.textContent = '♡';
-          btn.style.color = '';
-        } else {
-          await MplaceApi.request('/wishlist', {
-            method: 'POST',
-            body: { productId },
-          });
-          wishSet.add(productId);
-          btn.textContent = '♥';
-          btn.style.color = '#ef4444';
-        }
-      } catch (ex) {
-        alert(ex.message || 'Ошибка избранного');
-      } finally {
-        btn.disabled = false;
-      }
-    }
-    window.toggleWishlist = toggleWishlist;
-
-    // ===== Add to cart =====
     document.getElementById('productsGrid').addEventListener('click', async (e) => {
-      if (e.target.closest('.btn-wish')) return;
-      const btn = e.target.closest('.btn-add:not(.btn-wish)');
+      const btn = e.target.closest('.btn-add');
       if (!btn || !btn.dataset.id) return;
       btn.disabled = true;
       try {
         await MplaceApi.addToCart(btn.dataset.id, 1);
-        btn.textContent = I.t('product.added') || 'Добавлено';
+        btn.textContent = I.t('product.added');
         await refreshCart();
         openCart(true);
         setTimeout(() => {
-          btn.textContent = I.t('product.addToCart') || 'В заявку';
+          btn.textContent = I.t('product.addToCart');
           btn.disabled = false;
         }, 800);
       } catch (ex) {
-        alert(ex.message || 'Ошибка добавления в заявку');
+        alert(ex.message || 'Could not add to cart');
         btn.disabled = false;
       }
     });
 
-    // ===== Init =====
     async function init() {
       I.mountSwitcher('#localeMount');
+      I.applyDocument();
 
-      const badge = document.getElementById('apiBadge');
-      try {
-        await MplaceApi.health();
-        badge.textContent = I.t('api.ok') || 'API OK';
-        badge.classList.remove('down');
-      } catch {
-        badge.textContent = I.t('api.off') || 'API off';
-        badge.classList.add('down');
-      }
-
-      const user = MplaceApi.getUser();
+      const user = MplaceApi.getUser && MplaceApi.getUser();
       if (user) {
-        document.getElementById('helloLine').textContent = I.t('hello.user', { name: user.name || user.email }) || user.email;
-        const role = String(user.role || '').toUpperCase();
-        if (role === 'ADMIN' || role === 'SUPER_ADMIN') document.getElementById('accountLink').href = 'admin/index.html';
-        else if (role === 'MERCHANT') document.getElementById('accountLink').href = 'merchant/index.html';
+        document.getElementById('helloLine').textContent =
+          I.t('hello.user', { name: user.name || user.email }) || user.email;
+        // Keep account link generic — no public admin/seller shortcuts
+        document.getElementById('accountLink').href = 'account.html';
       }
 
       try {
@@ -548,19 +342,14 @@
           MplaceApi.categories(),
           MplaceApi.shops(),
         ]);
-
         allProducts = Array.isArray(products) ? products : (products.items || []);
         allCategories = Array.isArray(categories) ? categories : [];
         allShops = Array.isArray(shops) ? shops : [];
-        // wishlist hearts hydrate after first paint
 
         const catContainer = document.getElementById('categoryFilters');
         allCategories.forEach((c) => {
           catContainer.insertAdjacentHTML('beforeend', `
-            <label>
-              <input type="radio" name="category" value="${c.id}" />
-              <span>${c.name}</span>
-            </label>`);
+            <label><input type="radio" name="category" value="${c.id}" /> <span>${escapeHtml(c.name)}</span></label>`);
         });
         catContainer.querySelectorAll('input[name="category"]').forEach((el) => {
           el.addEventListener('change', applyFilters);
@@ -569,28 +358,17 @@
         const vendContainer = document.getElementById('vendorFilters');
         allShops.forEach((s) => {
           vendContainer.insertAdjacentHTML('beforeend', `
-            <label>
-              <input type="radio" name="vendor" value="${s.id}" />
-              <span>${s.name}</span>
-            </label>`);
+            <label><input type="radio" name="vendor" value="${s.id}" /> <span>${escapeHtml(s.name)}</span></label>`);
         });
         vendContainer.querySelectorAll('input[name="vendor"]').forEach((el) => {
           el.addEventListener('change', applyFilters);
         });
 
-        loadFiltersFromUrl();
         applyFilters();
         await refreshCart();
-        I.applyDocument();
-      } catch (err) {
-        console.error(err);
-        document.getElementById('productsGrid').innerHTML = `
-          <div class="error-state" style="grid-column:1/-1">
-            <div class="icon">⚠️</div>
-            <h3>Ошибка загрузки</h3>
-            <p style="color:var(--text-muted);margin:12px 0 20px">${err.message || 'Не удалось загрузить каталог'}</p>
-            <button type="button" class="btn-add" onclick="location.reload()">Обновить</button>
-          </div>`;
+      } catch (ex) {
+        document.getElementById('productsGrid').innerHTML =
+          '<p>Catalog temporarily unavailable. Please refresh in a moment.</p>';
       }
     }
 

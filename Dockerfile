@@ -1,4 +1,4 @@
-# Mplace — API image for docker-compose (PostgreSQL + Redis stack)
+# Mplace — API + static storefront (Render Starter single service)
 FROM node:22-bookworm-slim AS build
 
 RUN apt-get update \
@@ -15,7 +15,6 @@ RUN npx prisma generate
 RUN npm run build
 RUN npx tsc prisma/seed.ts --outDir prisma --module commonjs --esModuleInterop --skipLibCheck || true
 
-# Production image
 FROM node:22-bookworm-slim
 
 WORKDIR /app
@@ -34,17 +33,28 @@ RUN npm ci --omit=dev \
 
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
-# Optional entrypoint (migrate+start). Default CMD is app-only; compose uses migrate service.
 COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x docker-entrypoint.sh \
   && npx prisma generate \
   && chown -R node:node /app
+
+# Public demo storefront (static HTML)
+WORKDIR /app
+COPY index.html login.html cart.html product.html checkout.html account.html \
+  orders.html order.html wishlist.html rfq.html rfqs.html rfq-create.html \
+  rfq-offer.html request-demo.html merchant.html merchant-orders.html \
+  merchant-products.html ./frontend/
+COPY admin ./frontend/admin
+COPY merchant ./frontend/merchant
+COPY assets ./frontend/assets
+RUN chown -R node:node /app/frontend
+
+ENV FRONTEND_DIR=/app/frontend
+ENV SERVE_FRONTEND=true
 
 USER node
 WORKDIR /app/apps/api
 
 EXPOSE 3000
 
-# Render / single-container: migrate then start.
-# Compose can override CMD to skip entrypoint if needed.
 ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -6,6 +6,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Request, Response, NextFunction } from 'express';
+import { existsSync } from 'fs';
+import { join } from 'path';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 import {
@@ -150,7 +152,27 @@ async function bootstrap() {
     next();
   });
 
-  // Storefront is served exclusively by apps/web (Next.js).
+  // Demo / single-container: serve static storefront from FRONTEND_DIR
+  // (used on Render free/starter image with oil-gas HTML + assets).
+  const frontendDir =
+    config.get<string>('FRONTEND_DIR') ||
+    process.env.FRONTEND_DIR ||
+    '';
+  const serveFrontend =
+    config.get<string>('SERVE_FRONTEND') === 'true' ||
+    process.env.SERVE_FRONTEND === 'true' ||
+    !!frontendDir;
+  const resolvedFrontend = frontendDir
+    ? frontendDir
+    : join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src
+
+  if (serveFrontend && existsSync(resolvedFrontend)) {
+    app.useStaticAssets(resolvedFrontend, {
+      index: ['index.html'],
+      fallthrough: true,
+    });
+    logger.log(`frontend static: ${resolvedFrontend}`);
+  }
 
   const port = Number(config.get<string | number>('PORT') ?? 3000);
   await app.listen(port, '0.0.0.0');

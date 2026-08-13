@@ -57,7 +57,7 @@
       'hero.title': 'Oil & Gas Procurement Marketplace',
       'hero.sub': 'B2B platform for drilling, pipeline, PPE, pumps and field equipment — multi-vendor, multi-currency',
       'hero.cta': 'Browse Catalog',
-      'flash.banner': '🛢️ Oil & Gas B2B · RU / EN / AR · Multi-currency · Demo payment (no cards stored)',
+      'flash.banner': '🛢️ Oil & Gas B2B marketplace · Multi-currency · Request a private demo for full access',
       'section.categories': 'Industry categories',
       'section.products': 'Equipment & materials',
       'section.vendors': 'Verified suppliers',
@@ -630,13 +630,13 @@
   function getLang() {
     const saved = localStorage.getItem(LANG_KEY);
     if (saved && LANGS[saved]) return saved;
-    return 'ru';
+    return 'en';
   }
 
   function getCurrency() {
     const saved = localStorage.getItem(CUR_KEY);
     if (saved && CURRENCIES[saved]) return saved;
-    return 'RUB';
+    return 'USD';
   }
 
   function setLang(code) {
