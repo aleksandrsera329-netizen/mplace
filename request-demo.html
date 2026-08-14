@@ -78,8 +78,8 @@
         <button class="btn" type="submit" id="submitBtn">Send request</button>
       </form>
       <div class="ok" id="ok">
-        <strong>Request sent.</strong><br />
-        Your request was saved. We will contact you at the email you provided.
+        <strong>Request sent to email.</strong><br />
+        We received your demo request. Expect a reply at the address you entered.
       </div>
       <div class="err" id="err"></div>
     </div>
@@ -88,10 +88,13 @@
   </div>
   <script>
     (function () {
-      const form = document.getElementById('demoForm');
-      const btn = document.getElementById('submitBtn');
-      const ok = document.getElementById('ok');
-      const err = document.getElementById('err');
+      // Web3Forms public access key (safe in client) — delivers to aleksandrsera329@gmail.com
+      var W3F_KEY = 'e66f2eb8-881c-4805-8369-3de53e10f76a';
+
+      var form = document.getElementById('demoForm');
+      var btn = document.getElementById('submitBtn');
+      var ok = document.getElementById('ok');
+      var err = document.getElementById('err');
 
       function apiBase() {
         if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
@@ -101,6 +104,37 @@
         return location.origin + '/api';
       }
 
+      async function sendEmailWeb3Forms(payload) {
+        var res = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            access_key: W3F_KEY,
+            subject: 'Mplace Private Demo — ' + (payload.company || payload.name),
+            from_name: 'Mplace Demo Form',
+            name: payload.name,
+            email: payload.email,
+            company: payload.company || '',
+            role: payload.role,
+            message: payload.message || '(no notes)',
+          }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok || data.success === false) {
+          throw new Error(data.message || ('Web3Forms HTTP ' + res.status));
+        }
+        return data;
+      }
+
+      // Best-effort: also save on our API (ntfy + DB). Failures ignored if email worked.
+      function saveOnServer(payload) {
+        return fetch(apiBase() + '/leads/demo-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify(payload),
+        }).catch(function () { return null; });
+      }
+
       form.addEventListener('submit', async function (e) {
         e.preventDefault();
         ok.classList.remove('show');
@@ -108,7 +142,7 @@
         btn.disabled = true;
         btn.textContent = 'Sending…';
 
-        const payload = {
+        var payload = {
           name: document.getElementById('name').value.trim(),
           email: document.getElementById('email').value.trim(),
           company: document.getElementById('company').value.trim(),
@@ -117,22 +151,27 @@
         };
 
         try {
-          const res = await fetch(apiBase() + '/leads/demo-request', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json().catch(function () { return {}; });
-          if (!res.ok) {
-            throw new Error(data.message || ('HTTP ' + res.status));
-          }
+          await sendEmailWeb3Forms(payload);
+          saveOnServer(payload); // fire and forget
           ok.classList.add('show');
           form.reset();
         } catch (ex) {
-          err.textContent =
-            'Could not send. Please email aleksandrsera329@gmail.com with your name and company. (' +
-            (ex.message || 'error') + ')';
-          err.classList.add('show');
+          // If email API fails, still try our server
+          try {
+            var res = await fetch(apiBase() + '/leads/demo-request', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('server HTTP ' + res.status);
+            ok.classList.add('show');
+            form.reset();
+          } catch (ex2) {
+            err.textContent =
+              'Could not send. Please email aleksandrsera329@gmail.com directly. (' +
+              (ex.message || 'error') + ')';
+            err.classList.add('show');
+          }
         } finally {
           btn.disabled = false;
           btn.textContent = 'Send request';
