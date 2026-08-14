@@ -46,9 +46,11 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { DocumentsModule } from './documents/documents.module';
 import { RefundsModule } from './refunds/refunds.module';
 import { TenantIsolationInterceptor } from './common/tenant/tenant-isolation.interceptor';
+import { LeadsModule } from './leads/leads.module';
 
 @Module({
   imports: [
+    LeadsModule,
     AppCqrsModule,
     WebsocketsModule,
     OutboxModule,
