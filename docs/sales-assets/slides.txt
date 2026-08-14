@@ -1,0 +1,7 @@
+file 'home.png'
+duration 2.5
+file 'login.png'
+duration 2
+file 'request-demo.png'
+duration 2.5
+file 'request-demo.png'
