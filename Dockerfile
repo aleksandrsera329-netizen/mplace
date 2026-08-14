@@ -43,7 +43,8 @@ WORKDIR /app
 COPY index.html login.html cart.html product.html checkout.html account.html \
   orders.html order.html wishlist.html rfq.html rfqs.html rfq-create.html \
   rfq-offer.html request-demo.html merchant.html merchant-orders.html \
-  merchant-products.html ./frontend/
+  merchant-products.html \
+  telderi26cbc82300252d53c5d2f2a264e9d799.txt ./frontend/
 COPY admin ./frontend/admin
 COPY merchant ./frontend/merchant
 COPY assets ./frontend/assets
