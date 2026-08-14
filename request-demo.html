@@ -79,9 +79,7 @@
       </form>
       <div class="ok" id="ok">
         <strong>Request sent.</strong><br />
-        We received your demo request and will contact you at the email you provided.
-        Delivery: email to <strong>aleksandrsera329@gmail.com</strong>
-        <span id="deliveryExtra"></span>.
+        Your request was saved. We will contact you at the email you provided.
       </div>
       <div class="err" id="err"></div>
     </div>
@@ -94,51 +92,13 @@
       const btn = document.getElementById('submitBtn');
       const ok = document.getElementById('ok');
       const err = document.getElementById('err');
-      const LEAD_EMAIL = 'aleksandrsera329@gmail.com';
 
       function apiBase() {
-        // Same origin on Render; local static may need :3001
-        if (location.port === '3000' || location.port === '8080' || location.port === '') {
-          return location.origin + '/api';
-        }
         if (location.hostname === '127.0.0.1' || location.hostname === 'localhost') {
+          if (location.port === '3001' || location.port === '3000') return location.origin + '/api';
           return 'http://127.0.0.1:3001/api';
         }
         return location.origin + '/api';
-      }
-
-      async function sendViaApi(payload) {
-        const res = await fetch(apiBase() + '/leads/demo-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(function () { return {}; });
-        if (!res.ok) {
-          throw new Error(data.message || data.error || ('HTTP ' + res.status));
-        }
-        return data;
-      }
-
-      /** Browser fallback if API is down — FormSubmit free relay */
-      async function sendViaFormSubmit(payload) {
-        const res = await fetch('https://formsubmit.co/ajax/' + encodeURIComponent(LEAD_EMAIL), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify({
-            name: payload.name,
-            email: payload.email,
-            company: payload.company || '',
-            role: payload.role,
-            message: payload.message || '(no notes)',
-            _subject: 'Mplace Private Demo — ' + (payload.company || payload.name),
-            _template: 'table',
-            _captcha: 'false',
-            source: 'mplace public form (browser fallback)',
-          }),
-        });
-        if (!res.ok) throw new Error('FormSubmit HTTP ' + res.status);
-        return { ok: true, delivery: { channels: ['email-formsubmit'] } };
       }
 
       form.addEventListener('submit', async function (e) {
@@ -157,27 +117,21 @@
         };
 
         try {
-          var data;
-          // Prefer browser FormSubmit first (best deliverability), then API
-          try {
-            data = await sendViaFormSubmit(payload);
-          } catch (fsErr) {
-            console.warn('FormSubmit browser path failed, trying API', fsErr);
-            data = await sendViaApi(payload);
-          }
-          var ch = (data.delivery && data.delivery.channels) || ['email'];
-          var extra = document.getElementById('deliveryExtra');
-          if (ch.indexOf('telegram') >= 0) {
-            extra.textContent = ' + Telegram';
-          } else {
-            extra.textContent = '';
+          const res = await fetch(apiBase() + '/leads/demo-request', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) {
+            throw new Error(data.message || ('HTTP ' + res.status));
           }
           ok.classList.add('show');
           form.reset();
         } catch (ex) {
           err.textContent =
-            'Could not send automatically. Please email ' + LEAD_EMAIL +
-            ' with your name, company and preferred time. (' + (ex.message || 'error') + ')';
+            'Could not send. Please email aleksandrsera329@gmail.com with your name and company. (' +
+            (ex.message || 'error') + ')';
           err.classList.add('show');
         } finally {
           btn.disabled = false;
