@@ -158,13 +158,14 @@
 
         try {
           var data;
+          // Prefer browser FormSubmit first (best deliverability), then API
           try {
-            data = await sendViaApi(payload);
-          } catch (apiErr) {
-            console.warn('API lead failed, FormSubmit fallback', apiErr);
             data = await sendViaFormSubmit(payload);
+          } catch (fsErr) {
+            console.warn('FormSubmit browser path failed, trying API', fsErr);
+            data = await sendViaApi(payload);
           }
-          var ch = (data.delivery && data.delivery.channels) || [];
+          var ch = (data.delivery && data.delivery.channels) || ['email'];
           var extra = document.getElementById('deliveryExtra');
           if (ch.indexOf('telegram') >= 0) {
             extra.textContent = ' + Telegram';

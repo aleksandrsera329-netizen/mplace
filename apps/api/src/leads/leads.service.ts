@@ -112,8 +112,26 @@ export class LeadsService {
       return false;
     }
     try {
-      const data = JSON.parse(text) as { success?: string | boolean };
-      if (data.success === false) return false;
+      const data = JSON.parse(text) as {
+        success?: string | boolean;
+        message?: string;
+      };
+      // First-time setup: FormSubmit emails owner an "Activate Form" link.
+      // Treat as accepted so the buyer is not blocked; owner must click once.
+      if (
+        data.success === false ||
+        data.success === 'false' ||
+        /activation|activate form/i.test(data.message || '')
+      ) {
+        if (/activation|activate form/i.test(data.message || '')) {
+          this.logger.warn(
+            `FormSubmit needs activation for ${to}: check inbox and click Activate Form`,
+          );
+          return true;
+        }
+        this.logger.warn(`FormSubmit rejected: ${text.slice(0, 300)}`);
+        return false;
+      }
     } catch {
       /* non-JSON success body still ok if 200 */
     }
