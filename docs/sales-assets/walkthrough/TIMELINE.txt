@@ -1,0 +1,25 @@
+01. t00_open.png  6s
+02. f_01_home.png  28s
+03. f_02_home_catalog.png  12s
+04. t01_catalog.png  5s
+05. f_03_search_valve.png  22s
+06. f_04_product.png  28s
+07. t02_order.png  5s
+08. f_05_cart_drawer.png  18s
+09. f_06_cart_page.png  25s
+10. t03_rfq.png  5s
+11. f_07_rfq_create.png  35s
+12. f_15_buyer_rfqs.png  25s
+13. f_16_buyer_orders.png  20s
+14. t04_seller.png  5s
+15. f_09_merchant_after_login.png  22s
+16. f_10_merchant.png  18s
+17. f_11_merchant_products.png  15s
+18. f_12_merchant_orders.png  15s
+19. t05_admin.png  10s
+20. f_17_buyer_account.png  15s
+21. t06_close.png  6s
+22. f_08_request_demo.png  22s
+23. t07_end.png  12s
+
+TOTAL ~6m14s
