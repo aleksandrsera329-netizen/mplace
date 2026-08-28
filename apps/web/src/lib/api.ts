@@ -1,10 +1,11 @@
-/** Browser: relative `/api` on Render. Server: internal Nest URL. Local: :3001. */
+/** Same-origin `/api` on Render. Local Next still talks to Nest on :3001. */
 function resolveApiBase(): string {
-  const env = process.env.NEXT_PUBLIC_API_URL
   if (typeof window !== "undefined") {
-    if (env) return env
-    return "http://127.0.0.1:3001/api"
+    const host = window.location.hostname
+    if (host !== "localhost" && host !== "127.0.0.1") return "/api"
+    return process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api"
   }
+  const env = process.env.NEXT_PUBLIC_API_URL
   if (env && env.startsWith("http")) return env
   return process.env.INTERNAL_API_URL || "http://127.0.0.1:3001/api"
 }

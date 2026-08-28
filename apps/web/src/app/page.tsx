@@ -1,7 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Header } from "@/components/header"
@@ -36,9 +35,36 @@ function asList(data: unknown): { id: string; name: string; slug?: string }[] {
   return []
 }
 
+function useUrlQuery() {
+  const [queryFromUrl, setQueryFromUrl] = useState("")
+  useEffect(() => {
+    const read = () =>
+      setQueryFromUrl(new URLSearchParams(window.location.search).get("q") || "")
+    read()
+    window.addEventListener("popstate", read)
+    const push = history.pushState.bind(history)
+    const replace = history.replaceState.bind(history)
+    history.pushState = (...args: Parameters<History["pushState"]>) => {
+      const ret = push(...args)
+      read()
+      return ret
+    }
+    history.replaceState = (...args: Parameters<History["replaceState"]>) => {
+      const ret = replace(...args)
+      read()
+      return ret
+    }
+    return () => {
+      window.removeEventListener("popstate", read)
+      history.pushState = push
+      history.replaceState = replace
+    }
+  }, [])
+  return queryFromUrl
+}
+
 function HomeCatalog() {
-  const searchParams = useSearchParams()
-  const queryFromUrl = searchParams.get("q") || ""
+  const queryFromUrl = useUrlQuery()
   const { t, locale } = useI18n()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -275,15 +301,7 @@ export default function HomePage() {
       <Header />
       <HomeHero />
       <div id="catalog">
-        <Suspense
-          fallback={
-            <div className="py-20 text-center text-muted-foreground">
-              …
-            </div>
-          }
-        >
-          <HomeCatalog />
-        </Suspense>
+        <HomeCatalog />
       </div>
     </div>
   )

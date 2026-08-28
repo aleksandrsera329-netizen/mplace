@@ -2,6 +2,9 @@
  * Single-port reverse proxy for the Render demo:
  *   /api, /uploads → Nest  :3001
  *   everything else → Next :3002
+ *
+ * Forwards streamed bodies as-is (Next RSC / flight). Do not strip
+ * transfer-encoding or content-length — that hangs the catalog.
  */
 const http = require("http");
 
@@ -11,37 +14,26 @@ const webPort = Number(process.env.WEB_PORT || 3002);
 
 function targetFor(urlPath) {
   const path = String(urlPath || "/").split("?")[0];
-  if (path === "/api" || path.startsWith("/api/") || path.startsWith("/uploads")) {
+  if (
+    path === "/api" ||
+    path.startsWith("/api/") ||
+    path.startsWith("/uploads")
+  ) {
     return { hostname: "127.0.0.1", port: apiPort };
   }
   return { hostname: "127.0.0.1", port: webPort };
 }
 
-function hopByHop() {
-  return new Set([
-    "connection",
-    "keep-alive",
-    "proxy-authenticate",
-    "proxy-authorization",
-    "te",
-    "trailers",
-    "transfer-encoding",
-    "upgrade",
-  ]);
-}
-
-function filterHeaders(src) {
-  const skip = hopByHop();
-  const out = {};
-  for (const [k, v] of Object.entries(src || {})) {
-    if (!skip.has(k.toLowerCase())) out[k] = v;
-  }
+function copyHeaders(src) {
+  const out = { ...src };
+  delete out.connection;
+  delete out["keep-alive"];
   return out;
 }
 
 const server = http.createServer((req, res) => {
   const dest = targetFor(req.url || "/");
-  const headers = filterHeaders(req.headers);
+  const headers = copyHeaders(req.headers);
   headers.host = `127.0.0.1:${dest.port}`;
   const p = http.request(
     {
@@ -50,12 +42,14 @@ const server = http.createServer((req, res) => {
       path: req.url,
       method: req.method,
       headers,
+      timeout: 120000,
     },
     (up) => {
-      res.writeHead(up.statusCode || 502, filterHeaders(up.headers));
+      res.writeHead(up.statusCode || 502, copyHeaders(up.headers));
       up.pipe(res);
     },
   );
+  p.on("timeout", () => p.destroy());
   p.on("error", (err) => {
     console.error("[proxy]", dest.port, err.message);
     if (!res.headersSent) res.writeHead(502);
@@ -66,7 +60,8 @@ const server = http.createServer((req, res) => {
 
 server.on("upgrade", (req, socket, head) => {
   const dest = targetFor(req.url || "/");
-  const headers = { ...req.headers, host: `127.0.0.1:${dest.port}` };
+  const headers = copyHeaders(req.headers);
+  headers.host = `127.0.0.1:${dest.port}`;
   const p = http.request({
     hostname: dest.hostname,
     port: dest.port,
