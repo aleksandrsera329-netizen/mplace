@@ -42,23 +42,7 @@ function useUrlQuery() {
       setQueryFromUrl(new URLSearchParams(window.location.search).get("q") || "")
     read()
     window.addEventListener("popstate", read)
-    const push = history.pushState.bind(history)
-    const replace = history.replaceState.bind(history)
-    history.pushState = (...args: Parameters<History["pushState"]>) => {
-      const ret = push(...args)
-      read()
-      return ret
-    }
-    history.replaceState = (...args: Parameters<History["replaceState"]>) => {
-      const ret = replace(...args)
-      read()
-      return ret
-    }
-    return () => {
-      window.removeEventListener("popstate", read)
-      history.pushState = push
-      history.replaceState = replace
-    }
+    return () => window.removeEventListener("popstate", read)
   }, [])
   return queryFromUrl
 }
