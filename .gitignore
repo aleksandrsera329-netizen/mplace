@@ -38,3 +38,13 @@ apps/api/start-tunnel-server.ps1
 
 uploads/
 
+# Secrets / marketplace listing scratch (never commit)
+.acquire_creds.tmp
+.tg_bot_token.tmp
+.tg_bot_username.tmp
+.tg_chat_id.tmp
+*.tmp
+acquire-upload/
+acquire_avatar.png
+DEPLOY_CHECKLIST_SANA.txt
+

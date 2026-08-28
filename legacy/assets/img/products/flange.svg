@@ -1,7 +1,0 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
-  <rect width="640" height="400" fill="#1a3548"/>
-  <circle cx="320" cy="190" r="120" fill="#7a8b95" stroke="#e8a317" stroke-width="8"/>
-  <circle cx="320" cy="190" r="55" fill="#0b1c2c"/>
-  <g fill="#c9d5df"><circle cx="320" cy="85" r="10"/><circle cx="320" cy="295" r="10"/><circle cx="215" cy="190" r="10"/><circle cx="425" cy="190" r="10"/><circle cx="245" cy="115" r="10"/><circle cx="395" cy="265" r="10"/><circle cx="395" cy="115" r="10"/><circle cx="245" cy="265" r="10"/></g>
-  <text x="320" y="360" text-anchor="middle" fill="#f5e6c8" font-family="Segoe UI,Arial" font-size="22" font-weight="700">WN FLANGE</text>
-</svg>

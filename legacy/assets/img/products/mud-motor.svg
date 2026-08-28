@@ -1,9 +1,0 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400">
-  <rect width="640" height="400" fill="#0d2436"/>
-  <rect x="80" y="150" width="480" height="90" rx="20" fill="#4a5d6a"/>
-  <rect x="100" y="165" width="120" height="60" rx="8" fill="#e8a317"/>
-  <rect x="240" y="170" width="200" height="50" rx="6" fill="#2a8fbd"/>
-  <rect x="460" y="165" width="80" height="60" rx="8" fill="#c9d5df"/>
-  <circle cx="140" cy="195" r="12" fill="#0b1c2c"/><circle cx="500" cy="195" r="12" fill="#0b1c2c"/>
-  <text x="320" y="320" text-anchor="middle" fill="#f5e6c8" font-family="Segoe UI,Arial" font-size="22" font-weight="700">MUD MOTOR</text>
-</svg>

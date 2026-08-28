@@ -1,7 +1,7 @@
 # Mplace — multi-vendor B2B marketplace
 
-NestJS API + **Next.js primary UI** (`apps/web`: storefront, cart/checkout, buyer/merchant/admin).  
-Legacy static UI is archived under `legacy/` and is not part of the production path ([LEGACY.md](LEGACY.md)).  
+NestJS API + **Next.js UI** (`apps/web`: storefront, cart/checkout, buyer/merchant/admin).  
+Old static HTML was removed — there is one codebase ([LEGACY.md](LEGACY.md)).  
 Stack: **PostgreSQL 16 · Redis 7 · Meilisearch · BullMQ · Stripe**.
 
 ## Documentation map
