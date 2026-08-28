@@ -1,12 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { SlidersHorizontal, X } from "lucide-react"
 import { Header } from "@/components/header"
 import { CatalogSidebar } from "@/components/catalog-sidebar"
 import { ProductCard } from "@/components/product-card"
-import { api } from "@/lib/api"
 import { useI18n } from "@/i18n/store"
 
 type ProductRow = {
@@ -64,53 +62,54 @@ function HomeCatalog() {
     setFilters((prev) => ({ ...prev, search: queryFromUrl }))
   }, [queryFromUrl])
 
-  const { data: productsData, isLoading: productsLoading } = useQuery({
-    queryKey: ["products", queryFromUrl],
-    queryFn: () =>
-      queryFromUrl
-        ? api.products({ search: queryFromUrl, limit: "100" }).catch(() =>
-            api.products({ limit: "100" }),
-          )
-        : api.products({ limit: "100" }),
-  })
+  const [productsRaw, setProductsRaw] = useState<ProductRow[]>([])
+  const [categories, setCategories] = useState<
+    { id: string; name: string; slug?: string }[]
+  >([])
+  const [shops, setShops] = useState<{ id: string; name: string; slug?: string }[]>(
+    [],
+  )
+  const [productsLoading, setProductsLoading] = useState(true)
 
-  // Prefer Meilisearch endpoint when user typed a query
-  const { data: searchData } = useQuery({
-    queryKey: ["products-search", queryFromUrl],
-    queryFn: async () => {
+  useEffect(() => {
+    let cancelled = false
+    const host = window.location.hostname
+    const base =
+      host !== "localhost" && host !== "127.0.0.1"
+        ? "/api"
+        : process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api"
+    const load = async () => {
       try {
-        return await api.products({ q: queryFromUrl, limit: "50" })
+        const [pRes, cRes, sRes] = await Promise.all([
+          fetch(`${base}/products?limit=100`),
+          fetch(`${base}/categories`),
+          fetch(`${base}/shops`),
+        ])
+        const pJson = await pRes.json()
+        const cJson = await cRes.json()
+        const sJson = await sRes.json()
+        if (cancelled) return
+        const items = Array.isArray(pJson)
+          ? pJson
+          : Array.isArray(pJson?.items)
+            ? pJson.items
+            : []
+        setProductsRaw(items as ProductRow[])
+        setCategories(asList(cJson))
+        setShops(asList(sJson))
       } catch {
-        return null
+        if (!cancelled) setProductsRaw([])
+      } finally {
+        if (!cancelled) setProductsLoading(false)
       }
-    },
-    enabled: queryFromUrl.length >= 2,
-  })
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
-  const { data: categoriesRaw } = useQuery({
-    queryKey: ["categories"],
-    queryFn: () => api.categories(),
-  })
-
-  const { data: shopsRaw } = useQuery({
-    queryKey: ["shops"],
-    queryFn: () => api.shops(),
-  })
-
-  const categories = asList(categoriesRaw)
-  const shops = asList(shopsRaw)
-
-  let products: ProductRow[] = (productsData?.items || []) as ProductRow[]
-
-  // If dedicated search returned hits, prefer them (when API supports q)
-  if (
-    queryFromUrl &&
-    searchData &&
-    Array.isArray(searchData.items) &&
-    searchData.items.length > 0
-  ) {
-    products = searchData.items as ProductRow[]
-  }
+  let products: ProductRow[] = productsRaw
 
   const activeSearch = filters.search || queryFromUrl
 
