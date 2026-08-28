@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query"
 import { ScrollText } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDate } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminAuditPage() {
+  const { t } = useI18n()
   const [action, setAction] = useState("")
   const [entityType, setEntityType] = useState("")
 
@@ -25,9 +27,9 @@ export default function AdminAuditPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Audit Logs</h1>
+        <h1 className="text-3xl font-bold">{t("admin.audit.title")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Журнал важных действий в системе
+          {t("admin.auditSubtitle")}
         </p>
       </div>
 
@@ -50,7 +52,7 @@ export default function AdminAuditPage() {
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -66,18 +68,18 @@ export default function AdminAuditPage() {
       ) : logs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <ScrollText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Записей пока нет</p>
+          <p className="text-lg text-muted-foreground">{t("admin.noAudit")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Дата</th>
-                <th className="px-4 py-3 text-left font-medium">Действие</th>
-                <th className="px-4 py-3 text-left font-medium">Пользователь</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.date")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.action")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.user")}</th>
                 <th className="px-4 py-3 text-left font-medium">Entity</th>
-                <th className="px-4 py-3 text-left font-medium">Детали</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.details")}</th>
               </tr>
             </thead>
             <tbody>

@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, formatMoney, statusLabel, useLivePrices } from "@/lib/format"
 import { useI18n } from "@/i18n/store"
 
 function StatCard({
@@ -45,6 +45,7 @@ function StatCard({
 
 export default function AdminDashboard() {
   const { t } = useI18n()
+  useLivePrices()
   const { data, isLoading } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => api.adminDashboard(),
@@ -137,9 +138,9 @@ export default function AdminDashboard() {
           )}
         </div>
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 font-semibold">Новые / pending магазины</h2>
+          <h2 className="mb-4 font-semibold">{t("admin.pendingShops")}</h2>
           {(shops?.items || []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Нет pending</p>
+            <p className="text-sm text-muted-foreground">{t("admin.noPending")}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {(shops?.items || []).map((s) => (

@@ -6,8 +6,10 @@ import { Users, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminUsersPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState("")
@@ -35,9 +37,9 @@ export default function AdminUsersPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Пользователи</h1>
+        <h1 className="text-3xl font-bold">{t("admin.users.title")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Управление всеми пользователями платформы
+          {t("admin.usersSubtitle")}
         </p>
       </div>
 
@@ -46,7 +48,7 @@ export default function AdminUsersPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
-            placeholder="Поиск по email или имени..."
+            placeholder={t("admin.searchUsers")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm outline-none focus:border-primary"
@@ -65,7 +67,7 @@ export default function AdminUsersPage() {
                   : "bg-secondary text-muted-foreground hover:text-foreground"
               }`}
             >
-              {role || "Все"}
+              {role || t("common.all")}
             </button>
           ))}
         </div>
@@ -73,7 +75,7 @@ export default function AdminUsersPage() {
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -89,18 +91,18 @@ export default function AdminUsersPage() {
       ) : users.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Пользователи не найдены</p>
+          <p className="text-lg text-muted-foreground">{t("admin.noUsers")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Пользователь</th>
-                <th className="px-4 py-3 text-left font-medium">Роль</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-left font-medium">Регистрация</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.user")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.users.role")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.registered")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -148,7 +150,7 @@ export default function AdminUsersPage() {
                           })
                         }
                       >
-                        Заблокировать
+                        {t("admin.users.block")}
                       </Button>
                     ) : (
                       <Button
@@ -163,7 +165,7 @@ export default function AdminUsersPage() {
                           })
                         }
                       >
-                        Разблокировать
+                        {t("admin.users.unblock")}
                       </Button>
                     )}
                   </td>

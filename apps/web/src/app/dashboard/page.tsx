@@ -7,10 +7,12 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
 import { homePathForRole } from "@/lib/role-routes"
+import { useI18n } from "@/i18n/store"
 
 export default function DashboardAliasPage() {
   const router = useRouter()
   const { user, hydrated, refresh, isAuthenticated } = useAuthStore()
+  const { t } = useI18n()
 
   useEffect(() => {
     void refresh()
@@ -27,7 +29,7 @@ export default function DashboardAliasPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-      Перенаправление в кабинет…
+      {t("dashboard.redirect")}
     </div>
   )
 }

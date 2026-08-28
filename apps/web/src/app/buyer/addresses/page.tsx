@@ -1,11 +1,13 @@
+"use client"
+
+import { useI18n } from "@/i18n/store"
+
 export default function BuyerAddressesPage() {
+  const { t } = useI18n()
   return (
     <div className="space-y-2">
-      <h1 className="text-2xl font-bold">Адреса</h1>
-      <p className="text-muted-foreground">
-        Раздел адресов доставки появится в следующем этапе. Пока используйте
-        данные при оформлении заказа.
-      </p>
+      <h1 className="text-2xl font-bold">{t("buyer.addresses")}</h1>
+      <p className="text-muted-foreground">{t("addresses.soon")}</p>
     </div>
   )
 }

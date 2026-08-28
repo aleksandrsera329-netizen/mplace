@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminDisputesPage() {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [status, setStatus] = useState("")
 
@@ -37,7 +39,7 @@ export default function AdminDisputesPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Споры</h1>
+      <h1 className="mb-2 text-3xl font-bold">{t("nav.disputes")}</h1>
       <p className="mb-6 text-muted-foreground">Disputes / claims</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {["", "OPEN", "APPEALED", "RESOLVED"].map((s) => (
@@ -47,15 +49,15 @@ export default function AdminDisputesPage() {
             variant={status === s ? "default" : "outline"}
             onClick={() => setStatus(s)}
           >
-            {s ? statusLabel(s) : "All"}
+            {s ? statusLabel(s) : t("common.all")}
           </Button>
         ))}
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -108,7 +110,7 @@ export default function AdminDisputesPage() {
           </div>
         ))}
         {!isLoading && !items.length && (
-          <p className="text-muted-foreground">Споров нет</p>
+          <p className="text-muted-foreground">{t("admin.noDisputes")}</p>
         )}
       </div>
     </div>

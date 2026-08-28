@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
 import { RequireAuth } from "@/components/require-auth"
 import { homePathForRole } from "@/lib/role-routes"
+import { useI18n } from "@/i18n/store"
 
 export function RequireRole({
   roles,
@@ -15,6 +16,7 @@ export function RequireRole({
 }) {
   const router = useRouter()
   const user = useAuthStore((s) => s.user)
+  const { t } = useI18n()
 
   useEffect(() => {
     if (user?.role && !roles.includes(user.role)) {
@@ -29,7 +31,7 @@ export function RequireRole({
         children
       ) : user ? (
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          Недостаточно прав…
+          {t("common.noAccess")}
         </div>
       ) : null}
     </RequireAuth>

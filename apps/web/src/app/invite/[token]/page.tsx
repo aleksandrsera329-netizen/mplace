@@ -176,7 +176,7 @@ export default function AcceptInvitePage() {
         {mutation.isError && (
           <div className="flex items-center gap-2 rounded-lg bg-danger/10 p-3 text-sm text-danger">
             <AlertCircle className="h-4 w-4" />
-            Приглашение недействительно или уже использовано
+            {t("invite.used")}
           </div>
         )}
       </div>

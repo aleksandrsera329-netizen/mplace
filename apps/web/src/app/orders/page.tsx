@@ -6,19 +6,21 @@ import { useQuery } from "@tanstack/react-query"
 import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
-
-const FILTERS = [
-  { value: "", label: "Все" },
-  { value: "PENDING_PAYMENT", label: "Оплата" },
-  { value: "PAID", label: "Оплачен" },
-  { value: "PROCESSING", label: "В работе" },
-  { value: "SHIPPED", label: "Отправлен" },
-  { value: "DELIVERED", label: "Доставлен" },
-]
+import { formatDate, formatMoney, statusLabel, useLivePrices } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function OrdersPage() {
   const [status, setStatus] = useState("")
+  const { t } = useI18n()
+  useLivePrices()
+  const FILTERS = [
+    { value: "", label: t("common.all") },
+    { value: "PENDING_PAYMENT", label: t("status.PENDING_PAYMENT") },
+    { value: "PAID", label: t("status.PAID") },
+    { value: "PROCESSING", label: t("status.PROCESSING") },
+    { value: "SHIPPED", label: t("status.SHIPPED") },
+    { value: "COMPLETED", label: t("status.COMPLETED") },
+  ]
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["orders", status],
@@ -32,7 +34,7 @@ export default function OrdersPage() {
   const items = data?.items ?? []
 
   return (
-    <AccountShell title="Заказы">
+    <AccountShell title={t("orders.title")}>
       <div className="mb-4 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Button
@@ -47,19 +49,19 @@ export default function OrdersPage() {
       </div>
 
       {isLoading && (
-        <p className="text-muted-foreground">Загрузка заказов…</p>
+        <p className="text-muted-foreground">{t("orders.loading")}</p>
       )}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка загрузки"}
+          {error instanceof Error ? error.message : t("common.loadError")}
         </p>
       )}
 
       {!isLoading && items.length === 0 && (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          Заказов нет.{" "}
+          {t("orders.emptyHint")}{" "}
           <Link href="/" className="text-primary underline">
-            Перейти в каталог
+            {t("cart.goCatalog")}
           </Link>
         </div>
       )}
@@ -75,7 +77,7 @@ export default function OrdersPage() {
               <div>
                 <div className="font-semibold">{o.orderNumber}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
-                  {formatDate(o.createdAt)} · {o.shop?.name || "Магазин"}
+                  {formatDate(o.createdAt)} · {o.shop?.name || t("orders.shop")}
                 </div>
               </div>
               <div className="text-right">

@@ -10,16 +10,17 @@ import { Plus, Trash2 } from "lucide-react"
 import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
+import { useI18n } from "@/i18n/store"
 
 const itemSchema = z.object({
-  name: z.string().min(1, "Название"),
+  name: z.string().min(1),
   quantity: z.coerce.number().int().min(1),
   unit: z.string().optional(),
   specs: z.string().optional(),
 })
 
 const schema = z.object({
-  title: z.string().min(3, "Минимум 3 символа"),
+  title: z.string().min(3),
   description: z.string().optional(),
   deadline: z.string().optional(),
   items: z.array(itemSchema).min(1),
@@ -29,6 +30,7 @@ type FormData = z.infer<typeof schema>
 
 export default function NewRfqPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [error, setError] = useState("")
 
   const {
@@ -69,16 +71,16 @@ export default function NewRfqPage() {
       })
       router.push(`/rfq/${created.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось создать RFQ")
+      setError(e instanceof Error ? e.message : t("rfq.createError"))
     }
   }
 
   return (
     <AccountShell
-      title="Новый RFQ"
+      title={t("rfq.newTitle")}
       actions={
         <Button asChild variant="outline" size="sm">
-          <Link href="/rfq">Отмена</Link>
+          <Link href="/rfq">{t("rfq.cancel")}</Link>
         </Button>
       }
     >
@@ -87,19 +89,19 @@ export default function NewRfqPage() {
         className="space-y-6 rounded-xl border border-border bg-card p-6"
       >
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Тема *</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("rfq.subject")} *</label>
           <input
             {...register("title")}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-            placeholder="Поставка запорной арматуры"
+            placeholder={t("rfq.subjectPh")}
           />
           {errors.title && (
-            <p className="mt-1 text-xs text-danger">{errors.title.message}</p>
+            <p className="mt-1 text-xs text-danger">{t("form.minChars3")}</p>
           )}
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Описание</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("rfq.description")}</label>
           <textarea
             {...register("description")}
             rows={3}
@@ -108,7 +110,7 @@ export default function NewRfqPage() {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Дедлайн</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("rfq.deadline")}</label>
           <input
             type="date"
             {...register("deadline")}
@@ -118,7 +120,7 @@ export default function NewRfqPage() {
 
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-semibold">Позиции</h2>
+            <h2 className="font-semibold">{t("rfq.items")}</h2>
             <Button
               type="button"
               size="sm"
@@ -129,7 +131,7 @@ export default function NewRfqPage() {
               }
             >
               <Plus className="h-4 w-4" />
-              Строка
+              {t("rfq.line")}
             </Button>
           </div>
 
@@ -142,7 +144,7 @@ export default function NewRfqPage() {
                 <div className="sm:col-span-5">
                   <input
                     {...register(`items.${index}.name`)}
-                    placeholder="Наименование"
+                    placeholder={t("rfq.itemNamePh")}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                   />
                 </div>
@@ -157,14 +159,14 @@ export default function NewRfqPage() {
                 <div className="sm:col-span-2">
                   <input
                     {...register(`items.${index}.unit`)}
-                    placeholder="ед."
+                    placeholder={t("rfq.unitPh")}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <input
                     {...register(`items.${index}.specs`)}
-                    placeholder="Спеки"
+                    placeholder={t("rfq.specsPh")}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
                   />
                 </div>
@@ -183,14 +185,14 @@ export default function NewRfqPage() {
             ))}
           </div>
           {errors.items && (
-            <p className="mt-2 text-xs text-danger">Добавьте хотя бы одну позицию</p>
+            <p className="mt-2 text-xs text-danger">{t("rfq.addLine")}</p>
           )}
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <Button type="submit" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? "Создание…" : "Создать RFQ"}
+          {isSubmitting ? t("rfq.creating") : t("rfq.create")}
         </Button>
       </form>
     </AccountShell>

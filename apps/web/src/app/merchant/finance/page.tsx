@@ -5,10 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Wallet, ArrowUpRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, formatMoney, statusLabel, useLivePrices } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantFinancePage() {
   const qc = useQueryClient()
+  const { t } = useI18n()
+  useLivePrices()
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
   const [error, setError] = useState("")
@@ -28,7 +31,8 @@ export default function MerchantFinancePage() {
   const request = useMutation({
     mutationFn: () => {
       const rub = Number(amount)
-      if (!Number.isFinite(rub) || rub <= 0) throw new Error("Укажите сумму")
+      if (!Number.isFinite(rub) || rub <= 0)
+        throw new Error(t("merchant.amountRequired"))
       return api.requestPayout(Math.round(rub * 100), note || undefined)
     },
     onSuccess: () => {
@@ -39,7 +43,7 @@ export default function MerchantFinancePage() {
       void qc.invalidateQueries({ queryKey: ["merchant-balance"] })
     },
     onError: (e) =>
-      setError(e instanceof Error ? e.message : "Ошибка запроса"),
+      setError(e instanceof Error ? e.message : t("merchant.requestError")),
   })
 
   const available = balance?.availableCents ?? 0
@@ -55,15 +59,15 @@ export default function MerchantFinancePage() {
     <div>
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Финансы</h1>
-          <p className="mt-1 text-muted-foreground">Баланс и выплаты</p>
+          <h1 className="text-3xl font-bold">{t("merchant.finance.title")}</h1>
+          <p className="mt-1 text-muted-foreground">{t("merchant.financeSubtitle")}</p>
         </div>
       </div>
 
       <div className="mb-10 grid gap-5 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Доступно к выплате</p>
+            <p className="text-sm text-muted-foreground">{t("merchant.available")}</p>
             <Wallet className="h-5 w-5 text-primary" />
           </div>
           <p className="mt-3 text-3xl font-bold text-accent">
@@ -73,7 +77,7 @@ export default function MerchantFinancePage() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">В ожидании</p>
+            <p className="text-sm text-muted-foreground">{t("merchant.pending")}</p>
             <Clock className="h-5 w-5 text-yellow-500" />
           </div>
           <p className="mt-3 text-3xl font-bold">{formatMoney(pending)}</p>
@@ -81,7 +85,7 @@ export default function MerchantFinancePage() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">Всего заработано</p>
+            <p className="text-sm text-muted-foreground">{t("merchant.earned")}</p>
             <ArrowUpRight className="h-5 w-5 text-success" />
           </div>
           <p className="mt-3 text-3xl font-bold">
@@ -94,19 +98,19 @@ export default function MerchantFinancePage() {
       </div>
 
       <div className="mb-10 rounded-xl border border-border bg-card p-6">
-        <h2 className="mb-4 font-semibold">Запросить выплату</h2>
+        <h2 className="mb-4 font-semibold">{t("merchant.requestPayout")}</h2>
         <div className="flex max-w-lg flex-col gap-3 sm:flex-row">
           <input
             type="number"
             min={0}
             step="0.01"
-            placeholder="Сумма, ₽"
+            placeholder={t("merchant.amountPh")}
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
           />
           <input
-            placeholder="Комментарий"
+            placeholder={t("merchant.commentPh")}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
@@ -118,7 +122,7 @@ export default function MerchantFinancePage() {
               request.mutate()
             }}
           >
-            {request.isPending ? "…" : "Запросить"}
+            {request.isPending ? t("merchant.sending") : t("merchant.requestBtn")}
           </Button>
         </div>
         {error && <p className="mt-2 text-sm text-danger">{error}</p>}
@@ -126,14 +130,16 @@ export default function MerchantFinancePage() {
 
       <div className="rounded-xl border border-border bg-card">
         <div className="border-b border-border px-5 py-4 font-semibold">
-          История выплат
+          {t("merchant.finance.payouts")}
         </div>
 
         {isLoading ? (
-          <div className="px-5 py-8 text-muted-foreground">Загрузка…</div>
+          <div className="px-5 py-8 text-muted-foreground">
+            {t("common.loading")}
+          </div>
         ) : !(payouts || []).length ? (
           <div className="px-5 py-16 text-center text-muted-foreground">
-            Выплат пока нет
+            {t("admin.noPayouts")}
           </div>
         ) : (
           <div className="divide-y divide-border">

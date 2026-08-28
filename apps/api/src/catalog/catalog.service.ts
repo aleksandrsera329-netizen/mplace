@@ -183,7 +183,7 @@ export class CatalogService {
         shop: {
           select: { id: true, name: true, slug: true, status: true },
         },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -207,7 +207,7 @@ export class CatalogService {
       where: { id },
       include: {
         shop: { select: { id: true, name: true, slug: true } },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, slug: true } },
         stocks: {
           select: {
             id: true,
@@ -285,7 +285,7 @@ export class CatalogService {
       },
       include: {
         shop: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -385,7 +385,7 @@ export class CatalogService {
       data,
       include: {
         shop: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, slug: true } },
       },
     });
 
@@ -548,7 +548,7 @@ export class CatalogService {
     const products = await this.prisma.product.findMany({
       where: { status: ProductStatus.ACTIVE },
       include: {
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, slug: true } },
         shop: { select: { id: true, name: true } },
       },
     });

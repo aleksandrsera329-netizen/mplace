@@ -7,8 +7,10 @@ import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminOrdersPage() {
+  const { t } = useI18n()
   const [statusFilter, setStatusFilter] = useState("")
 
   const { data, isLoading, error } = useQuery({
@@ -25,8 +27,8 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Заказы</h1>
-        <p className="mt-1 text-muted-foreground">Все заказы платформы</p>
+        <h1 className="text-3xl font-bold">{t("admin.orders.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("admin.ordersSubtitle")}</p>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
@@ -49,14 +51,14 @@ export default function AdminOrdersPage() {
                 : "bg-secondary text-muted-foreground hover:text-foreground"
             }`}
           >
-            {s ? statusLabel(s) : "Все"}
+            {s ? statusLabel(s) : t("common.all")}
           </button>
         ))}
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -72,19 +74,19 @@ export default function AdminOrdersPage() {
       ) : orders.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <ShoppingCart className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Заказов нет</p>
+          <p className="text-lg text-muted-foreground">{t("admin.noOrders")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Номер</th>
-                <th className="px-4 py-3 text-left font-medium">Дата</th>
-                <th className="px-4 py-3 text-left font-medium">Магазин</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-left font-medium">Сумма</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">{t("buyer.number")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.date")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("orders.shop")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("cart.amount")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -112,7 +114,7 @@ export default function AdminOrdersPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/admin/orders/${order.id}`}>Открыть</Link>
+                      <Link href={`/admin/orders/${order.id}`}>{t("admin.open")}</Link>
                     </Button>
                   </td>
                 </tr>

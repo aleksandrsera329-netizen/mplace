@@ -478,8 +478,18 @@ export class AuthService {
     const isAdminRole =
       user.role === UserRole.ADMIN || user.role === UserRole.SUPER_ADMIN;
 
-    // Stage 6: ADMIN / SUPER_ADMIN must use TOTP (mandatory MFA)
-    if (isAdminRole) {
+    const allowDemoLogin = ['true', '1', 'yes'].includes(
+      String(this.config.get<string>('ALLOW_DEMO_LOGIN') || '')
+        .toLowerCase()
+        .trim(),
+    );
+    const nodeEnv = String(this.config.get<string>('NODE_ENV') || '').toLowerCase();
+    const skipAdminMfaEnroll =
+      allowDemoLogin && nodeEnv !== 'production' && nodeEnv !== 'staging';
+
+    // Stage 6: ADMIN / SUPER_ADMIN must use TOTP (mandatory MFA).
+    // Spec: development + ALLOW_DEMO_LOGIN skips enrollment so demo admins can log in.
+    if (isAdminRole && !(skipAdminMfaEnroll && !user.twoFactorEnabled)) {
       if (!user.twoFactorEnabled) {
         const tempToken = await this.signMfaTempToken(user.id, 'mfa_enroll');
         await this.audit('LOGIN_MFA_ENROLL_REQUIRED', {

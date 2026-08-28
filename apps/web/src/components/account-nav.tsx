@@ -13,24 +13,31 @@ import {
 import { cn } from "@/lib/utils"
 import { useAuthStore } from "@/store/auth"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/store"
+import type { TranslationKey } from "@/i18n/store"
 
-const links = [
-  { href: "/account", label: "Обзор", icon: LayoutDashboard },
-  { href: "/orders", label: "Заказы", icon: Package },
-  { href: "/wishlist", label: "Избранное", icon: Heart },
-  { href: "/rfq", label: "RFQ", icon: FileText },
-  { href: "/account/profile", label: "Профиль", icon: User },
+const links: {
+  href: string
+  labelKey: TranslationKey
+  icon: typeof Package
+}[] = [
+  { href: "/account", labelKey: "account.overview", icon: LayoutDashboard },
+  { href: "/orders", labelKey: "nav.orders", icon: Package },
+  { href: "/wishlist", labelKey: "header.wishlist", icon: Heart },
+  { href: "/rfq", labelKey: "nav.rfq", icon: FileText },
+  { href: "/account/profile", labelKey: "account.profile", icon: User },
 ]
 
 export function AccountNav() {
   const pathname = usePathname()
   const { user, logout } = useAuthStore()
+  const { t } = useI18n()
 
   return (
     <aside className="w-full shrink-0 space-y-4 lg:w-64">
       <div className="rounded-xl border border-border bg-card p-4">
         <div className="text-xs uppercase tracking-wider text-muted-foreground">
-          Покупатель
+          {t("account.buyerRole")}
         </div>
         <div className="mt-1 truncate font-semibold">
           {user?.name || user?.email || "…"}
@@ -43,7 +50,7 @@ export function AccountNav() {
       </div>
 
       <nav className="space-y-1 rounded-xl border border-border bg-card p-2">
-        {links.map(({ href, label, icon: Icon }) => {
+        {links.map(({ href, labelKey, icon: Icon }) => {
           const active =
             pathname === href ||
             (href !== "/account" && pathname.startsWith(href))
@@ -59,7 +66,7 @@ export function AccountNav() {
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {t(labelKey)}
             </Link>
           )
         })}
@@ -74,7 +81,7 @@ export function AccountNav() {
         }}
       >
         <LogOut className="h-4 w-4" />
-        Выйти
+        {t("common.logout")}
       </Button>
     </aside>
   )

@@ -5,8 +5,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminPayoutsPage() {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [status, setStatus] = useState("")
 
@@ -29,8 +31,8 @@ export default function AdminPayoutsPage() {
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Выплаты</h1>
-      <p className="mb-6 text-muted-foreground">Заявки на вывод средств</p>
+      <h1 className="mb-2 text-3xl font-bold">{t("nav.payouts")}</h1>
+      <p className="mb-6 text-muted-foreground">{t("admin.payoutsSubtitle")}</p>
       <div className="mb-4 flex flex-wrap gap-2">
         {["", "PENDING", "APPROVED", "REJECTED", "PAID"].map((s) => (
           <Button
@@ -39,15 +41,15 @@ export default function AdminPayoutsPage() {
             variant={status === s ? "default" : "outline"}
             onClick={() => setStatus(s)}
           >
-            {s ? statusLabel(s) : "All"}
+            {s ? statusLabel(s) : t("common.all")}
           </Button>
         ))}
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -59,7 +61,7 @@ export default function AdminPayoutsPage() {
           >
             <div>
               <div className="font-semibold">
-                {formatMoney(p.amountCents)} · {p.shop?.name || "Shop"}
+                {formatMoney(p.amountCents)} · {p.shop?.name || t("admin.shop")}
               </div>
               <div className="text-sm text-muted-foreground">
                 {statusLabel(p.status)} · {formatDate(p.createdAt)}
@@ -94,7 +96,7 @@ export default function AdminPayoutsPage() {
           </div>
         ))}
         {!isLoading && !items.length && (
-          <p className="text-muted-foreground">Выплат нет</p>
+          <p className="text-muted-foreground">{t("admin.noPayouts")}</p>
         )}
       </div>
     </div>

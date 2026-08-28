@@ -3,10 +3,12 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuthStore } from "@/store/auth"
+import { useI18n } from "@/i18n/store"
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const { user, loading, hydrated, refresh } = useAuthStore()
+  const { t } = useI18n()
 
   useEffect(() => {
     void refresh()
@@ -29,7 +31,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!hydrated || loading) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
-        Загрузка…
+        {t("common.loading")}
       </div>
     )
   }
@@ -37,7 +39,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
-        Перенаправление на вход…
+        {t("common.redirectLogin")}
       </div>
     )
   }

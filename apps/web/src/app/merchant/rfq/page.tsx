@@ -6,8 +6,10 @@ import { MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantRfqPage() {
+  const { t } = useI18n()
   const { data, isLoading, error } = useQuery({
     queryKey: ["merchant-rfq"],
     queryFn: () => api.rfqs({ incoming: "1", limit: "50" }),
@@ -18,15 +20,13 @@ export default function MerchantRfqPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">RFQ</h1>
-        <p className="mt-1 text-muted-foreground">
-          Запросы предложений от покупателей
-        </p>
+        <h1 className="text-3xl font-bold">{t("nav.rfq")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("rfq.pageTitle")}</p>
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -42,17 +42,25 @@ export default function MerchantRfqPage() {
       ) : rfqs.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Запросов пока нет</p>
+          <p className="text-lg text-muted-foreground">{t("rfq.none")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Номер / Тема</th>
-                <th className="px-4 py-3 text-left font-medium">Дата</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("buyer.number")} / {t("rfq.subject")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.date")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.status")}
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  {t("common.actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -79,7 +87,7 @@ export default function MerchantRfqPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/merchant/rfq/${rfq.id}`}>Открыть</Link>
+                      <Link href={`/merchant/rfq/${rfq.id}`}>{t("admin.open")}</Link>
                     </Button>
                   </td>
                 </tr>

@@ -188,6 +188,45 @@ export class PaymentsController {
     return this.payments.handleStripeWebhook(raw, signature);
   }
 
+  /** Public payment mode for the storefront (no secrets). */
+  @Get('payments/config')
+  paymentsConfig() {
+    const provider = this.config.get<string>('PAYMENT_PROVIDER') || 'dev';
+    const publishable = this.config.get<string>('STRIPE_PUBLISHABLE_KEY') || '';
+    return {
+      provider,
+      dev: this.payments.isDevConfirmEnabled(),
+      publishableKey: publishable || null,
+    };
+  }
+
+  /**
+   * Spec §8: POST /orders/:id/pay-dev — local DEV payment using the same ledger path.
+   * Browser never sees DEV_PAYMENT_SECRET; server injects it when ALLOW_DEV_PAYMENTS.
+   */
+  @UseGuards(OptionalJwtAuthGuard)
+  @Throttle(ThrottleLimits.PAYMENT)
+  @Post('orders/:id/pay-dev')
+  payDev(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+    @Body() dto: PaymentIntentDto,
+    @Headers('x-order-access-token') headerToken?: string,
+    @Ip() ip?: string,
+  ) {
+    if (!this.payments.isDevConfirmEnabled()) {
+      throw new NotFoundException();
+    }
+    return this.payments.devConfirm({
+      orderId: id,
+      paymentToken: dto.paymentToken || headerToken,
+      user: user ?? null,
+      secretHeader: this.config.get<string>('DEV_PAYMENT_SECRET') || '',
+      idempotencyKey: dto.idempotencyKey,
+      clientIp: ip,
+    });
+  }
+
   /**
    * Local-only. Never expose secret to browsers.
    * Returns 404 when not allowed (looks like missing route in staging/prod).

@@ -7,8 +7,10 @@ import { Store } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminMerchantsPage() {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [status, setStatus] = useState("")
 
@@ -35,9 +37,9 @@ export default function AdminMerchantsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Продавцы</h1>
+        <h1 className="text-3xl font-bold">{t("admin.merchants.title")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Магазины и продавцы платформы
+          {t("admin.merchantsSubtitle")}
         </p>
       </div>
 
@@ -53,14 +55,14 @@ export default function AdminMerchantsPage() {
                 : "bg-secondary text-muted-foreground"
             }`}
           >
-            {s ? statusLabel(s) : "Все"}
+            {s ? statusLabel(s) : t("common.all")}
           </button>
         ))}
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -76,19 +78,19 @@ export default function AdminMerchantsPage() {
       ) : merchants.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <Store className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Продавцы не найдены</p>
+          <p className="text-lg text-muted-foreground">{t("admin.noMerchants")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Магазин</th>
-                <th className="px-4 py-3 text-left font-medium">Владелец</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-left font-medium">Товаров</th>
-                <th className="px-4 py-3 text-left font-medium">Создан</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.shop")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.owner")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.shopCount")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.created")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -147,7 +149,7 @@ export default function AdminMerchantsPage() {
                       )}
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/admin/merchants/${shop.id}`}>
-                          Открыть
+                          {t("admin.open")}
                         </Link>
                       </Button>
                     </div>

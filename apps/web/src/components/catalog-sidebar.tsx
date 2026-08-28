@@ -4,8 +4,10 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/i18n/store"
 
+import { categoryLabel } from "@/lib/format"
+
 interface CatalogSidebarProps {
-  categories: { id: string; name: string }[]
+  categories: { id: string; name: string; slug?: string }[]
   shops: { id: string; name: string }[]
   /** Sync search from Header ?q= */
   searchValue?: string
@@ -79,7 +81,7 @@ export function CatalogSidebar({
                 checked={categoryId === c.id}
                 onChange={() => setCategoryId(c.id)}
               />
-              {c.name}
+              {categoryLabel(c, t)}
             </label>
           ))}
         </div>

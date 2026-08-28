@@ -16,29 +16,34 @@ import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { api } from "@/lib/api"
 import { toast } from "@/components/ui/toast"
+import { useI18n } from "@/i18n/store"
+import { useMoney } from "@/lib/money"
 
 const schema = z.object({
-  customerName: z.string().min(2, "Укажите имя / контактное лицо"),
-  customerEmail: z.string().email("Некорректный email"),
+  customerName: z.string().min(2, "name"),
+  customerEmail: z.string().email("email"),
   comment: z.string().max(2000).optional(),
 })
 
 type FormData = z.infer<typeof schema>
 
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
-}
-
 export default function CheckoutPage() {
   const { items, itemCount, subtotalCents, refresh, clear } = useCartStore()
   const user = useAuthStore((s) => s.user)
+  const { t } = useI18n()
+  const { format: formatMoney } = useMoney()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [orderNumbers, setOrderNumbers] = useState<string[]>([])
+  const [paid, setPaid] = useState(false)
+  const [paying, setPaying] = useState(false)
+  const [createdOrders, setCreatedOrders] = useState<
+    Array<{
+      id: string
+      orderNumber: string
+      paymentToken?: string
+      totalCents: number
+    }>
+  >([])
   const [ready, setReady] = useState(false)
   const [shippingRate, setShippingRate] = useState<ShippingRateOption | null>(
     null,
@@ -126,10 +131,15 @@ export default function CheckoutPage() {
       // Backend: POST /api/checkout + X-Session-Key (via api.request)
       // Response: { orders: [{ id, orderNumber, ... }], message? }
       const shippingNote = shippingRate
-        ? `Доставка: ${shippingRate.methodName} (${formatMoney(shippingRate.priceCents)})`
+        ? t("checkout.shippingNote", {
+            method: shippingRate.methodName,
+            price: formatMoney(shippingRate.priceCents),
+          })
         : undefined
       const taxNote =
-        taxCents > 0 ? `НДС/VAT: ${formatMoney(taxCents)}` : undefined
+        taxCents > 0
+          ? t("checkout.vatNote", { price: formatMoney(taxCents) })
+          : undefined
       const result = await api.checkout({
         customerName: data.customerName,
         customerEmail: data.customerEmail,
@@ -148,22 +158,26 @@ export default function CheckoutPage() {
           : undefined,
       })
 
-      const numbers = (result.orders || [])
-        .map((o) => o.orderNumber)
-        .filter(Boolean)
+      const orders = (result.orders || []).map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        paymentToken: o.paymentToken,
+        totalCents: o.totalCents,
+      }))
 
       // Backend clears cart in transaction; sync UI
       await clear()
       await refresh()
 
-      setOrderNumbers(numbers)
+      setCreatedOrders(orders)
+      setPaid(false)
       setSuccess(true)
     } catch (e) {
       console.error(e)
       toast({
-        title: "Ошибка",
+        title: t("common.error"),
         description:
-          e instanceof Error ? e.message : "Не удалось оформить заявку",
+          e instanceof Error ? e.message : t("checkout.error"),
         type: "error",
       })
     } finally {
@@ -171,28 +185,68 @@ export default function CheckoutPage() {
     }
   }
 
+  const payDevOrders = async () => {
+    if (createdOrders.length === 0) return
+    setPaying(true)
+    try {
+      for (const order of createdOrders) {
+        await api.payDev(order.id, order.paymentToken)
+      }
+      setPaid(true)
+      toast({
+        title: t("checkout.payOkTitle"),
+        description: t("checkout.payOk"),
+        type: "success",
+      })
+    } catch (e) {
+      toast({
+        title: t("order.payError"),
+        description:
+          e instanceof Error ? e.message : t("checkout.payError"),
+        type: "error",
+      })
+    } finally {
+      setPaying(false)
+    }
+  }
+
   if (success) {
+    const numbers = createdOrders.map((o) => o.orderNumber).filter(Boolean)
     return (
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-lg px-4 py-20 text-center">
           <div className="mb-6 text-6xl" aria-hidden>
-            ✅
+            {paid ? "✅" : "💳"}
           </div>
-          <h1 className="mb-4 text-3xl font-bold">Заявка отправлена</h1>
-          {orderNumbers.length > 0 && (
+          <h1 className="mb-4 text-3xl font-bold">
+            {paid ? t("checkout.paid") : t("checkout.created")}
+          </h1>
+          {numbers.length > 0 && (
             <p className="mb-2 text-sm text-muted-foreground">
-              Номер{orderNumbers.length > 1 ? "а" : ""}:{" "}
+              {t("checkout.orderNo")}:{" "}
               <span className="font-mono font-medium text-foreground">
-                {orderNumbers.join(", ")}
+                {numbers.join(", ")}
               </span>
             </p>
           )}
           <p className="mb-8 text-muted-foreground">
-            Поставщики получили вашу заявку и свяжутся с вами.
+            {paid ? t("checkout.paidHint") : t("checkout.devHint")}
           </p>
-          <Button asChild>
-            <Link href="/">Вернуться в каталог</Link>
+          {!paid && (
+            <Button
+              className="mb-4 w-full"
+              size="lg"
+              disabled={paying}
+              onClick={() => void payDevOrders()}
+            >
+              {paying ? t("checkout.paying") : t("checkout.payDev")}
+            </Button>
+          )}
+          <Button asChild variant={paid ? "default" : "ghost"}>
+            <Link href={paid ? "/buyer/orders" : "/"}>
+              {paid ? t("checkout.toOrders") : t("checkout.goCatalog")}
+            </Link>
           </Button>
         </div>
       </div>
@@ -204,7 +258,7 @@ export default function CheckoutPage() {
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-lg px-4 py-20 text-center text-muted-foreground">
-          Загрузка…
+          {t("common.loading")}
         </div>
       </div>
     )
@@ -215,9 +269,9 @@ export default function CheckoutPage() {
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-lg px-4 py-20 text-center">
-          <p className="mb-6 text-lg text-muted-foreground">Заявка пуста</p>
+          <p className="mb-6 text-lg text-muted-foreground">{t("checkout.empty")}</p>
           <Button asChild>
-            <Link href="/">Перейти в каталог</Link>
+            <Link href="/">{t("checkout.goCatalog")}</Link>
           </Button>
         </div>
       </div>
@@ -234,10 +288,10 @@ export default function CheckoutPage() {
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад к заявке
+          {t("checkout.back")}
         </Link>
 
-        <h1 className="mb-8 text-3xl font-bold">Оформление заявки</h1>
+        <h1 className="mb-8 text-3xl font-bold">{t("checkout.title")}</h1>
 
         <div className="grid gap-8 lg:grid-cols-5">
           <form
@@ -246,31 +300,31 @@ export default function CheckoutPage() {
           >
             <div>
               <label className="mb-1.5 block text-sm font-medium">
-                Контактное лицо *
+                {t("checkout.contact")} *
               </label>
               <input
                 {...register("customerName")}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="Иван Иванов"
+                placeholder={t("checkout.namePlaceholder")}
               />
               {errors.customerName && (
                 <p className="mt-1 text-xs text-danger">
-                  {errors.customerName.message}
+                  {t("checkout.nameRequired")}
                 </p>
               )}
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Email *</label>
+              <label className="mb-1.5 block text-sm font-medium">{t("auth.email")} *</label>
               <input
                 type="email"
                 {...register("customerEmail")}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="ivan@company.ru"
+                placeholder={t("checkout.emailPlaceholder")}
               />
               {errors.customerEmail && (
                 <p className="mt-1 text-xs text-danger">
-                  {errors.customerEmail.message}
+                  {t("auth.invalidEmail")}
                 </p>
               )}
             </div>
@@ -278,31 +332,31 @@ export default function CheckoutPage() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                  Регион доставки
+                  {t("checkout.region")}
                 </label>
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
                 >
-                  <option value="Moscow">Москва</option>
-                  <option value="Moscow Oblast">Московская область</option>
-                  <option value="Saint Petersburg">Санкт-Петербург</option>
-                  <option value="">Другой / вся РФ</option>
+                  <option value="Moscow">{t("checkout.moscow")}</option>
+                  <option value="Moscow Oblast">{t("checkout.moscowOblast")}</option>
+                  <option value="Saint Petersburg">{t("checkout.spb")}</option>
+                  <option value="">{t("checkout.otherRu")}</option>
                 </select>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium">
-                  Страна (НДС / VAT)
+                  {t("checkout.taxCountry")}
                 </label>
                 <select
                   value={taxCountry}
                   onChange={(e) => setTaxCountry(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
                 >
-                  <option value="RU">Россия (RU)</option>
-                  <option value="AE">ОАЭ (AE)</option>
-                  <option value="KZ">Казахстан (KZ)</option>
+                  <option value="RU">{t("checkout.countryRU")}</option>
+                  <option value="AE">{t("checkout.countryAE")}</option>
+                  <option value="KZ">{t("checkout.countryKZ")}</option>
                 </select>
               </div>
             </div>
@@ -316,13 +370,13 @@ export default function CheckoutPage() {
 
             <div>
               <label className="mb-1.5 block text-sm font-medium">
-                Комментарий
+                {t("checkout.comment")}
               </label>
               <textarea
                 {...register("comment")}
                 rows={4}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="Срок поставки, особые требования..."
+                placeholder={t("checkout.commentPh")}
               />
             </div>
 
@@ -332,33 +386,33 @@ export default function CheckoutPage() {
               className="w-full"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Отправка…" : "Отправить заявку"}
+              {isSubmitting ? t("checkout.submitting") : t("checkout.submit")}
             </Button>
           </form>
 
           <div className="h-fit rounded-xl border border-border bg-card p-5 lg:col-span-2">
-            <h2 className="mb-4 font-semibold">Ваша заявка</h2>
+            <h2 className="mb-4 font-semibold">{t("checkout.yourRequest")}</h2>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-muted-foreground">
-                <span>Позиций</span>
+                <span>{t("checkout.lines")}</span>
                 <span>{itemCount}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Подытог</span>
+                <span>{t("checkout.subtotal")}</span>
                 <span>{formatMoney(goodsSubtotal)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>НДС / VAT</span>
+                <span>{t("checkout.vat")}</span>
                 <span>{formatMoney(taxCents)}</span>
               </div>
               {shippingCents > 0 && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Доставка</span>
+                  <span>{t("checkout.shipping")}</span>
                   <span>{formatMoney(shippingCents)}</span>
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-2 text-base font-bold">
-                <span>Итого</span>
+                <span>{t("checkout.total")}</span>
                 <span className="text-accent">{formatMoney(grandTotal)}</span>
               </div>
             </div>

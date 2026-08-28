@@ -22,20 +22,21 @@ import {
 import { useAuthStore } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useI18n, type TranslationKey } from "@/i18n/store"
 
-const nav = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "Пользователи", icon: Users },
-  { href: "/admin/merchants", label: "Продавцы", icon: Store },
-  { href: "/admin/orders", label: "Заказы", icon: ShoppingCart },
-  { href: "/admin/products", label: "Товары", icon: Package },
-  { href: "/admin/categories", label: "Категории", icon: FolderTree },
-  { href: "/admin/payments", label: "Платежи", icon: CreditCard },
-  { href: "/admin/payouts", label: "Выплаты", icon: Wallet },
-  { href: "/admin/disputes", label: "Споры", icon: AlertTriangle },
-  { href: "/admin/kyc", label: "KYC", icon: ShieldCheck },
-  { href: "/admin/audit", label: "Audit Logs", icon: ScrollText },
-  { href: "/admin/settings", label: "Настройки", icon: Settings },
+const nav: { href: string; labelKey: TranslationKey; icon: typeof Users }[] = [
+  { href: "/admin", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/admin/users", labelKey: "nav.users", icon: Users },
+  { href: "/admin/merchants", labelKey: "nav.merchants", icon: Store },
+  { href: "/admin/orders", labelKey: "nav.orders", icon: ShoppingCart },
+  { href: "/admin/products", labelKey: "nav.products", icon: Package },
+  { href: "/admin/categories", labelKey: "admin.categories", icon: FolderTree },
+  { href: "/admin/payments", labelKey: "admin.payments", icon: CreditCard },
+  { href: "/admin/payouts", labelKey: "nav.payouts", icon: Wallet },
+  { href: "/admin/disputes", labelKey: "nav.disputes", icon: AlertTriangle },
+  { href: "/admin/kyc", labelKey: "nav.kyc", icon: ShieldCheck },
+  { href: "/admin/audit", labelKey: "nav.audit", icon: ScrollText },
+  { href: "/admin/settings", labelKey: "nav.settings", icon: Settings },
 ]
 
 export default function AdminLayout({
@@ -45,6 +46,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useI18n()
   const { user, isAuthenticated, logout, hydrated, refresh } = useAuthStore()
 
   useEffect(() => {
@@ -66,7 +68,7 @@ export default function AdminLayout({
   if (!hydrated || !isAuthenticated()) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Загрузка…
+        {t("common.loading")}
       </div>
     )
   }
@@ -102,7 +104,7 @@ export default function AdminLayout({
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             )
           })}
@@ -112,7 +114,7 @@ export default function AdminLayout({
           <Button variant="ghost" className="w-full justify-start gap-3" asChild>
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
-              На витрину
+              {t("common.storefront")}
             </Link>
           </Button>
           <Button
@@ -124,7 +126,7 @@ export default function AdminLayout({
             }}
           >
             <LogOut className="h-4 w-4" />
-            Выйти
+            {t("common.logout")}
           </Button>
         </div>
       </aside>

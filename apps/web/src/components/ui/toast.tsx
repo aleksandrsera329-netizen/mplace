@@ -37,15 +37,15 @@ export function Toaster() {
   const { toasts, remove } = useToastStore()
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+    <div className="pointer-events-none fixed bottom-4 start-4 z-[100] flex max-w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">
       {toasts.map((t) => (
         <div
           key={t.id}
           role="status"
           className={cn(
-            "min-w-[280px] max-w-sm cursor-pointer rounded-lg border border-border bg-card px-4 py-3 shadow-lg transition-opacity",
-            t.type === "success" && "border-success/40 bg-success/5",
-            t.type === "error" && "border-danger/40 bg-danger/5",
+            "pointer-events-auto min-w-[240px] cursor-pointer rounded-lg border bg-card px-4 py-3 shadow-xl",
+            t.type === "success" && "border-success text-foreground",
+            t.type === "error" && "border-danger text-foreground",
           )}
           onClick={() => remove(t.id)}
         >

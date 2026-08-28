@@ -7,8 +7,10 @@ import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function RfqListPage() {
+  const { t } = useI18n()
   const { data, isLoading, error } = useQuery({
     queryKey: ["rfq"],
     queryFn: () => api.rfqs({ limit: "30" }),
@@ -18,28 +20,28 @@ export default function RfqListPage() {
 
   return (
     <AccountShell
-      title="RFQ — заявки на котировку"
+      title={t("rfq.pageTitle")}
       actions={
         <Button asChild className="gap-2">
           <Link href="/rfq/new">
             <Plus className="h-4 w-4" />
-            Создать RFQ
+            {t("rfq.create")}
           </Link>
         </Button>
       }
     >
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
       {!isLoading && items.length === 0 && (
         <div className="rounded-xl border border-dashed border-border p-10 text-center text-muted-foreground">
-          <p className="mb-4">У вас ещё нет RFQ</p>
+          <p className="mb-4">{t("rfq.none")}</p>
           <Button asChild>
-            <Link href="/rfq/new">Создать первую заявку</Link>
+            <Link href="/rfq/new">{t("rfq.createFirst")}</Link>
           </Button>
         </div>
       )}
@@ -56,13 +58,13 @@ export default function RfqListPage() {
                 <div className="font-semibold">{r.title}</div>
                 <div className="mt-1 text-sm text-muted-foreground">
                   {r.number} · {formatDate(r.createdAt)}
-                  {r.deadline ? ` · до ${formatDate(r.deadline)}` : ""}
+                  {r.deadline ? ` · ${t("rfq.until", { date: formatDate(r.deadline) })}` : ""}
                 </div>
               </div>
               <div className="text-right text-sm">
                 <div className="font-medium">{statusLabel(r.status)}</div>
                 <div className="text-muted-foreground">
-                  офферов: {r._count?.offers ?? 0}
+                  {t("rfq.offersCount", { n: r._count?.offers ?? 0 })}
                 </div>
               </div>
             </div>

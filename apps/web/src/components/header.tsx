@@ -22,12 +22,17 @@ import { useAuthStore } from "@/store/auth"
 import { useTenantStore } from "@/store/tenant"
 import { useI18n } from "@/i18n/store"
 import { homePathForRole } from "@/lib/role-routes"
+import {
+  useCurrencyStore,
+  type CurrencyCode,
+} from "@/store/currency"
 
 export function Header() {
   const { resolvedTheme, setTheme } = useTheme()
   const { itemCount, open } = useCartStore()
   const { user, hydrated, refresh, isAuthenticated, logout } = useAuthStore()
   const { locale, setLocale, t } = useI18n()
+  const { currency, setCurrency } = useCurrencyStore()
   const tenant = useTenantStore((s) => s.tenant)
   const router = useRouter()
   const [search, setSearch] = useState("")
@@ -37,6 +42,11 @@ export function Header() {
     { code: "ru" as Locale, label: "RU" },
     { code: "en" as Locale, label: "EN" },
     { code: "ar" as Locale, label: "AR" },
+  ]
+  const currencies: { code: CurrencyCode; label: string }[] = [
+    { code: "RUB", label: "RUB" },
+    { code: "USD", label: "USD" },
+    { code: "EUR", label: "EUR" },
   ]
 
   useEffect(() => {
@@ -146,6 +156,26 @@ export function Header() {
                 }`}
               >
                 {lang.label}
+              </button>
+            ))}
+          </div>
+
+          <div
+            className="flex items-center gap-0.5 rounded-lg border border-border p-0.5"
+            title={t("header.currency")}
+          >
+            {currencies.map((c) => (
+              <button
+                key={c.code}
+                type="button"
+                onClick={() => setCurrency(c.code)}
+                className={`rounded-md px-2 py-1 text-xs font-medium transition ${
+                  currency === c.code
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                {c.label}
               </button>
             ))}
           </div>

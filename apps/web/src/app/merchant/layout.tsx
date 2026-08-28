@@ -17,17 +17,18 @@ import {
 import { useAuthStore } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useI18n, type TranslationKey } from "@/i18n/store"
 
-const nav = [
-  { href: "/merchant/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/merchant/products", label: "Товары", icon: Package },
-  { href: "/merchant/orders", label: "Заказы", icon: ShoppingCart },
-  { href: "/merchant/inventory", label: "Склад", icon: Warehouse },
-  { href: "/merchant/finance", label: "Финансы", icon: Wallet },
-  { href: "/merchant/payouts", label: "Выплаты", icon: Wallet },
-  { href: "/merchant/rfq", label: "RFQ", icon: MessageSquare },
-  { href: "/merchant/kyc", label: "KYC", icon: Users },
-  { href: "/merchant/customers", label: "Клиенты", icon: Users },
+const nav: { href: string; labelKey: TranslationKey; icon: typeof Package }[] = [
+  { href: "/merchant/dashboard", labelKey: "nav.dashboard", icon: LayoutDashboard },
+  { href: "/merchant/products", labelKey: "nav.products", icon: Package },
+  { href: "/merchant/orders", labelKey: "nav.orders", icon: ShoppingCart },
+  { href: "/merchant/inventory", labelKey: "nav.warehouse", icon: Warehouse },
+  { href: "/merchant/finance", labelKey: "nav.finance", icon: Wallet },
+  { href: "/merchant/payouts", labelKey: "nav.payouts", icon: Wallet },
+  { href: "/merchant/rfq", labelKey: "nav.rfq", icon: MessageSquare },
+  { href: "/merchant/kyc", labelKey: "nav.kyc", icon: Users },
+  { href: "/merchant/customers", labelKey: "nav.clients", icon: Users },
 ]
 
 export default function MerchantLayout({
@@ -37,6 +38,7 @@ export default function MerchantLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useI18n()
   const { user, isAuthenticated, logout, hydrated, refresh } = useAuthStore()
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export default function MerchantLayout({
   if (!hydrated || !isAuthenticated()) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Загрузка…
+        {t("common.loading")}
       </div>
     )
   }
@@ -99,7 +101,7 @@ export default function MerchantLayout({
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             )
           })}
@@ -113,7 +115,7 @@ export default function MerchantLayout({
           >
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
-              На витрину
+              {t("common.storefront")}
             </Link>
           </Button>
           <Button
@@ -125,7 +127,7 @@ export default function MerchantLayout({
             }}
           >
             <LogOut className="h-4 w-4" />
-            Выйти
+            {t("common.logout")}
           </Button>
         </div>
       </aside>

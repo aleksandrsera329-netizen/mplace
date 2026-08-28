@@ -7,12 +7,14 @@ import { z } from "zod"
 import { useQuery } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
+import { useI18n } from "@/i18n/store"
+import { categoryLabel } from "@/lib/format"
 
 const schema = z.object({
-  name: z.string().min(2, "Минимум 2 символа"),
+  name: z.string().min(2),
   sku: z.string().optional(),
   description: z.string().optional(),
-  price: z.coerce.number().min(0, "Цена не может быть отрицательной"),
+  price: z.coerce.number().min(0),
   stock: z.coerce.number().int().min(0),
   categoryId: z.string().optional(),
   status: z.enum(["DRAFT", "ACTIVE", "ARCHIVED"]),
@@ -61,6 +63,7 @@ export function ProductForm({
   onSubmit,
   isSubmitting,
 }: ProductFormProps) {
+  const { t } = useI18n()
   const { data: categoriesRaw } = useQuery({
     queryKey: ["categories"],
     queryFn: () => api.categories(),
@@ -120,14 +123,14 @@ export function ProductForm({
       className="max-w-2xl space-y-6"
     >
       <div>
-        <label className="mb-1.5 block text-sm font-medium">Название *</label>
+        <label className="mb-1.5 block text-sm font-medium">{t("common.name")} *</label>
         <input
           {...register("name")}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           placeholder="Centrifugal Process Pump 4x3-10"
         />
         {errors.name && (
-          <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
+          <p className="mt-1 text-xs text-danger">{t("form.minChars")}</p>
         )}
       </div>
 
@@ -141,21 +144,21 @@ export function ProductForm({
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Статус</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("common.status")}</label>
           <select
             {...register("status")}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           >
-            <option value="DRAFT">Черновик</option>
-            <option value="ACTIVE">Активный</option>
-            <option value="ARCHIVED">Архив</option>
+            <option value="DRAFT">{t("status.DRAFT")}</option>
+            <option value="ACTIVE">{t("status.ACTIVE")}</option>
+            <option value="ARCHIVED">{t("status.ARCHIVED")}</option>
           </select>
         </div>
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Цена (₽) *</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("form.priceLabel")} *</label>
           <input
             type="number"
             step="0.01"
@@ -163,11 +166,11 @@ export function ProductForm({
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
           {errors.price && (
-            <p className="mt-1 text-xs text-danger">{errors.price.message}</p>
+            <p className="mt-1 text-xs text-danger">{t("form.priceNegative")}</p>
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Остаток *</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("common.stock")} *</label>
           <input
             type="number"
             {...register("stock")}
@@ -180,33 +183,33 @@ export function ProductForm({
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium">Категория</label>
+        <label className="mb-1.5 block text-sm font-medium">{t("catalog.categories")}</label>
         <select
           {...register("categoryId")}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
         >
-          <option value="">Без категории</option>
+          <option value="">{t("form.noCategory")}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name}
+              {categoryLabel(c, t)}
             </option>
           ))}
         </select>
       </div>
 
       <div>
-        <label className="mb-1.5 block text-sm font-medium">Описание</label>
+        <label className="mb-1.5 block text-sm font-medium">{t("product.description")}</label>
         <textarea
           {...register("description")}
           rows={4}
           className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-          placeholder="Подробное описание товара..."
+          placeholder={t("form.descriptionPh")}
         />
       </div>
 
       <div className="flex gap-3">
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Сохранение…" : "Сохранить"}
+          {isSubmitting ? t("form.saving") : t("common.save")}
         </Button>
       </div>
     </form>

@@ -7,16 +7,7 @@ import { ShoppingCart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney, statusLabel } from "@/lib/format"
-
-const FILTERS = [
-  { value: "", label: "Все" },
-  { value: "PENDING_PAYMENT", label: "Оплата" },
-  { value: "PAID", label: "Оплачен" },
-  { value: "PROCESSING", label: "В работе" },
-  { value: "SHIPPED", label: "Отправлен" },
-  { value: "DELIVERED", label: "Доставлен" },
-  { value: "CANCELLED", label: "Отменён" },
-]
+import { useI18n } from "@/i18n/store"
 
 const statusColors: Record<string, string> = {
   PENDING_PAYMENT: "bg-blue-500/15 text-blue-500",
@@ -36,6 +27,17 @@ const NEXT: Record<string, string | null> = {
 export default function MerchantOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("")
   const qc = useQueryClient()
+  const { t } = useI18n()
+
+  const STATUS_FILTERS = [
+    { value: "", label: t("common.all") },
+    { value: "PENDING_PAYMENT", label: t("status.PENDING_PAYMENT") },
+    { value: "PAID", label: t("status.PAID") },
+    { value: "PROCESSING", label: t("status.PROCESSING") },
+    { value: "SHIPPED", label: t("status.SHIPPED") },
+    { value: "DELIVERED", label: t("status.DELIVERED") },
+    { value: "CANCELLED", label: t("status.CANCELLED") },
+  ]
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["merchant-orders", statusFilter],
@@ -59,12 +61,12 @@ export default function MerchantOrdersPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Заказы</h1>
-        <p className="mt-1 text-muted-foreground">Заказы вашего магазина</p>
+        <h1 className="text-3xl font-bold">{t("merchant.orders.title")}</h1>
+        <p className="mt-1 text-muted-foreground">{t("merchant.ordersSubtitle")}</p>
       </div>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        {FILTERS.map((s) => (
+        {STATUS_FILTERS.map((s) => (
           <button
             key={s.value || "all"}
             type="button"
@@ -82,7 +84,7 @@ export default function MerchantOrdersPage() {
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -98,18 +100,28 @@ export default function MerchantOrdersPage() {
       ) : orders.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <ShoppingCart className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Заказов пока нет</p>
+          <p className="text-lg text-muted-foreground">{t("merchant.noOrders")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Номер</th>
-                <th className="px-4 py-3 text-left font-medium">Дата</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-left font-medium">Сумма</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("buyer.number")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.date")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.status")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("cart.amount")}
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  {t("common.actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -154,7 +166,7 @@ export default function MerchantOrdersPage() {
                         )}
                         <Button variant="ghost" size="sm" asChild>
                           <Link href={`/merchant/orders/${order.id}`}>
-                            Открыть
+                            {t("admin.open")}
                           </Link>
                         </Button>
                       </div>

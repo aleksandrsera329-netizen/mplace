@@ -5,9 +5,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantPayoutsPage() {
   const qc = useQueryClient()
+  const { t } = useI18n()
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
   const [error, setError] = useState("")
@@ -26,7 +28,7 @@ export default function MerchantPayoutsPage() {
     mutationFn: () => {
       const rub = Number(amount)
       if (!Number.isFinite(rub) || rub <= 0) {
-        throw new Error("Укажите сумму")
+        throw new Error(t("merchant.amountRequired"))
       }
       const cents = Math.round(rub * 100)
       return api.requestPayout(cents, note || undefined)
@@ -39,16 +41,16 @@ export default function MerchantPayoutsPage() {
       void qc.invalidateQueries({ queryKey: ["merchant-balance"] })
     },
     onError: (e) =>
-      setError(e instanceof Error ? e.message : "Ошибка запроса"),
+      setError(e instanceof Error ? e.message : t("merchant.requestError")),
   })
 
   return (
     <div>
-      <h1 className="mb-2 text-3xl font-bold">Выплаты</h1>
-      <p className="mb-6 text-muted-foreground">Баланс и заявки на вывод</p>
+      <h1 className="mb-2 text-3xl font-bold">{t("nav.payouts")}</h1>
+      <p className="mb-6 text-muted-foreground">{t("merchant.financeSubtitle")}</p>
       <div className="mb-6 grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-5">
-          <div className="text-sm text-muted-foreground">Доступно</div>
+          <div className="text-sm text-muted-foreground">{t("merchant.available")}</div>
           <div className="mt-1 text-3xl font-bold text-primary">
             {balance
               ? formatMoney(balance.availableCents, balance.currency)
@@ -56,25 +58,26 @@ export default function MerchantPayoutsPage() {
           </div>
           {typeof balance?.pendingCents === "number" && (
             <div className="mt-2 text-sm text-muted-foreground">
-              В ожидании: {formatMoney(balance.pendingCents, balance.currency)}
+              {t("merchant.pending")}:{" "}
+              {formatMoney(balance.pendingCents, balance.currency)}
             </div>
           )}
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-3 font-semibold">Запросить вывод</h2>
+          <h2 className="mb-3 font-semibold">{t("merchant.requestPayout")}</h2>
           <div className="space-y-3">
             <input
               type="number"
               min={0}
               step="0.01"
-              placeholder="Сумма, ₽"
+              placeholder={t("merchant.amountPh")}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
             />
             <input
-              placeholder="Комментарий"
+              placeholder={t("merchant.commentPh")}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
@@ -87,14 +90,14 @@ export default function MerchantPayoutsPage() {
                 request.mutate()
               }}
             >
-              {request.isPending ? "Отправка…" : "Запросить"}
+              {request.isPending ? t("merchant.sending") : t("merchant.requestBtn")}
             </Button>
           </div>
         </div>
       </div>
 
-      <h2 className="mb-3 font-semibold">История</h2>
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      <h2 className="mb-3 font-semibold">{t("merchant.finance.payouts")}</h2>
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       <div className="space-y-2">
         {(payouts || []).map((p) => (
           <div
@@ -113,7 +116,7 @@ export default function MerchantPayoutsPage() {
           </div>
         ))}
         {!isLoading && !(payouts || []).length && (
-          <p className="text-muted-foreground">Заявок на вывод пока нет</p>
+          <p className="text-muted-foreground">{t("admin.noPayouts")}</p>
         )}
       </div>
     </div>

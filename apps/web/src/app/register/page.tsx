@@ -11,15 +11,16 @@ import { Button } from "@/components/ui/button"
 import { api, saveAuthTokens, type LoginResponse } from "@/lib/api"
 import { useAuthStore } from "@/store/auth"
 import { homePathForRole } from "@/lib/role-routes"
+import { useI18n } from "@/i18n/store"
 
 const customerSchema = z.object({
-  name: z.string().min(2, "Укажите имя"),
-  email: z.string().email("Некорректный email"),
-  password: z.string().min(6, "Минимум 6 символов"),
+  name: z.string().min(2),
+  email: z.string().email(),
+  password: z.string().min(6),
 })
 
 const merchantSchema = customerSchema.extend({
-  shopName: z.string().min(2, "Укажите название магазина"),
+  shopName: z.string().min(2),
   shopSlug: z.string().optional(),
 })
 
@@ -33,6 +34,7 @@ export default function RegisterPage() {
   const setAuth = useAuthStore((s) => s.setAuth)
   const [mode, setMode] = useState<Mode>("customer")
   const [error, setError] = useState("")
+  const { t } = useI18n()
 
   const customerForm = useForm<CustomerForm>({
     resolver: zodResolver(customerSchema),
@@ -52,7 +54,7 @@ export default function RegisterPage() {
 
   const applySession = (res: LoginResponse) => {
     const token = res.accessToken
-    if (!token) throw new Error(res.message || "Токен не получен")
+    if (!token) throw new Error(res.message || t("auth.tokenMissing"))
     if (res.refreshToken) saveAuthTokens(token, res.refreshToken)
     else saveAuthTokens(token)
     const user = res.user || {
@@ -74,7 +76,7 @@ export default function RegisterPage() {
       })
       applySession(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка регистрации")
+      setError(e instanceof Error ? e.message : t("auth.registerError"))
     }
   }
 
@@ -90,7 +92,7 @@ export default function RegisterPage() {
       })
       applySession(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка регистрации")
+      setError(e instanceof Error ? e.message : t("auth.registerError"))
     }
   }
 
@@ -98,9 +100,11 @@ export default function RegisterPage() {
     <div className="min-h-screen">
       <Header />
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-10">
-        <h1 className="mb-2 text-center text-3xl font-bold">Регистрация</h1>
+        <h1 className="mb-2 text-center text-3xl font-bold">
+          {t("auth.registerTitle")}
+        </h1>
         <p className="mb-6 text-center text-sm text-muted-foreground">
-          Stage 20 — Next.js auth (customer / merchant)
+          {t("auth.buyer")} / {t("auth.seller")}
         </p>
 
         <div className="mb-6 grid grid-cols-2 gap-2 rounded-lg border border-border p-1">
@@ -116,7 +120,7 @@ export default function RegisterPage() {
               setError("")
             }}
           >
-            Покупатель
+            {t("auth.buyer")}
           </button>
           <button
             type="button"
@@ -130,7 +134,7 @@ export default function RegisterPage() {
               setError("")
             }}
           >
-            Продавец
+            {t("auth.seller")}
           </button>
         </div>
 
@@ -140,8 +144,8 @@ export default function RegisterPage() {
             className="space-y-4"
           >
             <Field
-              label="Имя"
-              error={customerForm.formState.errors.name?.message}
+              label={t("auth.name")}
+              error={customerForm.formState.errors.name ? t("auth.nameRequired") : undefined}
             >
               <input
                 {...customerForm.register("name")}
@@ -150,8 +154,8 @@ export default function RegisterPage() {
               />
             </Field>
             <Field
-              label="Email"
-              error={customerForm.formState.errors.email?.message}
+              label={t("auth.email")}
+              error={customerForm.formState.errors.email ? t("auth.invalidEmail") : undefined}
             >
               <input
                 type="email"
@@ -161,8 +165,8 @@ export default function RegisterPage() {
               />
             </Field>
             <Field
-              label="Пароль"
-              error={customerForm.formState.errors.password?.message}
+              label={t("auth.passwordLabel")}
+              error={customerForm.formState.errors.password ? t("auth.minPassword") : undefined}
             >
               <input
                 type="password"
@@ -179,8 +183,8 @@ export default function RegisterPage() {
               disabled={customerForm.formState.isSubmitting}
             >
               {customerForm.formState.isSubmitting
-                ? "Создаём…"
-                : "Создать аккаунт"}
+                ? t("auth.signingIn")
+                : t("auth.registerTitle")}
             </Button>
           </form>
         ) : (
@@ -189,8 +193,8 @@ export default function RegisterPage() {
             className="space-y-4"
           >
             <Field
-              label="Контактное лицо"
-              error={merchantForm.formState.errors.name?.message}
+              label={t("checkout.contact")}
+              error={merchantForm.formState.errors.name ? t("auth.nameRequired") : undefined}
             >
               <input
                 {...merchantForm.register("name")}
@@ -199,8 +203,8 @@ export default function RegisterPage() {
               />
             </Field>
             <Field
-              label="Email"
-              error={merchantForm.formState.errors.email?.message}
+              label={t("auth.email")}
+              error={merchantForm.formState.errors.email ? t("auth.invalidEmail") : undefined}
             >
               <input
                 type="email"
@@ -210,8 +214,8 @@ export default function RegisterPage() {
               />
             </Field>
             <Field
-              label="Пароль"
-              error={merchantForm.formState.errors.password?.message}
+              label={t("auth.passwordLabel")}
+              error={merchantForm.formState.errors.password ? t("auth.minPassword") : undefined}
             >
               <input
                 type="password"
@@ -221,12 +225,12 @@ export default function RegisterPage() {
               />
             </Field>
             <Field
-              label="Название магазина"
-              error={merchantForm.formState.errors.shopName?.message}
+              label={t("auth.shopName")}
+              error={merchantForm.formState.errors.shopName ? t("auth.shopRequired") : undefined}
             >
               <input {...merchantForm.register("shopName")} className={inputCls} />
             </Field>
-            <Field label="Slug (опционально)">
+            <Field label={t("auth.slugOptional")}>
               <input
                 {...merchantForm.register("shopSlug")}
                 className={inputCls}
@@ -241,19 +245,19 @@ export default function RegisterPage() {
               disabled={merchantForm.formState.isSubmitting}
             >
               {merchantForm.formState.isSubmitting
-                ? "Создаём…"
-                : "Зарегистрировать магазин"}
+                ? t("auth.signingIn")
+                : t("auth.registerTitle")}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Магазин создаётся в статусе pending — потребуется KYC.
+              {t("auth.pendingKyc")}
             </p>
           </form>
         )}
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          Уже есть аккаунт?{" "}
+          {t("auth.hasAccount")}{" "}
           <Link href="/login" className="text-primary hover:underline">
-            Войти
+            {t("auth.login")}
           </Link>
         </p>
       </div>

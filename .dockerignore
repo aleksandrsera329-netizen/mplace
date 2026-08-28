@@ -13,3 +13,10 @@ agent-tools
 docs
 *.md
 !README.md
+acquire-upload
+.acquire_creds.tmp
+.tg_bot_token.tmp
+.tg_bot_username.tmp
+.tg_chat_id.tmp
+uploads
+backups

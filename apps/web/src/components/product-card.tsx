@@ -10,30 +10,28 @@ import { useAuthStore } from "@/store/auth"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/i18n/store"
+import { useMoney } from "@/lib/money"
+import { categoryLabel, productLabel } from "@/lib/format"
 
 interface Product {
   id: string
   name: string
+  slug?: string | null
+  sku?: string | null
   priceCents: number
+  currency?: string | null
   stock: number
   imageUrl?: string | null
-  category?: { name: string } | null
+  category?: { name: string; slug?: string } | null
   shop?: { name: string } | null
-}
-
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
 }
 
 export function ProductCard({ product }: { product: Product }) {
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
   const { isAuthenticated, accessToken } = useAuthStore()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
+  const { format } = useMoney()
   const qc = useQueryClient()
   const loggedIn = isAuthenticated() || !!accessToken
 
@@ -75,22 +73,22 @@ export function ProductCard({ product }: { product: Product }) {
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all hover:-translate-y-1 hover:border-primary hover:shadow-lg">
-      <div className="relative flex h-40 items-center justify-center bg-gradient-to-br from-secondary to-background">
+      <div className="relative h-48 overflow-hidden bg-secondary">
         <Link
           href={`/product/${product.id}`}
-          className="flex h-full w-full items-center justify-center"
+          className="block h-full w-full"
         >
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={product.imageUrl}
-              alt={product.name}
-              className="max-h-28 max-w-full object-contain"
+              alt={productLabel(product, t)}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
             />
           ) : (
-            <span className="text-5xl opacity-40" aria-hidden>
+            <div className="flex h-full items-center justify-center text-5xl opacity-40">
               ⚙️
-            </span>
+            </div>
           )}
         </Link>
         {product.stock > 0 && product.stock < 8 && (
@@ -124,11 +122,11 @@ export function ProductCard({ product }: { product: Product }) {
 
       <div className="flex flex-1 flex-col p-4">
         <div className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
-          {product.category?.name || "—"}
+          {categoryLabel(product.category || {}, t)}
         </div>
         <Link href={`/product/${product.id}`}>
           <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-snug hover:text-primary">
-            {product.name}
+            {productLabel(product, t)}
           </h3>
         </Link>
         <div className="mb-4 text-sm text-muted-foreground">
@@ -138,12 +136,12 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="mt-auto flex items-center justify-between gap-3">
           <div className="text-lg font-bold text-accent">
-            {formatMoney(product.priceCents)}
+            {format(product.priceCents, product.currency)}
           </div>
           <Button
             size="sm"
             disabled={product.stock <= 0}
-            onClick={() => void addItem(product.id)}
+            onClick={() => void addItem(product.id, 1, product.stock)}
           >
             {t("product.addToCart")}
           </Button>

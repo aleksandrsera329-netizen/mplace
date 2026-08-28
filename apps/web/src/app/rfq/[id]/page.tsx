@@ -7,6 +7,7 @@ import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function RfqDetailPage({
   params,
@@ -15,6 +16,7 @@ export default function RfqDetailPage({
 }) {
   const { id } = use(params)
   const qc = useQueryClient()
+  const { t } = useI18n()
   const [message, setMessage] = useState("")
 
   const { data: rfq, isLoading, error } = useQuery({
@@ -43,14 +45,14 @@ export default function RfqDetailPage({
       title={rfq?.title || "RFQ"}
       actions={
         <Button asChild variant="outline" size="sm">
-          <Link href="/rfq">К списку</Link>
+          <Link href="/rfq">{t("rfq.listBack")}</Link>
         </Button>
       }
     >
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -65,11 +67,11 @@ export default function RfqDetailPage({
                 </div>
               </div>
               <div className="text-sm text-muted-foreground">
-                Создан: {formatDate(rfq.createdAt)}
+                {t("rfq.createdAt", { date: formatDate(rfq.createdAt) })}
                 {rfq.deadline ? (
                   <>
                     <br />
-                    Дедлайн: {formatDate(rfq.deadline)}
+                    {t("rfq.deadlineAt", { date: formatDate(rfq.deadline) })}
                   </>
                 ) : null}
               </div>
@@ -82,7 +84,7 @@ export default function RfqDetailPage({
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-3 font-semibold">Позиции</h2>
+            <h2 className="mb-3 font-semibold">{t("rfq.items")}</h2>
             <ul className="divide-y divide-border text-sm">
               {(rfq.items || []).map((it) => (
                 <li key={it.id} className="py-3">
@@ -98,11 +100,11 @@ export default function RfqDetailPage({
 
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-3 font-semibold">
-              Предложения ({rfq.offers?.length ?? 0})
+              {t("rfq.offersTitle", { n: rfq.offers?.length ?? 0 })}
             </h2>
             {!rfq.offers?.length ? (
               <p className="text-sm text-muted-foreground">
-                Пока нет предложений от поставщиков
+                {t("rfq.noOffers")}
               </p>
             ) : (
               <div className="space-y-3">
@@ -135,7 +137,7 @@ export default function RfqDetailPage({
                             disabled={award.isPending}
                             onClick={() => award.mutate(offer.id)}
                           >
-                            Выбрать
+                            {t("rfq.award")}
                           </Button>
                         )}
                       </div>
@@ -148,16 +150,16 @@ export default function RfqDetailPage({
               <p className="mt-2 text-sm text-danger">
                 {award.error instanceof Error
                   ? award.error.message
-                  : "Ошибка award"}
+                  : t("rfq.awardError")}
               </p>
             )}
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-3 font-semibold">Сообщения</h2>
+            <h2 className="mb-3 font-semibold">{t("rfq.messages")}</h2>
             <div className="mb-4 max-h-64 space-y-2 overflow-y-auto">
               {(rfq.messages || []).length === 0 && (
-                <p className="text-sm text-muted-foreground">Пока пусто</p>
+                <p className="text-sm text-muted-foreground">{t("rfq.emptyMessages")}</p>
               )}
               {(rfq.messages || []).map((m) => (
                 <div
@@ -165,7 +167,7 @@ export default function RfqDetailPage({
                   className="rounded-lg bg-secondary/60 px-3 py-2 text-sm"
                 >
                   <div className="text-xs text-muted-foreground">
-                    {m.author?.name || "Участник"} · {formatDate(m.createdAt)}
+                    {m.author?.name || t("rfq.participant")} · {formatDate(m.createdAt)}
                   </div>
                   <div className="mt-1">{m.body}</div>
                 </div>
@@ -175,14 +177,14 @@ export default function RfqDetailPage({
               <input
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Написать сообщение…"
+                placeholder={t("rfq.messagePh")}
                 className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
               />
               <Button
                 disabled={!message.trim() || sendMsg.isPending}
                 onClick={() => sendMsg.mutate()}
               >
-                Отправить
+                {t("rfq.send")}
               </Button>
             </div>
           </div>

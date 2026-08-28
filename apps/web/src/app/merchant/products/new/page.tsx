@@ -10,9 +10,11 @@ import {
 } from "@/components/merchant/product-form"
 import { api } from "@/lib/api"
 import { toast } from "@/components/ui/toast"
+import { useI18n } from "@/i18n/store"
 
 export default function NewProductPage() {
   const router = useRouter()
+  const { t } = useI18n()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (data: ProductFormPayload) => {
@@ -28,16 +30,16 @@ export default function NewProductPage() {
         status: data.status,
       })
       toast({
-        title: "Успешно",
-        description: "Товар создан",
+        title: t("common.success"),
+        description: t("merchant.productCreated"),
         type: "success",
       })
       router.push("/merchant/products")
     } catch (e) {
       toast({
-        title: "Ошибка",
+        title: t("common.error"),
         description:
-          e instanceof Error ? e.message : "Ошибка создания товара",
+          e instanceof Error ? e.message : t("merchant.productCreateError"),
         type: "error",
       })
     } finally {
@@ -52,10 +54,10 @@ export default function NewProductPage() {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к товарам
+        {t("common.back")}
       </Link>
 
-      <h1 className="mb-8 text-3xl font-bold">Новый товар</h1>
+      <h1 className="mb-8 text-3xl font-bold">{t("merchant.products.add")}</h1>
 
       <ProductForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
     </div>

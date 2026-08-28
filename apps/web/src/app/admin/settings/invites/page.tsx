@@ -35,15 +35,15 @@ function InvitesInner() {
     mutationFn: () => api.tenant.createInvite({ email, role }),
     onSuccess: (inv) => {
       toast({
-        title: "Приглашение создано",
-        description: `Ссылка: /invite/${inv.token}`,
+        title: t("admin.inviteCreated"),
+        description: t("admin.inviteLink", { token: inv.token }),
         type: "success",
       })
       setEmail("")
       qc.invalidateQueries({ queryKey: ["tenant-invites"] })
     },
     onError: (e: Error) =>
-      toast({ title: "Ошибка", description: e.message, type: "error" }),
+      toast({ title: t("common.error"), description: e.message, type: "error" }),
   })
 
   return (
@@ -116,8 +116,8 @@ function InvitesInner() {
                   <div>
                     <div className="font-medium">{inv.email}</div>
                     <div className="text-xs text-muted-foreground">
-                      {inv.role} · до {formatDate(inv.expiresAt)}
-                      {inv.acceptedAt ? " · принято" : ""}
+                      {inv.role} · {t("rfq.until", { date: formatDate(inv.expiresAt) })}
+                      {inv.acceptedAt ? ` · ${t("admin.inviteAccepted")}` : ""}
                     </div>
                     {!inv.acceptedAt && (
                       <div className="mt-1 break-all text-xs text-primary">

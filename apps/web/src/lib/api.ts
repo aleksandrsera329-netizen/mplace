@@ -1,6 +1,13 @@
-// Docker compose maps API to host :3001; local nest default is :3000
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:3001/api"
+/** Browser: relative `/api` on Render. Server: internal Nest URL. Local: :3001. */
+function resolveApiBase(): string {
+  const env = process.env.NEXT_PUBLIC_API_URL
+  if (typeof window !== "undefined") {
+    if (env) return env
+    return "http://127.0.0.1:3001/api"
+  }
+  if (env && env.startsWith("http")) return env
+  return process.env.INTERNAL_API_URL || "http://127.0.0.1:3001/api"
+}
 
 const SESSION_KEY_STORAGE = "mplace_session_key"
 const TOKEN_KEY = "mplace_access_token"
@@ -27,7 +34,10 @@ export type CartItem = {
   product?: {
     id: string
     name: string
+    slug?: string | null
+    sku?: string | null
     priceCents: number
+    currency?: string | null
     imageUrl?: string | null
     stock?: number
   }
@@ -81,7 +91,7 @@ async function request<T>(
     ...(options.headers as Record<string, string> | undefined),
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${resolveApiBase()}${path}`, {
     ...options,
     headers,
     credentials: "include",
@@ -96,7 +106,7 @@ async function requestFormData<T>(
   method: "POST" | "PATCH" | "PUT" = "PATCH",
 ): Promise<T> {
   const headers = authHeaders(false)
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${resolveApiBase()}${path}`, {
     method,
     headers,
     body: formData,
@@ -428,14 +438,16 @@ export const api = {
     request<{
       id: string
       name: string
+      slug?: string | null
       description?: string | null
       sku?: string | null
       priceCents: number
+      currency?: string | null
       stock: number
       /** Available = quantity - reserved (when multi-warehouse stocks exist) */
       availableStock?: number
       imageUrl?: string | null
-      category?: { id?: string; name: string }
+      category?: { id?: string; name: string; slug?: string }
       shop?: { id?: string; name: string }
       stocks?: Array<{
         warehouseId: string
@@ -723,11 +735,29 @@ export const api = {
       amountCents?: number
       currency?: string
       devMode?: boolean
+      mode?: string
       message?: string
     }>(`/orders/${orderId}/payment-intent`, {
       method: "POST",
       body: JSON.stringify(paymentToken ? { paymentToken } : {}),
     }),
+
+  paymentsConfig: () =>
+    request<{
+      provider?: string
+      dev?: boolean
+      publishableKey?: string | null
+    }>("/payments/config"),
+
+  /** Spec: POST /orders/:id/pay-dev — local DEV payment, same ledger as webhook */
+  payDev: (orderId: string, paymentToken?: string) =>
+    request<{ id?: string; status?: string; orderNumber?: string }>(
+      `/orders/${orderId}/pay-dev`,
+      {
+        method: "POST",
+        body: JSON.stringify(paymentToken ? { paymentToken } : {}),
+      },
+    ),
 
   devConfirmPayment: (orderId: string, paymentToken?: string) =>
     request<{ ok?: boolean; status?: string }>("/payments/dev-confirm", {
@@ -995,7 +1025,7 @@ export const api = {
       const token = getAccessToken()
       if (token) headers.Authorization = `Bearer ${token}`
     }
-    const res = await fetch(`${API_BASE}/products/upload-image`, {
+    const res = await fetch(`${resolveApiBase()}/products/upload-image`, {
       method: "POST",
       headers,
       body: form,
@@ -1012,14 +1042,16 @@ export const api = {
 export type ProductRow = {
   id: string
   name: string
+  slug?: string | null
   priceCents: number
+  currency?: string | null
   stock: number
   status?: string
   sku?: string | null
   imageUrl?: string | null
   categoryId?: string | null
   shopId?: string
-  category?: { id?: string; name: string }
+  category?: { id?: string; name: string; slug?: string }
   shop?: { id?: string; name: string }
 }
 
@@ -1262,4 +1294,4 @@ export function clearAuthTokens() {
   }
 }
 
-export { API_BASE }
+export { resolveApiBase }

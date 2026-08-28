@@ -8,9 +8,12 @@ import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store/auth"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, formatMoney, statusLabel, useLivePrices } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AccountPage() {
+  const { t } = useI18n()
+  useLivePrices()
   const router = useRouter()
   const { user, accessToken, logout, isAuthenticated, hydrated, refresh } =
     useAuthStore()
@@ -47,7 +50,7 @@ export default function AccountPage() {
       <div className="min-h-screen">
         <Header />
         <div className="flex min-h-[50vh] items-center justify-center text-muted-foreground">
-          Загрузка…
+          {t("common.loading")}
         </div>
       </div>
     )
@@ -60,7 +63,7 @@ export default function AccountPage() {
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold">Личный кабинет</h1>
+            <h1 className="text-3xl font-bold">{t("account.title")}</h1>
             <p className="mt-1 text-muted-foreground">
               {user.name ? `${user.name} · ` : ""}
               {user.email}
@@ -69,22 +72,22 @@ export default function AccountPage() {
           <div className="flex flex-wrap gap-2">
             {user.role === "CUSTOMER" && (
               <Button asChild>
-                <Link href="/buyer/dashboard">Кабинет покупателя</Link>
+                <Link href="/buyer/dashboard">{t("account.buyer")}</Link>
               </Button>
             )}
             {user.role === "MERCHANT" && (
               <Button asChild>
-                <Link href="/merchant/dashboard">Кабинет продавца</Link>
+                <Link href="/merchant/dashboard">{t("account.seller")}</Link>
               </Button>
             )}
             <Button variant="outline" asChild>
-              <Link href="/account/profile">Профиль</Link>
+              <Link href="/account/profile">{t("account.profile")}</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/buyer/orders">Все заказы</Link>
+              <Link href="/buyer/orders">{t("account.allOrders")}</Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/wishlist">Избранное</Link>
+              <Link href="/wishlist">{t("account.wishlist")}</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/buyer/rfqs">RFQ</Link>
@@ -96,12 +99,12 @@ export default function AccountPage() {
                 router.push("/")
               }}
             >
-              Выйти
+              {t("common.logout")}
             </Button>
           </div>
         </div>
 
-        <h2 className="mb-4 text-xl font-semibold">Мои заказы / заявки</h2>
+        <h2 className="mb-4 text-xl font-semibold">{t("account.myOrders")}</h2>
 
         {isLoading ? (
           <div className="space-y-3">
@@ -114,9 +117,9 @@ export default function AccountPage() {
           </div>
         ) : orders.length === 0 ? (
           <div className="rounded-xl border border-border bg-card py-16 text-center text-muted-foreground">
-            Заказов пока нет.{" "}
+            {t("account.noOrders")}{" "}
             <Link href="/" className="text-primary underline">
-              В каталог
+              {t("cart.goCatalog")}
             </Link>
           </div>
         ) : (

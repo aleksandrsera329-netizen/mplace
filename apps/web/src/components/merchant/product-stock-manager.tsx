@@ -47,7 +47,7 @@ export function ProductStockManager({ productId }: { productId: string }) {
       queryClient.invalidateQueries({ queryKey: ["product", productId] })
       toast({
         title: t("common.success"),
-        description: "Остаток обновлён",
+        description: t("stock.updated"),
         type: "success",
       })
     },
@@ -73,7 +73,7 @@ export function ProductStockManager({ productId }: { productId: string }) {
 
       {warehouses.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Сначала создайте хотя бы один склад.{" "}
+          {t("warehouse.createFirst")}{" "}
           <Link href="/merchant/warehouse" className="text-primary underline">
             {t("merchant.warehouse.title")}
           </Link>

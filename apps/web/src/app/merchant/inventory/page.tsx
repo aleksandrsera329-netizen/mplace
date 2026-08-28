@@ -4,8 +4,11 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Warehouse, AlertTriangle } from "lucide-react"
 import { api, type ProductRow } from "@/lib/api"
+import { productLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantInventoryPage() {
+  const { t } = useI18n()
   const [search, setSearch] = useState("")
 
   const { data, isLoading } = useQuery({
@@ -26,21 +29,29 @@ export default function MerchantInventoryPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Склад</h1>
-        <p className="mt-1 text-muted-foreground">Остатки и контроль запасов</p>
+        <h1 className="text-3xl font-bold">{t("nav.warehouse")}</h1>
+        <p className="mt-1 text-muted-foreground">
+          {t("merchant.inventorySubtitle")}
+        </p>
       </div>
 
       <div className="mb-8 grid gap-5 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Всего позиций</p>
+          <p className="text-sm text-muted-foreground">
+            {t("merchant.inventoryTotal")}
+          </p>
           <p className="mt-1 text-2xl font-bold">{products.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Заканчивается</p>
+          <p className="text-sm text-muted-foreground">
+            {t("merchant.inventoryLow")}
+          </p>
           <p className="mt-1 text-2xl font-bold text-primary">{lowStock.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
-          <p className="text-sm text-muted-foreground">Нет в наличии</p>
+          <p className="text-sm text-muted-foreground">
+            {t("merchant.inventoryOut")}
+          </p>
           <p className="mt-1 text-2xl font-bold text-danger">
             {outOfStock.length}
           </p>
@@ -50,7 +61,7 @@ export default function MerchantInventoryPage() {
       <div className="mb-6">
         <input
           type="search"
-          placeholder="Поиск по названию или SKU..."
+          placeholder={t("merchant.products.search")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-full max-w-md rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary"
@@ -69,17 +80,23 @@ export default function MerchantInventoryPage() {
       ) : products.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <Warehouse className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Нет товаров</p>
+          <p className="text-lg text-muted-foreground">{t("merchant.noProducts")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Товар</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.name")}
+                </th>
                 <th className="px-4 py-3 text-left font-medium">SKU</th>
-                <th className="px-4 py-3 text-left font-medium">Остаток</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("merchant.warehouse.stock")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.status")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -92,7 +109,7 @@ export default function MerchantInventoryPage() {
                     key={product.id}
                     className="border-b border-border last:border-0 hover:bg-secondary/30"
                   >
-                    <td className="px-4 py-3 font-medium">{product.name}</td>
+                    <td className="px-4 py-3 font-medium">{productLabel(product)}</td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {product.sku || "—"}
                     </td>
@@ -113,15 +130,15 @@ export default function MerchantInventoryPage() {
                       {isOut ? (
                         <span className="inline-flex items-center gap-1 text-danger">
                           <AlertTriangle className="h-3.5 w-3.5" />
-                          Нет в наличии
+                          {t("product.outOfStock")}
                         </span>
                       ) : isLow ? (
                         <span className="inline-flex items-center gap-1 text-primary">
                           <AlertTriangle className="h-3.5 w-3.5" />
-                          Мало
+                          {t("product.lowStock")}
                         </span>
                       ) : (
-                        <span className="text-success">В норме</span>
+                        <span className="text-success">{t("merchant.inventoryOk")}</span>
                       )}
                     </td>
                   </tr>

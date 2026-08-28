@@ -11,14 +11,9 @@ import { api } from "@/lib/api"
 import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { cn } from "@/lib/utils"
-
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
-}
+import { useI18n } from "@/i18n/store"
+import { useMoney } from "@/lib/money"
+import { categoryLabel, productLabel, productDescription } from "@/lib/format"
 
 export default function ProductPage({
   params,
@@ -29,6 +24,8 @@ export default function ProductPage({
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
   const { isAuthenticated, accessToken } = useAuthStore()
+  const { t } = useI18n()
+  const { format } = useMoney()
   const qc = useQueryClient()
   const loggedIn = isAuthenticated() || !!accessToken
 
@@ -74,7 +71,7 @@ export default function ProductPage({
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center text-muted-foreground">
-          Загрузка…
+          {t("common.loading")}
         </div>
       </div>
     )
@@ -85,9 +82,9 @@ export default function ProductPage({
       <div className="min-h-screen">
         <Header />
         <div className="mx-auto max-w-5xl px-4 py-16 text-center">
-          <p className="text-lg text-muted-foreground">Товар не найден</p>
+          <p className="text-lg text-muted-foreground">{t("product.notFound")}</p>
           <Button asChild className="mt-6">
-            <Link href="/">Вернуться в каталог</Link>
+            <Link href="/">{t("product.backToCatalog")}</Link>
           </Button>
         </div>
       </div>
@@ -103,7 +100,9 @@ export default function ProductPage({
     product.stock
   const stockClass = available > 10 ? "text-success" : "text-danger"
   const stockText =
-    available > 0 ? `В наличии: ${available}` : "Нет в наличии"
+    available > 0
+      ? t("catalog.inStockCount", { count: available })
+      : t("product.outOfStock")
 
   return (
     <div className="min-h-screen">
@@ -115,36 +114,36 @@ export default function ProductPage({
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад в каталог
+          {t("product.back")}
         </Link>
 
         <div className="grid gap-8 lg:grid-cols-2">
-          <div className="flex aspect-square items-center justify-center rounded-2xl border border-border bg-gradient-to-br from-secondary to-background">
+          <div className="overflow-hidden rounded-2xl border border-border bg-secondary">
             {product.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
+              // eslint-next-line @next/next/no-img-element
               <img
                 src={product.imageUrl}
-                alt={product.name}
-                className="max-h-[80%] max-w-[80%] object-contain"
+                alt={productLabel(product, t)}
+                className="aspect-square w-full object-cover"
               />
             ) : (
-              <span className="text-8xl opacity-30" aria-hidden>
+              <div className="flex aspect-square items-center justify-center text-8xl opacity-30">
                 ⚙️
-              </span>
+              </div>
             )}
           </div>
 
           <div className="flex flex-col">
             <div className="mb-2 text-sm font-medium uppercase tracking-wider text-primary">
-              {product.category?.name || "—"}
+              {categoryLabel(product.category || {}, t)}
             </div>
 
             <h1 className="mb-4 text-3xl font-bold leading-tight">
-              {product.name}
+              {productLabel(product, t)}
             </h1>
 
             <div className="mb-6 text-sm text-muted-foreground">
-              Поставщик:{" "}
+              {t("product.supplier")}:{" "}
               <span className="font-medium text-foreground">
                 {product.shop?.name || "—"}
               </span>
@@ -152,25 +151,25 @@ export default function ProductPage({
               <span className={stockClass}>{stockText}</span>
             </div>
 
-            {product.description && (
+            {productDescription(product, t) && (
               <p className="mb-8 leading-relaxed text-muted-foreground">
-                {product.description}
+                {productDescription(product, t)}
               </p>
             )}
 
             <div className="mt-auto space-y-6">
               <div className="text-3xl font-bold text-accent">
-                {formatMoney(product.priceCents)}
+                {format(product.priceCents, product.currency)}
               </div>
 
               <div className="flex flex-wrap gap-3">
                 <Button
                   size="lg"
                   disabled={available <= 0}
-                  onClick={() => void addItem(product.id)}
+                  onClick={() => void addItem(product.id, 1, available)}
                   className="min-w-[180px]"
                 >
-                  В корзину
+                  {t("product.addToBasket")}
                 </Button>
 
                 <Button
@@ -186,11 +185,11 @@ export default function ProductPage({
                       inWishlist && "fill-primary text-primary",
                     )}
                   />
-                  {inWishlist ? "В избранном" : "В избранное"}
+                  {inWishlist ? t("product.inWishlist") : t("product.wishlist")}
                 </Button>
 
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/">Продолжить покупки</Link>
+                  <Link href="/">{t("product.continue")}</Link>
                 </Button>
               </div>
 

@@ -4,15 +4,17 @@ import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantKycPage() {
+  const { t } = useI18n()
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["merchant", "kyc"],
     queryFn: () => api.merchantKyc(),
   })
 
   if (isLoading) {
-    return <p className="text-muted-foreground">Загрузка KYC…</p>
+    return <p className="text-muted-foreground">{t("merchant.kycLoading")}</p>
   }
 
   if (error) {
@@ -29,20 +31,22 @@ export default function MerchantKycPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">KYC / Верификация</h1>
+          <h1 className="text-2xl font-bold">{t("merchant.kycTitle")}</h1>
           <p className="text-muted-foreground">
             {shop?.name} ·{" "}
-            {shop?.verified ? "Магазин верифицирован" : "Ожидает проверки"}
+            {shop?.verified ? t("merchant.verified") : t("merchant.awaitingReview")}
           </p>
         </div>
         <Button variant="outline" onClick={() => void refetch()}>
-          Обновить
+          {t("common.refresh")}
         </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="text-sm text-muted-foreground">Статус магазина</div>
+          <div className="text-sm text-muted-foreground">
+            {t("merchant.shopStatus")}
+          </div>
           <div className="mt-1 text-xl font-semibold">
             {statusLabel(summary?.shopStatus || shop?.status || "—")}
           </div>
@@ -63,10 +67,12 @@ export default function MerchantKycPage() {
 
       {(shop?.kycNotes || shop?.rejectionReason) && (
         <div className="rounded-lg border border-border bg-secondary/40 p-4 text-sm">
-          {shop.kycNotes && <p>Заметки: {shop.kycNotes}</p>}
+          {shop.kycNotes && (
+            <p>{t("merchant.notesLabel", { notes: shop.kycNotes })}</p>
+          )}
           {shop.rejectionReason && (
             <p className="text-destructive">
-              Причина отклонения: {shop.rejectionReason}
+              {t("merchant.rejectionReason", { reason: shop.rejectionReason })}
             </p>
           )}
         </div>
@@ -76,10 +82,10 @@ export default function MerchantKycPage() {
         <table className="w-full text-sm">
           <thead className="bg-secondary/50 text-left text-muted-foreground">
             <tr>
-              <th className="px-4 py-3 font-medium">Тип</th>
-              <th className="px-4 py-3 font-medium">Файл</th>
-              <th className="px-4 py-3 font-medium">Статус</th>
-              <th className="px-4 py-3 font-medium">Дата</th>
+              <th className="px-4 py-3 font-medium">{t("admin.type")}</th>
+              <th className="px-4 py-3 font-medium">{t("merchant.file")}</th>
+              <th className="px-4 py-3 font-medium">{t("common.status")}</th>
+              <th className="px-4 py-3 font-medium">{t("common.date")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -99,7 +105,7 @@ export default function MerchantKycPage() {
                   colSpan={4}
                   className="px-4 py-10 text-center text-muted-foreground"
                 >
-                  Документов нет. Загрузите через API{" "}
+                  {t("merchant.noDocs")}{" "}
                   <code className="text-xs">POST /shops/:id/kyc</code>
                 </td>
               </tr>

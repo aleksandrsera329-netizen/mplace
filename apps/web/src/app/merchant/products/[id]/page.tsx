@@ -12,6 +12,7 @@ import {
 import { ProductStockManager } from "@/components/merchant/product-stock-manager"
 import { api } from "@/lib/api"
 import { toast } from "@/components/ui/toast"
+import { useI18n } from "@/i18n/store"
 
 export default function EditProductPage({
   params,
@@ -20,6 +21,7 @@ export default function EditProductPage({
 }) {
   const { id } = use(params)
   const router = useRouter()
+  const { t } = useI18n()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const { data: product, isLoading } = useQuery({
@@ -40,16 +42,16 @@ export default function EditProductPage({
         status: data.status,
       })
       toast({
-        title: "Успешно",
-        description: "Товар обновлён",
+        title: t("common.success"),
+        description: t("merchant.productUpdated"),
         type: "success",
       })
       router.push("/merchant/products")
     } catch (e) {
       toast({
-        title: "Ошибка",
+        title: t("common.error"),
         description:
-          e instanceof Error ? e.message : "Ошибка обновления товара",
+          e instanceof Error ? e.message : t("merchant.productUpdateError"),
         type: "error",
       })
     } finally {
@@ -58,11 +60,11 @@ export default function EditProductPage({
   }
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Загрузка…</div>
+    return <div className="text-muted-foreground">{t("common.loading")}</div>
   }
 
   if (!product) {
-    return <div>Товар не найден</div>
+    return <div>{t("product.notFound")}</div>
   }
 
   return (
@@ -72,10 +74,10 @@ export default function EditProductPage({
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к товарам
+        {t("common.back")}
       </Link>
 
-      <h1 className="text-3xl font-bold">Редактирование товара</h1>
+      <h1 className="text-3xl font-bold">{t("merchant.products.edit")}</h1>
 
       <ProductForm
         initialData={product}

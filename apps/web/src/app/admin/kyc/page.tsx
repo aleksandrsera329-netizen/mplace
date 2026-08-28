@@ -5,8 +5,10 @@ import { ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function AdminKycPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   const { data, isLoading, error } = useQuery({
@@ -32,15 +34,15 @@ export default function AdminKycPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">KYC</h1>
+        <h1 className="text-3xl font-bold">{t("admin.kyc.title")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Проверка документов продавцов
+          {t("admin.kycSubtitle")}
         </p>
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -57,7 +59,7 @@ export default function AdminKycPage() {
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="text-lg text-muted-foreground">
-            Нет документов на проверке
+            {t("admin.noKycDocs")}
           </p>
         </div>
       ) : (
@@ -65,12 +67,12 @@ export default function AdminKycPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Документ</th>
-                <th className="px-4 py-3 text-left font-medium">Магазин</th>
-                <th className="px-4 py-3 text-left font-medium">Тип</th>
-                <th className="px-4 py-3 text-left font-medium">Дата</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.document")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.shop")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("admin.type")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.date")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.status")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -109,7 +111,7 @@ export default function AdminKycPage() {
                             })
                           }
                         >
-                          Одобрить
+                          {t("admin.kyc.approve")}
                         </Button>
                         <Button
                           size="sm"
@@ -123,7 +125,7 @@ export default function AdminKycPage() {
                             })
                           }
                         >
-                          Отклонить
+                          {t("admin.kyc.reject")}
                         </Button>
                       </>
                     )}

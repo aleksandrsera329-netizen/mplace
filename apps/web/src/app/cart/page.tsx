@@ -6,48 +6,27 @@ import { ArrowLeft, Trash2, Minus, Plus } from "lucide-react"
 import { Header } from "@/components/header"
 import { Button } from "@/components/ui/button"
 import { useCartStore } from "@/store/cart"
-import { api } from "@/lib/api"
 import type { CartItem } from "@/lib/api"
-import { toast } from "@/components/ui/toast"
-
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
-}
+import { useI18n } from "@/i18n/store"
+import { useMoney } from "@/lib/money"
+import { productLabel } from "@/lib/format"
 
 export default function CartPage() {
-  const { items, itemCount, subtotalCents, isLoading, refresh } = useCartStore()
+  const {
+    items,
+    itemCount,
+    subtotalCents,
+    isLoading,
+    refresh,
+    updateQty,
+    removeItem,
+  } = useCartStore()
+  const { t } = useI18n()
+  const { format: formatMoney } = useMoney()
 
   useEffect(() => {
     void refresh()
   }, [refresh])
-
-  const updateQuantity = async (itemId: string, quantity: number) => {
-    try {
-      // Backend: PATCH quantity 0 removes the line
-      await api.updateCartItem(itemId, quantity <= 0 ? 0 : quantity)
-      await refresh()
-    } catch (e) {
-      console.error(e)
-      const msg =
-        e instanceof Error ? e.message : "Не удалось изменить количество"
-      toast({ title: "Ошибка", description: msg, type: "error" })
-    }
-  }
-
-  const removeItem = async (itemId: string) => {
-    try {
-      await api.updateCartItem(itemId, 0)
-      await refresh()
-    } catch (e) {
-      console.error(e)
-      const msg = e instanceof Error ? e.message : "Не удалось удалить позицию"
-      toast({ title: "Ошибка", description: msg, type: "error" })
-    }
-  }
 
   return (
     <div className="min-h-screen">
@@ -59,11 +38,11 @@ export default function CartPage() {
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Продолжить покупки
+          {t("cart.continue")}
         </Link>
 
         <h1 className="mb-8 text-3xl font-bold">
-          Корзина
+          {t("cart.title")}
           {itemCount > 0 && (
             <span className="ml-2 text-lg font-normal text-muted-foreground">
               ({itemCount})
@@ -82,9 +61,9 @@ export default function CartPage() {
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card py-20 text-center">
-            <p className="text-lg text-muted-foreground">Корзина пуста</p>
+            <p className="text-lg text-muted-foreground">{t("cart.emptyHint")}</p>
             <Button asChild className="mt-6">
-              <Link href="/">Перейти в каталог</Link>
+              <Link href="/">{t("cart.goCatalog")}</Link>
             </Button>
           </div>
         ) : (
@@ -96,7 +75,10 @@ export default function CartPage() {
                 const qty = item.quantity || 1
                 const lineTotal = price * qty
                 const productId = product?.id || item.productId
-                const productName = product?.name || "Товар"
+                const productName = product
+                  ? productLabel(product, t)
+                  : t("common.name")
+                const lineCurrency = product?.currency
                 const imageUrl = product?.imageUrl
 
                 return (
@@ -129,7 +111,7 @@ export default function CartPage() {
                         <span className="font-medium">{productName}</span>
                       )}
                       <div className="mt-1 text-sm text-muted-foreground">
-                        {formatMoney(price)}
+                        {formatMoney(price, lineCurrency)}
                       </div>
                     </div>
 
@@ -138,8 +120,8 @@ export default function CartPage() {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => void updateQuantity(item.id, qty - 1)}
-                        aria-label="Уменьшить"
+                        onClick={() => void updateQty(item.id, qty - 1)}
+                        aria-label={t("cart.decrease")}
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </Button>
@@ -148,15 +130,19 @@ export default function CartPage() {
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => void updateQuantity(item.id, qty + 1)}
-                        aria-label="Увеличить"
+                        disabled={
+                          typeof product?.stock === "number" &&
+                          qty >= product.stock
+                        }
+                        onClick={() => void updateQty(item.id, qty + 1)}
+                        aria-label={t("cart.increase")}
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </Button>
                     </div>
 
                     <div className="min-w-[5rem] text-right font-semibold">
-                      {formatMoney(lineTotal)}
+                      {formatMoney(lineTotal, lineCurrency)}
                     </div>
 
                     <Button
@@ -164,8 +150,8 @@ export default function CartPage() {
                       size="icon"
                       className="text-muted-foreground hover:text-danger"
                       onClick={() => void removeItem(item.id)}
-                      title="Удалить"
-                      aria-label="Удалить"
+                      title={t("cart.remove")}
+                      aria-label={t("cart.remove")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -175,26 +161,22 @@ export default function CartPage() {
             </div>
 
             <div className="h-fit rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 text-lg font-semibold">Итого</h2>
+              <h2 className="mb-4 text-lg font-semibold">{t("cart.total")}</h2>
 
               <div className="mb-2 flex justify-between text-sm text-muted-foreground">
-                <span>Позиций</span>
+                <span>{t("cart.lines")}</span>
                 <span>{itemCount}</span>
               </div>
               <div className="mb-6 flex justify-between text-xl font-bold">
-                <span>Сумма</span>
+                <span>{t("cart.amount")}</span>
                 <span className="text-accent">
                   {formatMoney(subtotalCents)}
                 </span>
               </div>
 
               <Button className="w-full" size="lg" asChild>
-                <Link href="/checkout">Оформить заказ</Link>
+                <Link href="/checkout">{t("cart.checkoutBtn")}</Link>
               </Button>
-
-              <p className="mt-4 text-center text-xs text-muted-foreground">
-                После оформления поставщик получит вашу заявку
-              </p>
             </div>
           </div>
         )}

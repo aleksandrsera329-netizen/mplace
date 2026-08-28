@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { FolderTree, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
+import { useI18n } from "@/i18n/store"
 
 function asList(data: unknown): Array<{
   id: string
@@ -20,6 +21,7 @@ function asList(data: unknown): Array<{
 }
 
 export default function AdminCategoriesPage() {
+  const { t } = useI18n()
   const queryClient = useQueryClient()
   const [name, setName] = useState("")
 
@@ -40,9 +42,9 @@ export default function AdminCategoriesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Категории</h1>
+        <h1 className="text-3xl font-bold">{t("admin.categories")}</h1>
         <p className="mt-1 text-muted-foreground">
-          Управление категориями каталога
+          {t("admin.categoriesSubtitle")}
         </p>
       </div>
 
@@ -50,7 +52,7 @@ export default function AdminCategoriesPage() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Название новой категории"
+          placeholder={t("admin.categoryNamePh")}
           className="max-w-md flex-1 rounded-lg border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-primary"
         />
         <Button
@@ -58,20 +60,20 @@ export default function AdminCategoriesPage() {
           disabled={!name.trim() || createMutation.isPending}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Добавить
+          {t("common.add")}
         </Button>
       </div>
 
       {error && (
         <p className="mb-4 text-sm text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
       {createMutation.isError && (
         <p className="mb-4 text-sm text-danger">
           {createMutation.error instanceof Error
             ? createMutation.error.message
-            : "Не удалось создать"}
+            : t("admin.createError")}
         </p>
       )}
 
@@ -87,15 +89,15 @@ export default function AdminCategoriesPage() {
       ) : categories.length === 0 ? (
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <FolderTree className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Категорий пока нет</p>
+          <p className="text-lg text-muted-foreground">{t("admin.noCategories")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Название</th>
-                <th className="px-4 py-3 text-left font-medium">Товаров</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.name")}</th>
+                <th className="px-4 py-3 text-left font-medium">{t("common.productsCount")}</th>
                 <th className="px-4 py-3 text-left font-medium">ID</th>
               </tr>
             </thead>

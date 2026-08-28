@@ -1,6 +1,23 @@
 import { create } from "zustand"
 import { api, type CartItem } from "@/lib/api"
 import { toast } from "@/components/ui/toast"
+import { translate, useI18n } from "@/i18n/store"
+
+function t(key: string) {
+  return translate(useI18n.getState().locale, key)
+}
+
+function cartErrorMessage(e: unknown) {
+  const raw = e instanceof Error ? e.message : ""
+  if (/insufficient stock/i.test(raw)) return t("cart.insufficientStock")
+  return raw || t("product.addError")
+}
+
+function lineForProduct(items: CartItem[], productId: string) {
+  return items.find(
+    (i) => i.productId === productId || i.product?.id === productId,
+  )
+}
 
 interface CartState {
   items: CartItem[]
@@ -12,7 +29,13 @@ interface CartState {
   close: () => void
   toggle: () => void
   refresh: () => Promise<void>
-  addItem: (productId: string, quantity?: number) => Promise<void>
+  addItem: (
+    productId: string,
+    quantity?: number,
+    maxStock?: number,
+  ) => Promise<void>
+  updateQty: (itemId: string, quantity: number) => Promise<void>
+  removeItem: (itemId: string) => Promise<void>
   clear: () => Promise<void>
 }
 
@@ -44,27 +67,56 @@ export const useCartStore = create<CartState>((set, get) => ({
     }
   },
 
-  addItem: async (productId: string, quantity = 1) => {
+  addItem: async (productId, quantity = 1, maxStock) => {
+    const existing = lineForProduct(get().items, productId)
+    const have = existing?.quantity ?? 0
+    const cap = maxStock ?? existing?.product?.stock
+    if (typeof cap === "number" && have + quantity > cap) {
+      get().open()
+      toast({
+        title: t("common.error"),
+        description: t("cart.maxInRequest"),
+        type: "error",
+      })
+      return
+    }
     try {
       await api.addToCart(productId, quantity)
       await get().refresh()
       get().open()
-      const { t } = await import("@/i18n/store").then((m) => ({
-        t: m.useI18n.getState().t,
-      }))
-      toast({
-        title: t("common.success"),
-        description: t("product.added"),
-        type: "success",
-      })
     } catch (e) {
       console.error("Add to cart error", e)
-      const { t } = await import("@/i18n/store").then((m) => ({
-        t: m.useI18n.getState().t,
-      }))
-      const msg =
-        e instanceof Error ? e.message : t("product.addError")
-      toast({ title: t("common.error"), description: msg, type: "error" })
+      toast({
+        title: t("common.error"),
+        description: cartErrorMessage(e),
+        type: "error",
+      })
+    }
+  },
+
+  updateQty: async (itemId, quantity) => {
+    try {
+      await api.updateCartItem(itemId, quantity <= 0 ? 0 : quantity)
+      await get().refresh()
+    } catch (e) {
+      toast({
+        title: t("common.error"),
+        description: cartErrorMessage(e),
+        type: "error",
+      })
+    }
+  },
+
+  removeItem: async (itemId) => {
+    try {
+      await api.removeFromCart(itemId)
+      await get().refresh()
+    } catch (e) {
+      toast({
+        title: t("common.error"),
+        description: cartErrorMessage(e),
+        type: "error",
+      })
     }
   },
 

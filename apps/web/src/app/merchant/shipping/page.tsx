@@ -32,7 +32,7 @@ function MerchantShippingInner() {
     description: "",
   })
   const [zoneForm, setZoneForm] = useState({
-    name: "Москва и МО",
+    name: t("merchant.moscowMO"),
     countries: "RU",
     regions: "Moscow, Moscow Oblast",
   })
@@ -61,7 +61,7 @@ function MerchantShippingInner() {
       queryClient.invalidateQueries({ queryKey: ["shipping-methods"] })
       toast({
         title: t("common.success"),
-        description: "Метод доставки создан",
+        description: t("merchant.methodCreated"),
         type: "success",
       })
       setIsCreating(false)
@@ -93,7 +93,7 @@ function MerchantShippingInner() {
       queryClient.invalidateQueries({ queryKey: ["shipping-zones"] })
       toast({
         title: t("common.success"),
-        description: "Зона создана",
+        description: t("merchant.zoneCreated"),
         type: "success",
       })
       setShowZone(false)
@@ -116,7 +116,7 @@ function MerchantShippingInner() {
       queryClient.invalidateQueries({ queryKey: ["shipping-methods"] })
       toast({
         title: t("common.success"),
-        description: "Тариф создан",
+        description: t("merchant.rateCreated"),
         type: "success",
       })
       setShowRate(false)
@@ -129,29 +129,29 @@ function MerchantShippingInner() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Доставка</h1>
+          <h1 className="text-3xl font-bold">{t("nav.shipping")}</h1>
           <p className="mt-1 text-muted-foreground">
-            Методы, зоны и тарифы доставки
+            {t("merchant.shippingSubtitle")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setShowZone(true)}>
             <MapPin className="me-2 h-4 w-4" />
-            Зона
+            {t("merchant.shippingZone")}
           </Button>
           <Button variant="outline" onClick={() => setShowRate(true)}>
-            Тариф
+            {t("merchant.shippingRate")}
           </Button>
           <Button onClick={() => setIsCreating(true)}>
             <Plus className="me-2 h-4 w-4" />
-            Метод
+            {t("shipping.method")}
           </Button>
         </div>
       </div>
 
       {isCreating && (
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Новый метод доставки</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t("merchant.newMethod")}</h2>
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -161,16 +161,16 @@ function MerchantShippingInner() {
             className="grid gap-4 sm:grid-cols-2"
           >
             <div className="space-y-2">
-              <Label>Название *</Label>
+              <Label>{t("common.name")} *</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Автотранспорт"
+                placeholder={t("merchant.methodNamePh")}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label>Код</Label>
+              <Label>{t("merchant.warehouseCode")}</Label>
               <Input
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
@@ -178,13 +178,13 @@ function MerchantShippingInner() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label>Описание</Label>
+              <Label>{t("rfq.description")}</Label>
               <Input
                 value={form.description}
                 onChange={(e) =>
                   setForm({ ...form, description: e.target.value })
                 }
-                placeholder="Доставка фурой до объекта"
+                placeholder={t("merchant.methodDescPh")}
               />
             </div>
             <div className="flex gap-3 sm:col-span-2">
@@ -192,7 +192,7 @@ function MerchantShippingInner() {
                 {createMutation.isPending && (
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 )}
-                Создать
+                {t("common.create")}
               </Button>
               <Button
                 type="button"
@@ -208,10 +208,12 @@ function MerchantShippingInner() {
 
       {showZone && (
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Новая зона</h2>
+          <h2 className="mb-4 text-lg font-semibold">
+            {t("merchant.shippingZone")}
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Название</Label>
+              <Label>{t("common.name")}</Label>
               <Input
                 value={zoneForm.name}
                 onChange={(e) =>
@@ -220,7 +222,7 @@ function MerchantShippingInner() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Страны (через запятую)</Label>
+              <Label>{t("checkout.taxCountry")}</Label>
               <Input
                 value={zoneForm.countries}
                 onChange={(e) =>
@@ -230,7 +232,7 @@ function MerchantShippingInner() {
               />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label>Регионы (через запятую)</Label>
+              <Label>{t("checkout.region")}</Label>
               <Input
                 value={zoneForm.regions}
                 onChange={(e) =>
@@ -244,7 +246,7 @@ function MerchantShippingInner() {
                 onClick={() => zoneMutation.mutate()}
                 disabled={zoneMutation.isPending}
               >
-                Создать зону
+                {t("common.create")}
               </Button>
               <Button variant="outline" onClick={() => setShowZone(false)}>
                 {t("common.cancel")}
@@ -256,10 +258,12 @@ function MerchantShippingInner() {
 
       {showRate && (
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Новый тариф</h2>
+          <h2 className="mb-4 text-lg font-semibold">
+            {t("merchant.shippingRate")}
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Метод</Label>
+              <Label>{t("shipping.method")}</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 value={rateForm.shippingMethodId}
@@ -270,7 +274,7 @@ function MerchantShippingInner() {
                   })
                 }
               >
-                <option value="">Выберите метод</option>
+                <option value="">{t("shipping.method")}</option>
                 {methods.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
@@ -279,7 +283,7 @@ function MerchantShippingInner() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Зона</Label>
+              <Label>{t("merchant.shippingZone")}</Label>
               <select
                 className="flex h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 value={rateForm.shippingZoneId}
@@ -287,7 +291,7 @@ function MerchantShippingInner() {
                   setRateForm({ ...rateForm, shippingZoneId: e.target.value })
                 }
               >
-                <option value="">Выберите зону</option>
+                <option value="">{t("merchant.shippingZone")}</option>
                 {zones.map((z) => (
                   <option key={z.id} value={z.id}>
                     {z.name}
@@ -296,7 +300,7 @@ function MerchantShippingInner() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Цена (копейки)</Label>
+              <Label>{t("common.price")}</Label>
               <Input
                 value={rateForm.priceCents}
                 onChange={(e) =>
@@ -305,7 +309,7 @@ function MerchantShippingInner() {
               />
             </div>
             <div className="space-y-2">
-              <Label>За кг (копейки)</Label>
+              <Label>{t("common.price")} / kg</Label>
               <Input
                 value={rateForm.pricePerKgCents}
                 onChange={(e) =>
@@ -322,7 +326,7 @@ function MerchantShippingInner() {
                   !rateForm.shippingZoneId
                 }
               >
-                Создать тариф
+                {t("common.create")}
               </Button>
               <Button variant="outline" onClick={() => setShowRate(false)}>
                 {t("common.cancel")}
@@ -334,7 +338,9 @@ function MerchantShippingInner() {
 
       {zones.length > 0 && (
         <div>
-          <h2 className="mb-3 text-lg font-semibold">Зоны</h2>
+          <h2 className="mb-3 text-lg font-semibold">
+            {t("merchant.shippingZone")}
+          </h2>
           <div className="flex flex-wrap gap-2">
             {zones.map((z) => (
               <span
@@ -355,9 +361,7 @@ function MerchantShippingInner() {
       ) : methods.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-20 text-center">
           <Truck className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">
-            Методов доставки пока нет
-          </p>
+          <p className="text-lg text-muted-foreground">{t("common.noData")}</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -383,9 +387,9 @@ function MerchantShippingInner() {
                     </p>
                   )}
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Тарифов: {method.rates?.length || 0}
+                    {t("merchant.shippingRate")}: {method.rates?.length || 0}
                     {method.rates && method.rates.length > 0
-                      ? ` · от ${formatMoney(
+                      ? ` · ${formatMoney(
                           Math.min(
                             ...(method.rates as { priceCents?: number }[]).map(
                               (r) => r.priceCents || 0,

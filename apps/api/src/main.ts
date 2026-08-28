@@ -159,9 +159,10 @@ async function bootstrap() {
     process.env.FRONTEND_DIR ||
     '';
   const serveFrontend =
-    config.get<string>('SERVE_FRONTEND') === 'true' ||
-    process.env.SERVE_FRONTEND === 'true' ||
-    !!frontendDir;
+    process.env.SERVE_FRONTEND !== 'false' &&
+    (config.get<string>('SERVE_FRONTEND') === 'true' ||
+      process.env.SERVE_FRONTEND === 'true' ||
+      !!frontendDir);
   const resolvedFrontend = frontendDir
     ? frontendDir
     : join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src

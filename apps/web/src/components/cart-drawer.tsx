@@ -1,25 +1,28 @@
 "use client"
 
 import { useEffect } from "react"
-import { X } from "lucide-react"
+import { Minus, Plus, Trash2, X } from "lucide-react"
 import Link from "next/link"
 import { useCartStore } from "@/store/cart"
 import { Button } from "@/components/ui/button"
 import type { CartItem } from "@/lib/api"
 import { useI18n } from "@/i18n/store"
-
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat("ru-RU", {
-    style: "currency",
-    currency: "RUB",
-    maximumFractionDigits: 0,
-  }).format(cents / 100)
-}
+import { useMoney } from "@/lib/money"
+import { productLabel } from "@/lib/format"
 
 export function CartDrawer() {
-  const { isOpen, close, items, subtotalCents, itemCount, refresh } =
-    useCartStore()
+  const {
+    isOpen,
+    close,
+    items,
+    subtotalCents,
+    itemCount,
+    refresh,
+    updateQty,
+    removeItem,
+  } = useCartStore()
   const { t } = useI18n()
+  const { format: formatMoney } = useMoney()
 
   useEffect(() => {
     void refresh()
@@ -60,6 +63,9 @@ export function CartDrawer() {
             <div className="space-y-4">
               {items.map((item: CartItem) => {
                 const unit = item.product?.priceCents ?? item.priceCents ?? 0
+                const stock = item.product?.stock
+                const atMax =
+                  typeof stock === "number" && item.quantity >= stock
                 return (
                   <div
                     key={item.id}
@@ -67,10 +73,51 @@ export function CartDrawer() {
                   >
                     <div className="flex-1">
                       <div className="font-medium">
-                        {item.product?.name || "—"}
+                        {item.product ? productLabel(item.product, t) : "—"}
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
-                        {item.quantity} × {formatMoney(unit)}
+                        {formatMoney(unit)}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={t("cart.decrease")}
+                          disabled={item.quantity <= 1}
+                          onClick={() =>
+                            void updateQty(item.id, item.quantity - 1)
+                          }
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </Button>
+                        <span className="min-w-6 text-center text-sm font-medium">
+                          {item.quantity}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          aria-label={t("cart.increase")}
+                          disabled={atMax}
+                          onClick={() =>
+                            void updateQty(item.id, item.quantity + 1)
+                          }
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground"
+                          aria-label={t("cart.remove")}
+                          onClick={() => void removeItem(item.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
                     </div>
                     <div className="text-sm font-semibold">
@@ -83,7 +130,7 @@ export function CartDrawer() {
           )}
         </div>
 
-        <div className="border-t border-border p-5">
+        <div className="relative z-10 border-t border-border bg-card p-5">
           <div className="mb-4 flex justify-between text-lg font-bold">
             <span>{t("cart.total")}</span>
             <span>{formatMoney(subtotalCents)}</span>
@@ -99,9 +146,9 @@ export function CartDrawer() {
                   {t("cart.checkout")}
                 </Link>
               </Button>
-              <Button variant="outline" className="w-full" asChild>
+              <Button variant="outline" className="w-full bg-card" asChild>
                 <Link href="/cart" onClick={close}>
-                  Открыть корзину
+                  {t("cart.openCart")}
                 </Link>
               </Button>
             </div>

@@ -8,9 +8,10 @@ import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/store/auth"
+import { useI18n } from "@/i18n/store"
 
 const schema = z.object({
-  name: z.string().min(1, "Укажите имя"),
+  name: z.string().min(1),
   phone: z.string().optional(),
   company: z.string().optional(),
 })
@@ -19,6 +20,7 @@ type FormData = z.infer<typeof schema>
 
 export default function ProfilePage() {
   const { user, setUser, refresh } = useAuthStore()
+  const { t } = useI18n()
   const [message, setMessage] = useState("")
   const [error, setError] = useState("")
 
@@ -52,20 +54,20 @@ export default function ProfilePage() {
       })
       setUser(updated)
       await refresh()
-      setMessage("Профиль сохранён")
+      setMessage(t("profile.saved"))
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось сохранить")
+      setError(e instanceof Error ? e.message : t("profile.saveError"))
     }
   }
 
   return (
-    <AccountShell title="Профиль">
+    <AccountShell title={t("account.profile")}>
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="max-w-lg space-y-5 rounded-xl border border-border bg-card p-6"
       >
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Email</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("auth.email")}</label>
           <input
             value={user?.email || ""}
             disabled
@@ -73,17 +75,17 @@ export default function ProfilePage() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Имя *</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("account.name")} *</label>
           <input
             {...register("name")}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
           />
           {errors.name && (
-            <p className="mt-1 text-xs text-danger">{errors.name.message}</p>
+            <p className="mt-1 text-xs text-danger">{t("auth.nameRequired")}</p>
           )}
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Телефон</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("account.phone")}</label>
           <input
             {...register("phone")}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
@@ -91,7 +93,7 @@ export default function ProfilePage() {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium">Компания</label>
+          <label className="mb-1.5 block text-sm font-medium">{t("account.company")}</label>
           <input
             {...register("company")}
             className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
@@ -102,7 +104,7 @@ export default function ProfilePage() {
         {error && <p className="text-sm text-danger">{error}</p>}
 
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Сохранение…" : "Сохранить"}
+          {isSubmitting ? t("form.saving") : t("common.save")}
         </Button>
       </form>
     </AccountShell>

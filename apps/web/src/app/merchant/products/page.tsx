@@ -6,13 +6,14 @@ import Link from "next/link"
 import { Plus, Pencil, Trash2, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { api, type ProductRow } from "@/lib/api"
-import { formatMoney, statusLabel } from "@/lib/format"
+import { formatMoney, statusLabel, useLivePrices, productLabel } from "@/lib/format"
 import { useI18n } from "@/i18n/store"
 
 export default function MerchantProductsPage() {
   const queryClient = useQueryClient()
   const [search, setSearch] = useState("")
   const { t } = useI18n()
+  useLivePrices()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["merchant-products"],
@@ -81,11 +82,11 @@ export default function MerchantProductsPage() {
         <div className="rounded-2xl border border-border bg-card py-20 text-center">
           <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
           <p className="mb-6 text-lg text-muted-foreground">
-            {search ? "Ничего не найдено" : "Товаров пока нет"}
+            {search ? t("catalog.empty") : t("merchant.noProducts")}
           </p>
           {!search && (
             <Button asChild>
-              <Link href="/merchant/products/new">Добавить первый товар</Link>
+              <Link href="/merchant/products/new">{t("merchant.products.add")}</Link>
             </Button>
           )}
         </div>
@@ -94,12 +95,22 @@ export default function MerchantProductsPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-secondary/50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium">Товар</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.name")}
+                </th>
                 <th className="px-4 py-3 text-left font-medium">SKU</th>
-                <th className="px-4 py-3 text-left font-medium">Цена</th>
-                <th className="px-4 py-3 text-left font-medium">Остаток</th>
-                <th className="px-4 py-3 text-left font-medium">Статус</th>
-                <th className="px-4 py-3 text-right font-medium">Действия</th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.price")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("merchant.warehouse.stock")}
+                </th>
+                <th className="px-4 py-3 text-left font-medium">
+                  {t("common.status")}
+                </th>
+                <th className="px-4 py-3 text-right font-medium">
+                  {t("common.actions")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -109,7 +120,7 @@ export default function MerchantProductsPage() {
                   className="border-b border-border last:border-0 hover:bg-secondary/30"
                 >
                   <td className="px-4 py-3">
-                    <div className="font-medium">{product.name}</div>
+                    <div className="font-medium">{productLabel(product)}</div>
                     <div className="text-xs text-muted-foreground">
                       {product.category?.name || "—"}
                     </div>
@@ -151,7 +162,7 @@ export default function MerchantProductsPage() {
                         className="text-danger hover:text-danger"
                         disabled={deleteMutation.isPending}
                         onClick={() => {
-                          if (confirm("Удалить товар?")) {
+                          if (confirm(t("merchant.products.deleteConfirm"))) {
                             deleteMutation.mutate(product.id)
                           }
                         }}

@@ -20,9 +20,11 @@ services:
       - key: ALLOW_PILOT
         value: "true"
       - key: SERVE_FRONTEND
-        value: "true"
-      - key: FRONTEND_DIR
-        value: "/app/frontend"
+        value: "false"
+      - key: APP_PUBLIC_URL
+        value: "https://mplace-vu4o.onrender.com"
+      - key: NEXT_PUBLIC_API_URL
+        value: "/api"
       - key: DEMO_PASSWORD
         sync: false
       - key: PAYMENT_PROVIDER
@@ -38,4 +40,4 @@ services:
         sync: false
       # After you know frontend URL (Vercel / sana.tmweb.ru):
       - key: CORS_ORIGINS
-        value: https://sana.tmweb.ru,https://www.sana.tmweb.ru,http://localhost:3000,http://127.0.0.1:3000
+        value: https://mplace-vu4o.onrender.com,https://sana.tmweb.ru,https://www.sana.tmweb.ru,http://localhost:3000,http://127.0.0.1:3000,http://127.0.0.1:3002

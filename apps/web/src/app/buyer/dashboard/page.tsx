@@ -9,12 +9,16 @@ import {
   ArrowRight,
 } from "lucide-react"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, statusLabel } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { useAuthStore } from "@/store/auth"
+import { useI18n } from "@/i18n/store"
+import { useMoney } from "@/lib/money"
 
 export default function BuyerDashboardPage() {
   const { user } = useAuthStore()
+  const { t } = useI18n()
+  const { format } = useMoney()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["buyer", "dashboard"],
@@ -23,14 +27,14 @@ export default function BuyerDashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground">Загрузка кабинета…</div>
+      <div className="text-muted-foreground">{t("buyer.loading")}</div>
     )
   }
 
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        {(error as Error).message || "Не удалось загрузить dashboard"}
+        {(error as Error).message || t("buyer.loadError")}
       </div>
     )
   }
@@ -43,34 +47,34 @@ export default function BuyerDashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">
-          Здравствуйте{user?.name ? `, ${user.name}` : ""}
+          {t("buyer.hello")}{user?.name ? `, ${user.name}` : ""}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Обзор заказов, RFQ и избранного
+          {t("buyer.overviewSubtitle")}
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Активные заказы"
+          title={t("buyer.activeOrders")}
           value={stats?.activeOrders ?? 0}
           href="/buyer/orders?status=active"
           icon={ShoppingCart}
         />
         <StatCard
-          title="Открытые RFQ"
+          title={t("buyer.openRfqs")}
           value={stats?.pendingRfqs ?? 0}
           href="/buyer/rfqs?status=open"
           icon={MessageSquare}
         />
         <StatCard
-          title="С предложениями"
+          title={t("buyer.withOffers")}
           value={stats?.rfqsWithOffers ?? 0}
           href="/buyer/rfqs?status=offers"
           icon={MessageSquare}
         />
         <StatCard
-          title="Избранное"
+          title={t("header.wishlist")}
           value={stats?.wishlistCount ?? 0}
           href="/wishlist"
           icon={Heart}
@@ -80,19 +84,19 @@ export default function BuyerDashboardPage() {
       <section className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="font-semibold">Последние заказы</h2>
+            <h2 className="font-semibold">{t("buyer.recentOrders")}</h2>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/buyer/orders">
-                Все <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                {t("buyer.all")} <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
           <div className="divide-y divide-border">
             {recentOrders.length === 0 && (
               <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-                Заказов пока нет.{" "}
+                {t("buyer.noOrdersHint")}{" "}
                 <Link href="/" className="text-primary underline">
-                  В каталог
+                  {t("buyer.toCatalog")}
                 </Link>
               </p>
             )}
@@ -111,7 +115,7 @@ export default function BuyerDashboardPage() {
                   </div>
                 </div>
                 <div className="shrink-0 text-sm font-semibold">
-                  {formatMoney(o.totalCents, o.currency || "RUB")}
+                  {format(o.totalCents, o.currency || "RUB")}
                 </div>
               </Link>
             ))}
@@ -120,19 +124,19 @@ export default function BuyerDashboardPage() {
 
         <div className="rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
-            <h2 className="font-semibold">Последние RFQ</h2>
+            <h2 className="font-semibold">{t("buyer.recentRfqs")}</h2>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/buyer/rfqs">
-                Все <ArrowRight className="ml-1 h-3.5 w-3.5" />
+                {t("buyer.all")} <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </Button>
           </div>
           <div className="divide-y divide-border">
             {recentRfqs.length === 0 && (
               <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-                RFQ нет.{" "}
+                {t("buyer.noRfqs")}{" "}
                 <Link href="/rfq/new" className="text-primary underline">
-                  Создать запрос
+                  {t("buyer.createRequest")}
                 </Link>
               </p>
             )}
@@ -147,7 +151,7 @@ export default function BuyerDashboardPage() {
                   <div className="text-xs text-muted-foreground">
                     {r.number} · {statusLabel(r.status)}
                     {r._count?.offers != null
-                      ? ` · офферов: ${r._count.offers}`
+                      ? ` · ${t("buyer.offersCount", { n: r._count.offers })}`
                       : ""}
                   </div>
                 </div>

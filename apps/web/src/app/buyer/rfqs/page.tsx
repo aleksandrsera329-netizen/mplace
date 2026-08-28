@@ -7,17 +7,18 @@ import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-
-const filters = [
-  { key: "all", label: "Все" },
-  { key: "open", label: "Открытые" },
-  { key: "offers", label: "С предложениями" },
-  { key: "awarded", label: "Awarded" },
-  { key: "draft", label: "Черновики" },
-]
+import { useI18n } from "@/i18n/store"
 
 export default function BuyerRfqsPage() {
   const search = useSearchParams()
+  const { t } = useI18n()
+  const filters = [
+    { key: "all", label: t("common.all") },
+    { key: "open", label: t("status.OPEN") },
+    { key: "offers", label: t("status.QUOTED") },
+    { key: "awarded", label: t("status.AWARDED") },
+    { key: "draft", label: t("status.DRAFT") },
+  ]
   const status = search.get("status") || "all"
 
   const { data, isLoading, error } = useQuery({
@@ -29,11 +30,11 @@ export default function BuyerRfqsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Мои RFQ</h1>
-          <p className="text-muted-foreground">Запросы предложений поставщикам</p>
+          <h1 className="text-2xl font-bold">{t("buyer.rfqsTitle")}</h1>
+          <p className="text-muted-foreground">{t("buyer.rfqsSubtitle")}</p>
         </div>
         <Button asChild>
-          <Link href="/rfq/new">Новый RFQ</Link>
+          <Link href="/rfq/new">{t("buyer.newRfq")}</Link>
         </Button>
       </div>
 
@@ -56,7 +57,7 @@ export default function BuyerRfqsPage() {
         ))}
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-sm text-destructive">{(error as Error).message}</p>
       )}
@@ -78,7 +79,7 @@ export default function BuyerRfqsPage() {
               </div>
               <div className="text-sm text-muted-foreground">
                 {typeof r._count?.offers === "number"
-                  ? `Офферов: ${r._count.offers}`
+                  ? t("rfq.offersCount", { n: r._count.offers })
                   : null}
               </div>
             </div>
@@ -86,9 +87,9 @@ export default function BuyerRfqsPage() {
         ))}
         {!isLoading && (data?.items?.length ?? 0) === 0 && (
           <p className="py-10 text-center text-muted-foreground">
-            RFQ нет —{" "}
+            {t("buyer.noRfqs")}{" "}
             <Link href="/rfq/new" className="text-primary underline">
-              создать
+              {t("buyer.createRequest")}
             </Link>
           </p>
         )}

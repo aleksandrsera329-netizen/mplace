@@ -6,7 +6,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { AccountShell } from "@/components/account-shell"
 import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, formatMoney, statusLabel, productLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function OrderDetailPage({
   params,
@@ -15,6 +16,7 @@ export default function OrderDetailPage({
 }) {
   const { id } = use(params)
   const qc = useQueryClient()
+  const { t } = useI18n()
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ["order", id],
@@ -41,17 +43,17 @@ export default function OrderDetailPage({
 
   return (
     <AccountShell
-      title={order ? `Заказ ${order.orderNumber}` : "Заказ"}
+      title={order ? t("order.number", { n: order.orderNumber }) : t("order.title")}
       actions={
         <Button asChild variant="outline" size="sm">
-          <Link href="/orders">К списку</Link>
+          <Link href="/orders">{t("orders.back")}</Link>
         </Button>
       }
     >
-      {isLoading && <p className="text-muted-foreground">Загрузка…</p>}
+      {isLoading && <p className="text-muted-foreground">{t("common.loading")}</p>}
       {error && (
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Ошибка"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       )}
 
@@ -60,7 +62,7 @@ export default function OrderDetailPage({
           <div className="rounded-xl border border-border bg-card p-5">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="text-sm text-muted-foreground">Статус</div>
+                <div className="text-sm text-muted-foreground">{t("common.status")}</div>
                 <div className="text-xl font-semibold">
                   {statusLabel(order.status)}
                 </div>
@@ -69,7 +71,7 @@ export default function OrderDetailPage({
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm text-muted-foreground">Итого</div>
+                <div className="text-sm text-muted-foreground">{t("checkout.total")}</div>
                 <div className="text-2xl font-bold text-accent">
                   {formatMoney(order.totalCents, order.currency)}
                 </div>
@@ -79,7 +81,7 @@ export default function OrderDetailPage({
             <div className="mt-4 space-y-1 rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
               {order.subtotalCents != null && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Подытог</span>
+                  <span>{t("checkout.subtotal")}</span>
                   <span>
                     {formatMoney(order.subtotalCents, order.currency)}
                   </span>
@@ -87,7 +89,7 @@ export default function OrderDetailPage({
               )}
               {(order.taxCents ?? 0) > 0 && (
                 <div className="flex justify-between text-muted-foreground">
-                  <span>НДС / VAT</span>
+                  <span>{t("checkout.vat")}</span>
                   <span>{formatMoney(order.taxCents!, order.currency)}</span>
                 </div>
               )}
@@ -95,13 +97,13 @@ export default function OrderDetailPage({
                 order.shippingMethod) && (
                 <div className="flex justify-between text-muted-foreground">
                   <span>
-                    Доставка
+                    {t("checkout.shipping")}
                     {order.shippingMethod?.name
                       ? ` (${order.shippingMethod.name})`
                       : ""}
                     {order.shippingDaysMin != null &&
                     order.shippingDaysMax != null
-                      ? ` ${order.shippingDaysMin}–${order.shippingDaysMax} дн.`
+                      ? ` ${t("shipping.days", { min: order.shippingDaysMin, max: order.shippingDaysMax })}`
                       : ""}
                   </span>
                   <span>
@@ -113,7 +115,7 @@ export default function OrderDetailPage({
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-2 font-semibold">
-                <span>Итого</span>
+                <span>{t("checkout.total")}</span>
                 <span>
                   {formatMoney(order.totalCents, order.currency)}
                 </span>
@@ -123,31 +125,30 @@ export default function OrderDetailPage({
             {order.status === "PENDING_PAYMENT" && (
               <div className="mt-5 border-t border-border pt-4">
                 <p className="mb-3 text-sm text-muted-foreground">
-                  Оплата (demo): payment-intent + dev-confirm при локальном
-                  режиме.
+                  {t("order.payDemoHint")}
                 </p>
                 <Button
                   onClick={() => payMutation.mutate()}
                   disabled={payMutation.isPending}
                 >
-                  {payMutation.isPending ? "Оплата…" : "Оплатить (demo)"}
+                  {payMutation.isPending ? t("order.paying") : t("order.payDemo")}
                 </Button>
                 {payMutation.isError && (
                   <p className="mt-2 text-sm text-danger">
                     {payMutation.error instanceof Error
                       ? payMutation.error.message
-                      : "Ошибка оплаты"}
+                      : t("order.payError")}
                   </p>
                 )}
                 {payMutation.isSuccess && (
-                  <p className="mt-2 text-sm text-success">Статус обновлён</p>
+                  <p className="mt-2 text-sm text-success">{t("order.statusUpdated")}</p>
                 )}
               </div>
             )}
           </div>
 
           <div className="rounded-xl border border-border bg-card p-5">
-            <h2 className="mb-4 font-semibold">Позиции</h2>
+            <h2 className="mb-4 font-semibold">{t("rfq.items")}</h2>
             <ul className="divide-y divide-border">
               {(order.items || []).map((item) => (
                 <li
@@ -156,7 +157,10 @@ export default function OrderDetailPage({
                 >
                   <div>
                     <div className="font-medium">
-                      {item.productName || item.name || "Позиция"}
+                      {productLabel({
+                        name: item.productName || item.name,
+                        productName: item.productName,
+                      })}
                     </div>
                     <div className="text-muted-foreground">
                       {item.quantity} × {formatMoney(item.unitPriceCents)}
@@ -176,7 +180,7 @@ export default function OrderDetailPage({
 
           {order.statusHistory && order.statusHistory.length > 0 && (
             <div className="rounded-xl border border-border bg-card p-5">
-              <h2 className="mb-4 font-semibold">История статусов</h2>
+              <h2 className="mb-4 font-semibold">{t("orders.history")}</h2>
               <ol className="space-y-2 text-sm">
                 {order.statusHistory.map((h) => (
                   <li key={h.id} className="flex justify-between gap-3">

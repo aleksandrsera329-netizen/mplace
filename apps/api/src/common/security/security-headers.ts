@@ -65,10 +65,13 @@ export const DEFAULT_CORS_ORIGINS = [
   'http://127.0.0.1:3000',
   'http://localhost:3001',
   'http://127.0.0.1:3001',
+  'http://localhost:3002',
+  'http://127.0.0.1:3002',
   'http://localhost:8080',
   'http://127.0.0.1:8080',
   'http://localhost:8088',
   'http://127.0.0.1:8088',
+  'https://mplace-vu4o.onrender.com',
 ] as const;
 
 /**
@@ -96,10 +99,19 @@ export function resolveCorsOrigins(
   if (list.includes('*')) {
     // Never allow * with credentials:true — fall back to allowlist
     void isProd;
-    return defaults;
+    return withPublicOrigins(defaults);
   }
 
-  return list;
+  return withPublicOrigins(list);
+}
+
+function withPublicOrigins(list: string[]): string[] {
+  const out = [...list];
+  for (const key of ['APP_PUBLIC_URL', 'RENDER_EXTERNAL_URL'] as const) {
+    const v = (process.env[key] || '').trim().replace(/\/$/, '');
+    if (v.startsWith('http') && !out.includes(v)) out.push(v);
+  }
+  return out;
 }
 
 export function buildCorsOptions(

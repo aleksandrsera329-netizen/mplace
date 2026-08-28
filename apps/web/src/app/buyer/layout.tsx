@@ -17,15 +17,16 @@ import {
 import { useAuthStore } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useI18n, type TranslationKey } from "@/i18n/store"
 
-const nav = [
-  { href: "/buyer/dashboard", label: "Обзор", icon: LayoutDashboard },
-  { href: "/buyer/orders", label: "Заказы", icon: ShoppingCart },
-  { href: "/buyer/rfqs", label: "RFQ", icon: MessageSquare },
-  { href: "/wishlist", label: "Избранное", icon: Heart },
-  { href: "/account/profile", label: "Профиль", icon: User },
-  { href: "/buyer/security", label: "Безопасность", icon: Shield },
-  { href: "/buyer/addresses", label: "Адреса", icon: MapPin },
+const nav: { href: string; labelKey: TranslationKey; icon: typeof User }[] = [
+  { href: "/buyer/dashboard", labelKey: "account.overview", icon: LayoutDashboard },
+  { href: "/buyer/orders", labelKey: "nav.orders", icon: ShoppingCart },
+  { href: "/buyer/rfqs", labelKey: "nav.rfq", icon: MessageSquare },
+  { href: "/wishlist", labelKey: "header.wishlist", icon: Heart },
+  { href: "/account/profile", labelKey: "account.profile", icon: User },
+  { href: "/buyer/security", labelKey: "buyer.security", icon: Shield },
+  { href: "/buyer/addresses", labelKey: "buyer.addresses", icon: MapPin },
 ]
 
 export default function BuyerLayout({
@@ -35,6 +36,7 @@ export default function BuyerLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
+  const { t } = useI18n()
   const { user, isAuthenticated, logout, hydrated, refresh } = useAuthStore()
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function BuyerLayout({
   if (!hydrated || !isAuthenticated()) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Загрузка…
+        {t("common.loading")}
       </div>
     )
   }
@@ -67,7 +69,7 @@ export default function BuyerLayout({
   if (user?.role && user.role !== "CUSTOMER") {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-        Перенаправление…
+        {t("common.redirect")}
       </div>
     )
   }
@@ -103,7 +105,7 @@ export default function BuyerLayout({
                 )}
               >
                 <item.icon className="h-4 w-4" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             )
           })}
@@ -113,7 +115,7 @@ export default function BuyerLayout({
           <Button variant="ghost" className="w-full justify-start gap-3" asChild>
             <Link href="/">
               <ArrowLeft className="h-4 w-4" />
-              На витрину
+              {t("common.storefront")}
             </Link>
           </Button>
           <Button
@@ -125,7 +127,7 @@ export default function BuyerLayout({
             }}
           >
             <LogOut className="h-4 w-4" />
-            Выйти
+            {t("common.logout")}
           </Button>
         </div>
       </aside>

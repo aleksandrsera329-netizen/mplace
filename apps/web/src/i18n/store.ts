@@ -16,6 +16,32 @@ const dictionaries: Record<Locale, Dictionary> = {
   ar: ar as Dictionary,
 }
 
+function table(locale: Locale): Record<string, string> {
+  if (locale === "en") return en as Record<string, string>
+  if (locale === "ar") return ar as Record<string, string>
+  return ru as Record<string, string>
+}
+
+export function translate(
+  locale: Locale,
+  key: string,
+  params?: Record<string, string | number>,
+): string {
+  const fromLocale = table(locale)[key]
+  const fromEn = (en as Record<string, string>)[key]
+  let text =
+    fromLocale ||
+    (locale === "ru" ? fromEn : undefined) ||
+    (locale === "ar" ? fromEn : undefined) ||
+    key
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replaceAll(`{${k}}`, String(v))
+    })
+  }
+  return text
+}
+
 function applyDocumentLocale(locale: Locale) {
   if (typeof document === "undefined") return
   const dir = locale === "ar" ? "rtl" : "ltr"
@@ -43,19 +69,7 @@ export const useI18n = create<I18nState>()(
         applyDocumentLocale(locale)
         set({ locale, dir })
       },
-      t: (key, params) => {
-        const dict = dictionaries[get().locale] || (ru as Dictionary)
-        let text =
-          (dict[key as TranslationKey] as string) ??
-          (ru[key as TranslationKey] as string) ??
-          String(key)
-        if (params) {
-          Object.entries(params).forEach(([k, v]) => {
-            text = text.replaceAll(`{${k}}`, String(v))
-          })
-        }
-        return text
-      },
+      t: (key, params) => translate(get().locale, key, params),
     }),
     {
       name: "mplace-locale",

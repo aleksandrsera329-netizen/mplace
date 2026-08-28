@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft } from "lucide-react"
 import { api } from "@/lib/api"
 import { formatDate, statusLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantRfqDetailPage({
   params,
@@ -13,6 +14,7 @@ export default function MerchantRfqDetailPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const { t } = useI18n()
 
   const { data: rfq, isLoading, error } = useQuery({
     queryKey: ["rfq", id],
@@ -20,7 +22,7 @@ export default function MerchantRfqDetailPage({
   })
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Загрузка…</div>
+    return <div className="text-muted-foreground">{t("common.loading")}</div>
   }
 
   if (error || !rfq) {
@@ -31,10 +33,10 @@ export default function MerchantRfqDetailPage({
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад к RFQ
+          {t("rfq.listBack")}
         </Link>
         <p className="text-danger">
-          {error instanceof Error ? error.message : "RFQ не найден"}
+          {error instanceof Error ? error.message : t("common.error")}
         </p>
       </div>
     )
@@ -47,7 +49,7 @@ export default function MerchantRfqDetailPage({
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к RFQ
+        {t("rfq.listBack")}
       </Link>
 
       <h1 className="mb-2 text-3xl font-bold">{rfq.title}</h1>
@@ -60,7 +62,7 @@ export default function MerchantRfqDetailPage({
       )}
 
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-3 font-semibold">Позиции</h2>
+        <h2 className="mb-3 font-semibold">{t("rfq.items")}</h2>
         <ul className="divide-y divide-border text-sm">
           {(rfq.items || []).map((it) => (
             <li key={it.id} className="py-3">
@@ -75,7 +77,7 @@ export default function MerchantRfqDetailPage({
       </div>
 
       <p className="mt-6 text-sm text-muted-foreground">
-        Отправка оффера — на следующем шаге (или через список RFQ ранее).
+        {t("merchant.rfq.respond")}
       </p>
     </div>
   )

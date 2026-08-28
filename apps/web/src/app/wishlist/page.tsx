@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/product-card"
 import { useAuthStore } from "@/store/auth"
 import { api, type WishlistItem } from "@/lib/api"
+import { useI18n } from "@/i18n/store"
 
 export default function WishlistPage() {
+  const { t } = useI18n()
   const router = useRouter()
   const { isAuthenticated, hydrated, refresh, accessToken } = useAuthStore()
   const queryClient = useQueryClient()
@@ -57,7 +59,7 @@ export default function WishlistPage() {
       <div className="min-h-screen">
         <Header />
         <div className="flex min-h-[40vh] items-center justify-center text-muted-foreground">
-          Загрузка…
+          {t("common.loading")}
         </div>
       </div>
     )
@@ -70,13 +72,13 @@ export default function WishlistPage() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 flex items-center gap-3">
           <Heart className="h-7 w-7 text-primary" />
-          <h1 className="text-3xl font-bold">Избранное</h1>
+          <h1 className="text-3xl font-bold">{t("account.wishlist")}</h1>
           <span className="text-muted-foreground">({products.length})</span>
         </div>
 
         {error && (
           <p className="mb-4 text-sm text-danger">
-            {error instanceof Error ? error.message : "Ошибка загрузки"}
+            {error instanceof Error ? error.message : t("common.loadError")}
           </p>
         )}
 
@@ -92,10 +94,10 @@ export default function WishlistPage() {
         ) : products.length === 0 ? (
           <div className="rounded-2xl border border-border bg-card py-20 text-center">
             <p className="mb-6 text-lg text-muted-foreground">
-              В избранном пока пусто
+              {t("wishlist.empty")}
             </p>
             <Button asChild>
-              <Link href="/">Перейти в каталог</Link>
+              <Link href="/">{t("cart.goCatalog")}</Link>
             </Button>
           </div>
         ) : (
@@ -109,7 +111,7 @@ export default function WishlistPage() {
                   className="absolute right-3 top-3 z-10 bg-background/80 hover:bg-background"
                   disabled={removeMutation.isPending}
                   onClick={() => removeMutation.mutate(product.id)}
-                  title="Убрать из избранного"
+                  title={t("wishlist.remove")}
                 >
                   <Trash2 className="h-4 w-4 text-danger" />
                 </Button>

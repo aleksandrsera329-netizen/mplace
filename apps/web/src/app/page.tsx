@@ -13,21 +13,25 @@ import { useI18n } from "@/i18n/store"
 type ProductRow = {
   id: string
   name: string
+  slug?: string | null
   sku?: string | null
   priceCents: number
+  currency?: string | null
   stock: number
   imageUrl?: string | null
   categoryId?: string | null
   shopId?: string
-  category?: { id?: string; name: string }
+  category?: { id?: string; name: string; slug?: string }
   shop?: { id?: string; name: string }
 }
 
-function asList(data: unknown): { id: string; name: string }[] {
-  if (Array.isArray(data)) return data as { id: string; name: string }[]
+function asList(data: unknown): { id: string; name: string; slug?: string }[] {
+  if (Array.isArray(data))
+    return data as { id: string; name: string; slug?: string }[]
   if (data && typeof data === "object" && "items" in data) {
     const items = (data as { items: unknown }).items
-    if (Array.isArray(items)) return items as { id: string; name: string }[]
+    if (Array.isArray(items))
+      return items as { id: string; name: string; slug?: string }[]
   }
   return []
 }
@@ -35,7 +39,7 @@ function asList(data: unknown): { id: string; name: string }[] {
 function HomeCatalog() {
   const searchParams = useSearchParams()
   const queryFromUrl = searchParams.get("q") || ""
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
 
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [filters, setFilters] = useState({
@@ -131,7 +135,9 @@ function HomeCatalog() {
   } else if (filters.sort === "price-desc") {
     products = [...products].sort((a, b) => b.priceCents - a.priceCents)
   } else if (filters.sort === "name") {
-    products = [...products].sort((a, b) => a.name.localeCompare(b.name, "ru"))
+    products = [...products].sort((a, b) =>
+      a.name.localeCompare(b.name, locale),
+    )
   } else if (filters.sort === "stock") {
     products = [...products].sort((a, b) => b.stock - a.stock)
   }
@@ -223,19 +229,62 @@ function HomeCatalog() {
   )
 }
 
+function HomeHero() {
+  const { t } = useI18n()
+  return (
+    <section className="relative isolate overflow-hidden border-b border-border">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/assets/img/photos/hero-rig.jpg"
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/25" />
+      <div className="relative mx-auto flex min-h-[280px] max-w-7xl flex-col justify-end gap-4 px-4 py-12 sm:min-h-[340px] sm:px-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+          {t("hero.kicker")}
+        </p>
+        <h1 className="max-w-2xl text-3xl font-extrabold leading-tight text-white sm:text-5xl">
+          {t("hero.title")}
+        </h1>
+        <p className="max-w-xl text-sm text-white/80 sm:text-base">
+          {t("hero.subtitle")}
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <a
+            href="#catalog"
+            className="inline-flex items-center rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            {t("hero.cta")}
+          </a>
+          <a
+            href="/rfq/new"
+            className="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-5 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-white/20"
+          >
+            {t("hero.rfq")}
+          </a>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default function HomePage() {
   return (
     <div className="min-h-screen">
       <Header />
-      <Suspense
-        fallback={
-          <div className="py-20 text-center text-muted-foreground">
-            …
-          </div>
-        }
-      >
-        <HomeCatalog />
-      </Suspense>
+      <HomeHero />
+      <div id="catalog">
+        <Suspense
+          fallback={
+            <div className="py-20 text-center text-muted-foreground">
+              …
+            </div>
+          }
+        >
+          <HomeCatalog />
+        </Suspense>
+      </div>
     </div>
   )
 }

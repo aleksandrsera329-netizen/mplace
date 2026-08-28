@@ -7,17 +7,21 @@ import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/store/auth"
 import Link from "next/link"
+import { useI18n } from "@/i18n/store"
 
-function formatRelative(dateStr: string) {
+function formatRelative(
+  dateStr: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
   const d = new Date(dateStr).getTime()
   const diff = Math.max(0, Date.now() - d)
   const min = Math.floor(diff / 60000)
-  if (min < 1) return "только что"
-  if (min < 60) return `${min} мин. назад`
+  if (min < 1) return t("notify.justNow")
+  if (min < 60) return t("notify.minAgo", { n: min })
   const h = Math.floor(min / 60)
-  if (h < 24) return `${h} ч. назад`
+  if (h < 24) return t("notify.hourAgo", { n: h })
   const days = Math.floor(h / 24)
-  return `${days} дн. назад`
+  return t("notify.dayAgo", { n: days })
 }
 
 export function NotificationBell() {
@@ -25,6 +29,7 @@ export function NotificationBell() {
   const { user, isAuthenticated, accessToken } = useAuthStore()
   const loggedIn = Boolean(user) || isAuthenticated() || !!accessToken
   const [open, setOpen] = useState(false)
+  const { t } = useI18n()
 
   const { data: rawNotifications, isLoading } = useQuery({
     queryKey: ["notifications"],
@@ -35,8 +40,8 @@ export function NotificationBell() {
 
   const notifications = Array.isArray(rawNotifications)
     ? rawNotifications
-    : Array.isArray((rawNotifications as { items?: unknown })?.items)
-      ? ((rawNotifications as { items: unknown[] }).items as {
+    : Array.isArray((rawNotifications as unknown as { items?: unknown })?.items)
+      ? ((rawNotifications as unknown as { items: unknown[] }).items as {
           id: string
           isRead: boolean
           title: string
@@ -78,7 +83,7 @@ export function NotificationBell() {
         size="icon"
         className="relative"
         onClick={() => setOpen(!open)}
-        title="Уведомления"
+        title={t("notify.title")}
       >
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
@@ -93,7 +98,7 @@ export function NotificationBell() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute end-0 z-50 mt-2 w-96 max-w-[95vw] rounded-xl border border-border bg-card shadow-xl">
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <h3 className="font-semibold">Уведомления</h3>
+              <h3 className="font-semibold">{t("notify.title")}</h3>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
@@ -102,7 +107,7 @@ export function NotificationBell() {
                   disabled={markAllAsRead.isPending}
                 >
                   <Check className="me-1 h-4 w-4" />
-                  Прочитать все
+                  {t("notify.markAll")}
                 </Button>
               )}
             </div>
@@ -114,7 +119,7 @@ export function NotificationBell() {
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="py-10 text-center text-sm text-muted-foreground">
-                  Нет уведомлений
+                  {t("notify.empty")}
                 </div>
               ) : (
                 notifications.map((n) => (
@@ -131,7 +136,7 @@ export function NotificationBell() {
                           {n.message}
                         </div>
                         <div className="mt-1 text-xs text-muted-foreground">
-                          {formatRelative(n.createdAt)}
+                          {formatRelative(n.createdAt, t)}
                         </div>
                       </div>
                       {!n.isRead && (
@@ -139,7 +144,7 @@ export function NotificationBell() {
                           type="button"
                           onClick={() => markAsRead.mutate(n.id)}
                           className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary"
-                          title="Отметить прочитанным"
+                          title={t("notify.markRead")}
                         />
                       )}
                     </div>
@@ -152,7 +157,7 @@ export function NotificationBell() {
                         }}
                         className="mt-2 inline-block text-sm text-primary hover:underline"
                       >
-                        Перейти →
+                        {t("notify.go")} →
                       </Link>
                     )}
                   </div>

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Truck, Loader2 } from "lucide-react"
 import { api } from "@/lib/api"
-import { formatMoney } from "@/lib/format"
+import { formatMoney, useLivePrices } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export type ShippingRateOption = {
   id: string
@@ -34,6 +35,8 @@ export function ShippingCalculator({
   onSelect?: (rate: ShippingRateOption | null) => void
 }) {
   const [selected, setSelected] = useState<string | null>(null)
+  useLivePrices()
+  const { t } = useI18n()
 
   const { data: rates = [], isLoading } = useQuery({
     queryKey: ["shipping-rates", country, region, weightKg, warehouseId, merchantId],
@@ -64,7 +67,7 @@ export function ShippingCalculator({
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Рассчитываем доставку…
+        {t("shipping.calculating")}
       </div>
     )
   }
@@ -72,8 +75,7 @@ export function ShippingCalculator({
   if (rates.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">
-        Доставка в указанный регион недоступна (добавьте зоны и тарифы в
-        Merchant → Доставка)
+        {t("shipping.unavailable")}
       </div>
     )
   }
@@ -82,7 +84,7 @@ export function ShippingCalculator({
     <div className="space-y-3">
       <div className="flex items-center gap-2 font-medium">
         <Truck className="h-4 w-4" />
-        Способ доставки
+        {t("shipping.method")}
       </div>
 
       <div className="space-y-2">
@@ -109,8 +111,11 @@ export function ShippingCalculator({
                 <div className="font-medium">{rate.methodName}</div>
                 <div className="text-sm text-muted-foreground">
                   {rate.estimatedDaysMin && rate.estimatedDaysMax
-                    ? `${rate.estimatedDaysMin}–${rate.estimatedDaysMax} дн.`
-                    : "Срок уточняется"}
+                    ? t("shipping.days", {
+                        min: rate.estimatedDaysMin,
+                        max: rate.estimatedDaysMax,
+                      })
+                    : t("shipping.etaUnknown")}
                   {rate.warehouseName && ` · ${rate.warehouseName}`}
                   {rate.zoneName && ` · ${rate.zoneName}`}
                 </div>

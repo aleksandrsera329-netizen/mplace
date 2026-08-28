@@ -204,7 +204,7 @@ function BrandingSettingsInner() {
               </label>
             </Button>
             <p className="mt-1 text-xs text-muted-foreground">
-              PNG, JPG, SVG, WebP · до 2 MB
+              PNG, JPG, SVG, WebP · up to 2 MB
             </p>
           </div>
         </div>
@@ -260,7 +260,7 @@ function BrandingSettingsInner() {
         {mutation.isPending ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            Сохраняем...
+            {t("form.saving")}
           </>
         ) : (
           <>

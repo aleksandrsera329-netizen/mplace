@@ -113,13 +113,20 @@ Details: [docs/DOCKER.md](docs/DOCKER.md), [docs/DEPLOYMENT.md](docs/DEPLOYMENT.
 
 ## Demo logins (development seed only)
 
-| Role | Email | Password |
-|------|-------|----------|
-| Super admin | `superadmin@demo.com` | Set `DEMO_PASSWORD` before seeding |
-| Merchant | `merchant@demo.com` | Set `DEMO_PASSWORD` before seeding |
-| Customer | `customer@demo.com` | Set `DEMO_PASSWORD` before seeding |
+Password for all spec accounts: `123456` (override with `DEMO_PASSWORD` before seed).
 
-> Admins require TOTP MFA after first login (Stage 6). Do **not** use these credentials in production.
+| Role | Email | Shop |
+|------|-------|------|
+| Super admin | `superadmin@demo.com` | — |
+| Admin | `admin@demo.com` | — |
+| Merchant | `merchant@demo.com` | DrillTech Supply |
+| Merchant | `merchant2@demo.com` | FieldSafe PPE |
+| Merchant | `merchant3@demo.com` | Pipe & Valve Co |
+| Customer | `customer@demo.com` | — |
+
+Local extra: `admin@mplace.local` / `Adm#Mplace2026` (SUPER_ADMIN).
+
+With `ALLOW_DEMO_LOGIN=true` in development, admin MFA enrollment is not required. Do **not** use these credentials in production.
 
 ---
 

@@ -42,7 +42,7 @@ function MerchantWarehouseInner() {
       queryClient.invalidateQueries({ queryKey: ["merchant-warehouses"] })
       toast({
         title: t("common.success"),
-        description: "Склад создан",
+        description: t("merchant.warehouseCreated"),
         type: "success",
       })
       setIsCreating(false)
@@ -69,30 +69,30 @@ function MerchantWarehouseInner() {
         <div>
           <h1 className="text-3xl font-bold">{t("merchant.warehouse.title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            Управление складами и остатками
+            {t("merchant.warehouseManage")}
           </p>
         </div>
         <Button onClick={() => setIsCreating(true)}>
           <Plus className="me-2 h-4 w-4" />
-          Добавить склад
+          {t("merchant.addWarehouse")}
         </Button>
       </div>
 
       {isCreating && (
         <div className="rounded-2xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Новый склад</h2>
+          <h2 className="mb-4 text-lg font-semibold">{t("merchant.newWarehouse")}</h2>
           <form onSubmit={handleCreate} className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label>Название *</Label>
+              <Label>{t("merchant.warehouseName")} *</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Склад Москва"
+                placeholder={t("merchant.warehouseNamePh")}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label>Код</Label>
+              <Label>{t("merchant.warehouseCode")}</Label>
               <Input
                 value={form.code}
                 onChange={(e) => setForm({ ...form, code: e.target.value })}
@@ -100,19 +100,19 @@ function MerchantWarehouseInner() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Город</Label>
+              <Label>{t("merchant.warehouseCity")}</Label>
               <Input
                 value={form.city}
                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                placeholder="Москва"
+                placeholder={t("merchant.warehouseCityPh")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Адрес</Label>
+              <Label>{t("merchant.warehouseAddress")}</Label>
               <Input
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
-                placeholder="ул. Примерная, 1"
+                placeholder={t("merchant.warehouseAddressPh")}
               />
             </div>
             <div className="flex items-center gap-2 sm:col-span-2">
@@ -124,14 +124,14 @@ function MerchantWarehouseInner() {
                   setForm({ ...form, isDefault: e.target.checked })
                 }
               />
-              <Label htmlFor="isDefault">Склад по умолчанию</Label>
+              <Label htmlFor="isDefault">{t("merchant.warehouseDefault")}</Label>
             </div>
             <div className="flex gap-3 sm:col-span-2">
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending && (
                   <Loader2 className="me-2 h-4 w-4 animate-spin" />
                 )}
-                Создать
+                {t("common.create")}
               </Button>
               <Button
                 type="button"
@@ -152,9 +152,9 @@ function MerchantWarehouseInner() {
       ) : warehouses.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-20 text-center">
           <Warehouse className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <p className="text-lg text-muted-foreground">Складов пока нет</p>
+          <p className="text-lg text-muted-foreground">{t("merchant.noWarehouses")}</p>
           <Button className="mt-4" onClick={() => setIsCreating(true)}>
-            Создать первый склад
+            {t("merchant.createWarehouse")}
           </Button>
         </div>
       ) : (
@@ -167,7 +167,7 @@ function MerchantWarehouseInner() {
               {wh.isDefault && (
                 <div className="absolute end-3 top-3 flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                   <Star className="h-3 w-3" />
-                  По умолчанию
+                  {t("merchant.defaultBadge")}
                 </div>
               )}
               <div className="flex items-start gap-3">

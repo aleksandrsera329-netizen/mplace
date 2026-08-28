@@ -16,6 +16,7 @@ import { formatDate, formatMoney, statusLabel } from "@/lib/format"
 import { useAuthStore } from "@/store/auth"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/i18n/store"
+import { useCurrencyStore } from "@/store/currency"
 
 function StatCard({
   title,
@@ -48,6 +49,7 @@ function StatCard({
 export default function MerchantDashboard() {
   const user = useAuthStore((s) => s.user)
   const { t } = useI18n()
+  useCurrencyStore((s) => s.currency)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["merchant", "dashboard"],
@@ -62,14 +64,14 @@ export default function MerchantDashboard() {
 
   if (isLoading) {
     return (
-      <div className="text-muted-foreground">Загрузка кабинета продавца…</div>
+      <div className="text-muted-foreground">{t("merchant.loading")}</div>
     )
   }
 
   if (error) {
     return (
       <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-        {(error as Error).message || "Не удалось загрузить dashboard"}
+        {(error as Error).message || t("merchant.loadError")}
       </div>
     )
   }
@@ -82,7 +84,7 @@ export default function MerchantDashboard() {
           <p className="mt-1 text-muted-foreground">
             {data?.shop?.name
               ? `${data.shop.name}${data.shop.verified ? " · verified" : ""}`
-              : "Обзор вашего магазина"}
+              : t("merchant.shopOverview")}
           </p>
         </div>
         <Button variant="outline" asChild>
@@ -99,32 +101,36 @@ export default function MerchantDashboard() {
           href="/merchant/orders?status=paid"
         />
         <StatCard
-          title="Выручка (после комиссии)"
+          title={t("merchant.revenueAfterFee")}
           value={formatMoney(stats?.revenueCents ?? 0)}
           icon={Wallet}
-          description={`Комиссия: ${formatMoney(stats?.commissionCents ?? 0)}`}
+          description={t("merchant.commission", {
+            amount: formatMoney(stats?.commissionCents ?? 0),
+          })}
         />
         <StatCard
-          title="Доступный баланс"
+          title={t("merchant.availableBalance")}
           value={formatMoney(stats?.availableBalanceCents ?? 0)}
           icon={Wallet}
           href="/merchant/payouts"
-          description={`В резерве выплат: ${formatMoney(stats?.pendingPayoutsCents ?? 0)}`}
+          description={t("merchant.payoutReserve", {
+            amount: formatMoney(stats?.pendingPayoutsCents ?? 0),
+          })}
         />
         <StatCard
-          title="Заказы / pending"
+          title={t("merchant.ordersPending")}
           value={`${stats?.ordersCount ?? 0} / ${stats?.pendingOrders ?? 0}`}
           icon={ShoppingCart}
           href="/merchant/orders"
         />
         <StatCard
-          title="Товары (active)"
+          title={t("merchant.productsActive")}
           value={`${stats?.activeProducts ?? 0} / ${stats?.productsCount ?? 0}`}
           icon={Package}
           href="/merchant/products"
         />
         <StatCard
-          title="Открытые offers"
+          title={t("merchant.openOffers")}
           value={stats?.openOffers ?? 0}
           icon={MessageSquare}
           href="/merchant/rfq"
@@ -152,13 +158,13 @@ export default function MerchantDashboard() {
       <div className="mt-10 grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Последние заказы</h2>
+            <h2 className="font-semibold">{t("merchant.recentOrders")}</h2>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/merchant/orders">Все</Link>
+              <Link href="/merchant/orders">{t("merchant.all")}</Link>
             </Button>
           </div>
           {recentOrders.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Заказов пока нет</p>
+            <p className="text-sm text-muted-foreground">{t("merchant.noOrders")}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {recentOrders.map((o) => (
@@ -187,13 +193,13 @@ export default function MerchantDashboard() {
 
         <div className="rounded-xl border border-border bg-card p-6">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-semibold">Мои offers / RFQ</h2>
+            <h2 className="font-semibold">{t("merchant.myOffers")}</h2>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/merchant/rfq">Все</Link>
+              <Link href="/merchant/rfq">{t("merchant.all")}</Link>
             </Button>
           </div>
           {recentOffers.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Offers пока нет</p>
+            <p className="text-sm text-muted-foreground">{t("merchant.noOffers")}</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {recentOffers.map((o) => (

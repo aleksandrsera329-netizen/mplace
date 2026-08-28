@@ -5,7 +5,8 @@ import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft } from "lucide-react"
 import { api } from "@/lib/api"
-import { formatDate, formatMoney, statusLabel } from "@/lib/format"
+import { formatDate, formatMoney, statusLabel, productLabel } from "@/lib/format"
+import { useI18n } from "@/i18n/store"
 
 export default function MerchantOrderPage({
   params,
@@ -13,6 +14,7 @@ export default function MerchantOrderPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = use(params)
+  const { t } = useI18n()
 
   const { data: order, isLoading, error } = useQuery({
     queryKey: ["order", id],
@@ -20,7 +22,7 @@ export default function MerchantOrderPage({
   })
 
   if (isLoading) {
-    return <div className="text-muted-foreground">Загрузка…</div>
+    return <div className="text-muted-foreground">{t("common.loading")}</div>
   }
 
   if (error || !order) {
@@ -31,10 +33,10 @@ export default function MerchantOrderPage({
           className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад к заказам
+          {t("order.backToOrders")}
         </Link>
         <p className="text-danger">
-          {error instanceof Error ? error.message : "Заказ не найден"}
+          {error instanceof Error ? error.message : t("order.notFound")}
         </p>
       </div>
     )
@@ -47,11 +49,11 @@ export default function MerchantOrderPage({
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
-        Назад к заказам
+        {t("order.backToOrders")}
       </Link>
 
       <h1 className="mb-2 text-3xl font-bold">
-        Заказ {order.orderNumber || id}
+        {t("order.number", { n: order.orderNumber || id })}
       </h1>
       <p className="mb-8 text-muted-foreground">
         {formatDate(order.createdAt)} · {statusLabel(order.status)} ·{" "}
@@ -59,7 +61,7 @@ export default function MerchantOrderPage({
       </p>
 
       <div className="rounded-xl border border-border bg-card p-5">
-        <h2 className="mb-4 font-semibold">Позиции</h2>
+        <h2 className="mb-4 font-semibold">{t("rfq.items")}</h2>
         <ul className="divide-y divide-border text-sm">
           {(order.items || []).map((item) => (
             <li
@@ -67,7 +69,10 @@ export default function MerchantOrderPage({
               className="flex justify-between gap-2 py-3"
             >
               <span>
-                {item.productName || item.name || "Позиция"} × {item.quantity}
+                {productLabel({
+                  name: item.productName || item.name,
+                  productName: item.productName,
+                })} × {item.quantity}
               </span>
               <span className="font-medium">
                 {formatMoney(
@@ -81,20 +86,20 @@ export default function MerchantOrderPage({
         <div className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
           {order.subtotalCents != null && (
             <div className="flex justify-between text-muted-foreground">
-              <span>Подытог</span>
+              <span>{t("checkout.subtotal")}</span>
               <span>{formatMoney(order.subtotalCents, order.currency)}</span>
             </div>
           )}
           {(order.taxCents ?? 0) > 0 && (
             <div className="flex justify-between text-muted-foreground">
-              <span>НДС / VAT</span>
+              <span>{t("checkout.vat")}</span>
               <span>{formatMoney(order.taxCents!, order.currency)}</span>
             </div>
           )}
           {(order.shippingPriceCents ?? 0) > 0 && (
             <div className="flex justify-between text-muted-foreground">
               <span>
-                Доставка
+                {t("checkout.shipping")}
                 {order.shippingMethod?.name
                   ? ` (${order.shippingMethod.name})`
                   : ""}
@@ -105,7 +110,7 @@ export default function MerchantOrderPage({
             </div>
           )}
           <div className="flex justify-between text-base font-bold">
-            <span>Итого</span>
+            <span>{t("checkout.total")}</span>
             <span>{formatMoney(order.totalCents, order.currency)}</span>
           </div>
         </div>
