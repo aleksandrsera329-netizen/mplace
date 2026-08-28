@@ -9,7 +9,7 @@ import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { api } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/i18n/store"
+import { useTranslations } from "@/i18n/store"
 import { useMoney } from "@/lib/money"
 import { categoryLabel, productLabel } from "@/lib/format"
 
@@ -30,7 +30,7 @@ export function ProductCard({ product }: { product: Product }) {
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
   const { isAuthenticated, accessToken } = useAuthStore()
-  const { t, locale } = useI18n()
+  const { t } = useTranslations()
   const { format } = useMoney()
   const qc = useQueryClient()
   const loggedIn = isAuthenticated() || !!accessToken

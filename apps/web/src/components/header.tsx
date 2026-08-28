@@ -20,7 +20,7 @@ import { NotificationBell } from "@/components/notification-bell"
 import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { useTenantStore } from "@/store/tenant"
-import { useI18n } from "@/i18n/store"
+import { useI18n, useTranslations } from "@/i18n/store"
 import { homePathForRole } from "@/lib/role-routes"
 import {
   useCurrencyStore,
@@ -31,8 +31,9 @@ export function Header() {
   const { resolvedTheme, setTheme } = useTheme()
   const { itemCount, open } = useCartStore()
   const { user, hydrated, refresh, isAuthenticated, logout } = useAuthStore()
-  const { locale, setLocale, t } = useI18n()
-  const { currency, setCurrency } = useCurrencyStore()
+  const { locale, setLocale, t } = useTranslations()
+  const currency = useCurrencyStore((s) => s.currency)
+  const setCurrency = useCurrencyStore((s) => s.setCurrency)
   const tenant = useTenantStore((s) => s.tenant)
   const router = useRouter()
   const [search, setSearch] = useState("")
@@ -51,6 +52,8 @@ export function Header() {
 
   useEffect(() => {
     setMounted(true)
+    void useCurrencyStore.persist.rehydrate()
+    void useI18n.persist.rehydrate()
   }, [])
 
   useEffect(() => {

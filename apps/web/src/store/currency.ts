@@ -41,6 +41,6 @@ export const useCurrencyStore = create<CurrencyState>()(
       currency: "RUB",
       setCurrency: (currency) => set({ currency }),
     }),
-    { name: "mplace-currency" },
+    { name: "mplace-currency", skipHydration: true },
   ),
 )

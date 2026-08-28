@@ -11,6 +11,7 @@ const http = require("http");
 const listenPort = Number(process.env.PORT || 3000);
 const apiPort = Number(process.env.API_PORT || 3001);
 const webPort = Number(process.env.WEB_PORT || 3002);
+const agent = new http.Agent({ keepAlive: true, maxSockets: 64 });
 
 function targetFor(urlPath) {
   const path = String(urlPath || "/").split("?")[0];
@@ -42,6 +43,7 @@ const server = http.createServer((req, res) => {
       path: req.url,
       method: req.method,
       headers,
+      agent,
       timeout: 120000,
     },
     (up) => {

@@ -70,18 +70,29 @@ export const useTenantStore = create<TenantState>((set) => ({
           ? process.env.NEXT_PUBLIC_TENANT_SLUG
           : undefined
 
+      const withTimeout = <T,>(p: Promise<T>, ms = 4000) =>
+        Promise.race([
+          p,
+          new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error("tenant timeout")), ms),
+          ),
+        ])
+
       let data: TenantBranding | null = null
       if (slug) {
-        data = await api.tenant.bySlug(slug)
+        data = await withTimeout(api.tenant.bySlug(slug))
       } else {
-        // Prefer authenticated tenant; fall back to header/subdomain
         try {
-          data = await api.tenant.me()
+          data = await withTimeout(api.tenant.me())
         } catch {
           data = null
         }
         if (!data) {
-          data = await api.tenant.current()
+          try {
+            data = await withTimeout(api.tenant.current())
+          } catch {
+            data = null
+          }
         }
       }
 

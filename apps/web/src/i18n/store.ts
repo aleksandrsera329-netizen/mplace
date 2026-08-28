@@ -73,6 +73,7 @@ export const useI18n = create<I18nState>()(
     }),
     {
       name: "mplace-locale",
+      skipHydration: true,
       partialize: (s) => ({ locale: s.locale, dir: s.dir }),
       onRehydrateStorage: () => (state) => {
         if (state?.locale) {
@@ -83,3 +84,14 @@ export const useI18n = create<I18nState>()(
     },
   ),
 )
+
+/** Always re-renders when language changes (unlike a stale `t` from the store). */
+export function useTranslations() {
+  const locale = useI18n((s) => s.locale)
+  const setLocale = useI18n((s) => s.setLocale)
+  const t = (
+    key: TranslationKey | string,
+    params?: Record<string, string | number>,
+  ) => translate(locale, key, params)
+  return { locale, setLocale, t, dir: locale === "ar" ? "rtl" : "ltr" }
+}

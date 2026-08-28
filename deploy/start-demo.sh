@@ -1,6 +1,6 @@
 #!/bin/bash
 # Render single service: Nest API + Next.js (same UI as local :3002) + proxy.
-set -euo pipefail
+set -eu
 
 cd /app/apps/api
 
@@ -34,8 +34,8 @@ API_PID=$!
 echo "[entrypoint] Next.js on :${WEB_PORT}"
 WEB_DIR=/app/web
 if [ ! -f "${WEB_DIR}/server.js" ]; then
-  FOUND=$(find /app/web -name server.js -type f | head -n 1)
-  if [ -n "$FOUND" ]; then
+  FOUND=$(find /app/web -name server.js -type f 2>/dev/null | head -n 1 || true)
+  if [ -n "${FOUND:-}" ]; then
     WEB_DIR=$(dirname "$FOUND")
   fi
 fi

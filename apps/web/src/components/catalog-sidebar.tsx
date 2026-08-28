@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { useI18n } from "@/i18n/store"
+import { useTranslations } from "@/i18n/store"
 
 import { categoryLabel } from "@/lib/format"
 
@@ -31,7 +31,7 @@ export function CatalogSidebar({
   const [shopId, setShopId] = useState("")
   const [inStockOnly, setInStockOnly] = useState(false)
   const [sort, setSort] = useState("default")
-  const { t } = useI18n()
+  const { t } = useTranslations()
 
   useEffect(() => {
     setSearch(searchValue)

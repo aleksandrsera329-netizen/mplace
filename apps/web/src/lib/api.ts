@@ -87,10 +87,12 @@ async function request<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const method = (options.method || "GET").toUpperCase()
   const headers: Record<string, string> = {
-    ...authHeaders(true),
+    ...authHeaders(method !== "GET" && method !== "HEAD"),
     ...(options.headers as Record<string, string> | undefined),
   }
+  if (method === "GET" || method === "HEAD") delete headers["Content-Type"]
 
   const res = await fetch(`${resolveApiBase()}${path}`, {
     ...options,
