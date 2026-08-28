@@ -11,5 +11,10 @@ if [ "${SEED_ON_BOOT:-false}" = "true" ]; then
   npx prisma db seed || echo "[entrypoint] seed failed (non-fatal)"
 fi
 
+if [ "${PATCH_PRODUCT_PHOTOS:-true}" = "true" ] && [ -f ./scripts/set-product-photos.js ]; then
+  echo "[entrypoint] Patching catalog product photos..."
+  node ./scripts/set-product-photos.js || echo "[entrypoint] photo patch skipped (non-fatal)"
+fi
+
 echo "[entrypoint] Starting application..."
 exec node dist/src/main.js

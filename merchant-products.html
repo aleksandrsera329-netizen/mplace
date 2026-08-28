@@ -303,7 +303,7 @@
     }
     const res = await fetch(apiBase() + path, { ...opts, headers });
     if (res.status === 401) {
-      location.href = '/login.html?email=merchant@demo.com&next=/merchant-products.html';
+      location.href = '/login?next=/merchant-products.html';
       throw new Error('Unauthorized');
     }
     if (!res.ok) {
@@ -541,7 +541,7 @@
 
   async function init() {
     if (!getToken()) {
-      location.href = '/login.html?email=merchant@demo.com&next=/merchant-products.html';
+      location.href = '/login?next=/merchant-products.html';
       return;
     }
     await loadProducts(true);

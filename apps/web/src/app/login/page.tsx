@@ -16,10 +16,11 @@ import {
 } from "@/lib/api"
 import { useAuthStore } from "@/store/auth"
 import { postLoginPath } from "@/lib/role-routes"
+import { useI18n } from "@/i18n/store"
 
 const schema = z.object({
-  email: z.string().email("Некорректный email"),
-  password: z.string().min(6, "Минимум 6 символов"),
+  email: z.string().email("email"),
+  password: z.string().min(6, "password"),
 })
 
 type FormData = z.infer<typeof schema>
@@ -30,6 +31,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setAuth = useAuthStore((s) => s.setAuth)
+  const { t } = useI18n()
   const [error, setError] = useState("")
   const [mfaPhase, setMfaPhase] = useState<MfaPhase>(null)
   const [tempToken, setTempToken] = useState("")
@@ -52,7 +54,7 @@ function LoginForm() {
 
   const finishLogin = (res: LoginResponse, fallbackEmail?: string) => {
     const token = res.accessToken
-    if (!token) throw new Error(res.message || "Токен не получен")
+    if (!token) throw new Error(res.message || t("auth.tokenMissing"))
     if (res.refreshToken) saveAuthTokens(token, res.refreshToken)
     else saveAuthTokens(token)
     const user: AuthUser = res.user || {
@@ -84,7 +86,7 @@ function LoginForm() {
             setError(
               e instanceof Error
                 ? e.message
-                : "Не удалось начать настройку MFA",
+                : t("auth.mfaSetupFail"),
             )
           }
         } else {
@@ -94,7 +96,7 @@ function LoginForm() {
       }
       finishLogin(res, data.email)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ошибка входа")
+      setError(e instanceof Error ? e.message : t("auth.loginError"))
     }
   }
 
@@ -103,11 +105,11 @@ function LoginForm() {
     setMfaBusy(true)
     try {
       const code = totpCode.replace(/\s/g, "")
-      if (code.length < 6) throw new Error("Введите 6-значный код")
+      if (code.length < 6) throw new Error(t("auth.mfaCodeShort"))
       const res = await api.mfaVerify(tempToken, code)
       finishLogin(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Неверный код MFA")
+      setError(e instanceof Error ? e.message : t("auth.mfaInvalid"))
     } finally {
       setMfaBusy(false)
     }
@@ -118,13 +120,13 @@ function LoginForm() {
     setMfaBusy(true)
     try {
       const code = totpCode.replace(/\s/g, "")
-      if (code.length < 6) throw new Error("Введите 6-значный код из приложения")
+      if (code.length < 6) throw new Error(t("auth.mfaCodeFromApp"))
       await api.mfaEnable(tempToken, code)
       // After enable, verify to get full session
       const res = await api.mfaVerify(tempToken, code)
       finishLogin(res)
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось включить MFA")
+      setError(e instanceof Error ? e.message : t("auth.mfaEnableFail"))
     } finally {
       setMfaBusy(false)
     }
@@ -134,25 +136,27 @@ function LoginForm() {
     <div className="min-h-screen">
       <Header />
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4">
-        <h1 className="mb-8 text-center text-3xl font-bold">Вход</h1>
+        <h1 className="mb-8 text-center text-3xl font-bold">{t("auth.login")}</h1>
 
         {!mfaPhase && (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Email</label>
+              <label className="mb-1.5 block text-sm font-medium">{t("auth.email")}</label>
               <input
                 type="email"
                 {...register("email")}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm outline-none focus:border-primary"
-                placeholder="customer@demo.com"
+                placeholder="email@company.com"
                 autoComplete="email"
               />
               {errors.email && (
-                <p className="mt-1 text-xs text-danger">{errors.email.message}</p>
+                <p className="mt-1 text-xs text-danger">{t("auth.invalidEmail")}</p>
               )}
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium">Пароль</label>
+              <label className="mb-1.5 block text-sm font-medium">
+                {t("auth.passwordLabel")}
+              </label>
               <input
                 type="password"
                 {...register("password")}
@@ -162,7 +166,7 @@ function LoginForm() {
               />
               {errors.password && (
                 <p className="mt-1 text-xs text-danger">
-                  {errors.password.message}
+                  {t("auth.minPassword")}
                 </p>
               )}
             </div>
@@ -175,7 +179,7 @@ function LoginForm() {
               size="lg"
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Вход…" : "Войти"}
+              {isSubmitting ? t("auth.signingIn") : t("auth.loginButton")}
             </Button>
           </form>
         )}
@@ -183,11 +187,11 @@ function LoginForm() {
         {mfaPhase === "verify" && (
           <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Введите код из authenticator-приложения (TOTP).
+              {t("auth.mfaPrompt")}
             </p>
             <div>
               <label className="mb-1.5 block text-sm font-medium">
-                Код MFA
+                {t("auth.mfaCode")}
               </label>
               <input
                 type="text"
@@ -207,7 +211,7 @@ function LoginForm() {
               disabled={mfaBusy}
               onClick={() => void submitMfaVerify()}
             >
-              {mfaBusy ? "Проверка…" : "Подтвердить"}
+              {mfaBusy ? t("auth.checking") : t("auth.mfaConfirm")}
             </Button>
             <Button
               variant="ghost"
@@ -218,7 +222,7 @@ function LoginForm() {
                 setTempToken("")
               }}
             >
-              ← Назад
+              ← {t("common.back")}
             </Button>
           </div>
         )}
@@ -226,8 +230,7 @@ function LoginForm() {
         {mfaPhase === "enroll" && (
           <div className="space-y-5">
             <p className="text-sm text-muted-foreground">
-              Для ADMIN обязательна MFA. Отсканируйте QR в Google Authenticator /
-              Authy, затем введите код.
+              {t("auth.mfaEnroll")}
             </p>
             {enrollQr ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -244,7 +247,7 @@ function LoginForm() {
             ) : null}
             <div>
               <label className="mb-1.5 block text-sm font-medium">
-                Код подтверждения
+                {t("auth.mfaCode")}
               </label>
               <input
                 type="text"
@@ -264,7 +267,7 @@ function LoginForm() {
               disabled={mfaBusy}
               onClick={() => void submitMfaEnroll()}
             >
-              {mfaBusy ? "Включаем MFA…" : "Включить MFA и войти"}
+              {mfaBusy ? t("auth.enabling") : t("auth.mfaEnable")}
             </Button>
             <Button
               variant="ghost"
@@ -275,22 +278,17 @@ function LoginForm() {
                 setTempToken("")
               }}
             >
-              ← Назад
+              ← {t("common.back")}
             </Button>
           </div>
         )}
 
         {!mfaPhase && (
           <p className="mt-6 text-center text-sm text-muted-foreground">
-            Нет аккаунта?{" "}
+            {t("auth.noAccount")}{" "}
             <Link href="/register" className="text-primary hover:underline">
-              Регистрация
+              {t("auth.register")}
             </Link>
-            <br />
-            <span className="mt-2 inline-block text-xs">
-              Демо: customer@demo.com · demo-merchant@example.invalid · demo-admin@example.invalid /
-              Use the password configured for your demo environment.
-            </span>
           </p>
         )}
       </div>
@@ -298,15 +296,18 @@ function LoginForm() {
   )
 }
 
+function LoginFallback() {
+  const { t } = useI18n()
+  return (
+    <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+      {t("common.loading")}
+    </div>
+  )
+}
+
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-          Загрузка…
-        </div>
-      }
-    >
+    <Suspense fallback={<LoginFallback />}>
       <LoginForm />
     </Suspense>
   )

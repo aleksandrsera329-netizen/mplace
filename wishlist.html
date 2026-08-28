@@ -191,7 +191,7 @@
       }
     });
     if (res.status === 401) {
-      location.href = '/login.html?email=customer@demo.com&next=/wishlist.html';
+      location.href = '/login?next=/wishlist.html';
       throw new Error('Unauthorized');
     }
     if (!res.ok) {
@@ -269,7 +269,7 @@
   }
 
   if (!getToken()) {
-    location.href = '/login.html?email=customer@demo.com&next=/wishlist.html';
+    location.href = '/login?next=/wishlist.html';
   } else {
     loadWishlist();
   }

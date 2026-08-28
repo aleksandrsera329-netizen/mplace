@@ -313,7 +313,7 @@
         }
       });
       if (res.status === 401) {
-        location.href = '/login.html?email=merchant@demo.com&next=/merchant.html';
+        location.href = '/login?next=/merchant.html';
         throw new Error('Unauthorized');
       }
       if (!res.ok) {
@@ -531,7 +531,7 @@
 
     async function init() {
       if (!getToken()) {
-        location.href = '/login.html?email=merchant@demo.com&next=/merchant.html';
+        location.href = '/login?next=/merchant.html';
         return;
       }
       if (new URLSearchParams(location.search).get('stripe') === 'return') {

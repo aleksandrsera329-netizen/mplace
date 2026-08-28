@@ -22,6 +22,31 @@
   global.escapeHtml = escapeHtml;
   global.escapeAttr = escapeAttr;
 
+  /** Map legacy SVG catalog art to the same JPG photos used on the Next.js storefront. */
+  var PHOTO_FROM_SVG = {
+    'drill-bit.svg': '/assets/img/photos/drill-bit.jpg',
+    'mud-motor.svg': '/assets/img/photos/mud-motor.jpg',
+    'gate-valve.svg': '/assets/img/photos/gate-valve.jpg',
+    'ball-valve.svg': '/assets/img/photos/ball-valve.jpg',
+    'flange.svg': '/assets/img/photos/flange.jpg',
+    'fr-coverall.svg': '/assets/img/photos/coverall-fr.jpg',
+    'h2s-kit.svg': '/assets/img/photos/respirator.jpg',
+    'pump.svg': '/assets/img/photos/pump.jpg',
+    'transmitter.svg': '/assets/img/photos/transmitter.jpg',
+    'chemicals.svg': '/assets/img/photos/chemicals.jpg',
+    'hero-rig.svg': '/assets/img/photos/hero-rig.jpg',
+  };
+
+  function catalogPhoto(url) {
+    var raw = String(url || '').trim();
+    if (!raw) return '/assets/img/photos/industrial.jpg';
+    var file = raw.split('?')[0].split('#')[0].split('/').pop() || '';
+    if (PHOTO_FROM_SVG[file]) return PHOTO_FROM_SVG[file];
+    return raw;
+  }
+
+  global.catalogPhoto = catalogPhoto;
+
   function defaultApiBase() {
     if (typeof location === 'undefined' || !location.hostname) {
       return 'http://127.0.0.1:3000/api';
@@ -422,5 +447,6 @@
     /** XSS helpers (also on window.escapeHtml / escapeAttr) */
     escapeHtml: escapeHtml,
     escapeAttr: escapeAttr,
+    catalogPhoto: catalogPhoto,
   };
 })(window);

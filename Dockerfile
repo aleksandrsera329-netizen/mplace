@@ -34,6 +34,7 @@ RUN npm ci --omit=dev \
 COPY --from=build /app/apps/api/dist ./dist
 COPY --from=build /app/apps/api/prisma ./prisma
 COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY apps/api/scripts/set-product-photos.js ./scripts/set-product-photos.js
 RUN chmod +x docker-entrypoint.sh \
   && npx prisma generate \
   && chown -R node:node /app

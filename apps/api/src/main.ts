@@ -167,6 +167,31 @@ async function bootstrap() {
     : join(__dirname, '..', '..', '..', '..'); // monorepo root when running dist/src
 
   if (serveFrontend && existsSync(resolvedFrontend)) {
+    const prettyPages: Record<string, string> = {
+      '/login': 'login.html',
+      '/cart': 'cart.html',
+      '/checkout': 'checkout.html',
+      '/wishlist': 'wishlist.html',
+      '/account': 'account.html',
+      '/orders': 'orders.html',
+      '/rfq/new': 'rfq-create.html',
+      '/rfq': 'rfqs.html',
+    };
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      const file = prettyPages[req.path];
+      if (file) {
+        const full = join(resolvedFrontend, file);
+        if (existsSync(full)) return res.sendFile(full);
+      }
+      const prod = req.path.match(/^\/product\/([^/]+)$/);
+      if (prod) {
+        return res.redirect(
+          `/product.html?id=${encodeURIComponent(prod[1])}`,
+        );
+      }
+      next();
+    });
     app.useStaticAssets(resolvedFrontend, {
       index: ['index.html'],
       fallthrough: true,

@@ -55,9 +55,11 @@
       background: linear-gradient(160deg, #e2e8f0, #f8fafc);
     }
     .main-image img {
-      max-height: 320px;
-      max-width: 90%;
-      object-fit: contain;
+      width: 100%;
+      height: 100%;
+      max-height: none;
+      max-width: none;
+      object-fit: cover;
       position: relative;
       z-index: 1;
     }
@@ -227,7 +229,7 @@
       <div class="header-actions">
         <button type="button" class="theme-btn" id="themeToggle" title="Тема">🌙</button>
         <div id="localeMount"></div>
-        <a class="icon-btn" href="/login.html" title="Аккаунт">👤</a>
+        <a class="icon-btn" href="/login" title="Аккаунт">👤</a>
         <button type="button" class="cart-btn" id="cartBtn">
           🛒 <span data-i18n="nav.cart">Корзина</span>
           <span class="cart-count" id="cartCount">0</span>
@@ -386,7 +388,8 @@
     }
 
     function safeImgUrl(url) {
-      const raw = String(url || '');
+      const mapped = typeof catalogPhoto === 'function' ? catalogPhoto(url) : String(url || '');
+      const raw = String(mapped || '');
       if (!/^(https?:|\/|data:image\/)/i.test(raw)) return '';
       return typeof escapeAttr === 'function' ? escapeAttr(raw) : raw.replace(/"/g, '&quot;');
     }
@@ -513,7 +516,7 @@
           return `
           <article class="product-card" style="opacity:1;transform:none;cursor:pointer;" onclick="location.href='${a(href)}'">
             <div class="product-image">
-              ${imgSrc ? `<img src="${imgSrc}" alt="" style="max-height:100px;">` : '🛢️'}
+              ${imgSrc ? `<img src="${imgSrc}" alt="" onerror="this.onerror=null;this.src='/assets/img/photos/industrial.jpg'">` : '🛢️'}
             </div>
             <div class="product-body">
               <div class="product-category">${e(p.category?.name || '')}</div>

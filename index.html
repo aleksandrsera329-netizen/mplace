@@ -44,27 +44,6 @@
     }
     .ha-link:hover { color: var(--primary); background: var(--primary-soft); }
     .ha-link strong { display: block; color: var(--text); font-size: 0.88rem; }
-    .product-image img { max-height: 100px; max-width: 100%; object-fit: contain; }
-    .hero-demo {
-      margin: 0 0 20px; padding: 28px 24px; border-radius: 16px;
-      border: 1px solid var(--border); background:
-        linear-gradient(135deg, rgba(245,158,11,.12), transparent 55%),
-        var(--card);
-    }
-    .hero-demo h1 {
-      margin: 0 0 8px; font-size: clamp(1.4rem, 2.5vw, 1.85rem);
-      letter-spacing: -0.03em; line-height: 1.2;
-    }
-    .hero-demo p { margin: 0 0 16px; color: var(--text-muted); max-width: 52ch; line-height: 1.5; }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .btn-demo {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 12px 18px; border-radius: 12px; font-weight: 800; text-decoration: none;
-      background: var(--primary); color: #000; border: none; cursor: pointer;
-    }
-    .btn-demo.secondary {
-      background: transparent; color: var(--text); border: 1px solid var(--border);
-    }
   </style>
 </head>
 <body>
@@ -75,6 +54,9 @@
       <a class="logo" href="index.html">M<span>place</span> Energy</a>
 
       <div class="header-actions">
+        <form class="header-search" id="headerSearchForm" action="index.html">
+          <input type="search" name="q" id="headerSearch" placeholder="Valves, pumps, PPE, drilling…" data-i18n-placeholder="search.placeholder" />
+        </form>
         <button type="button" class="theme-btn" id="themeToggle" title="Theme">🌙</button>
         <div id="localeMount"></div>
         <div class="header-links">
@@ -84,15 +66,11 @@
           </a>
           <a class="ha-link" href="rfq-create.html">
             <span>RFQ</span>
-            <strong>Request quote</strong>
+            <strong data-i18n="hero.rfq">Create RFQ</strong>
           </a>
-          <a class="ha-link" href="login.html" id="accountLink">
+          <a class="ha-link" href="/login" id="accountLink">
             <span id="helloLine" data-i18n="hello.signIn">Sign in</span>
             <strong data-i18n="nav.account">Account</strong>
-          </a>
-          <a class="ha-link" href="request-demo.html">
-            <span>Sales</span>
-            <strong>Private demo</strong>
           </a>
         </div>
         <button type="button" class="cart-btn" id="cartBtn">
@@ -102,6 +80,20 @@
       </div>
     </div>
   </header>
+
+  <section class="hero-photo">
+    <img class="hero-bg" src="/assets/img/photos/hero-rig.jpg" alt="" />
+    <div class="hero-veil"></div>
+    <div class="hero-inner">
+      <p class="hero-kicker" data-i18n="hero.kicker">Oil &amp; Gas B2B</p>
+      <h1 data-i18n="hero.title">Procurement for oil &amp; gas</h1>
+      <p data-i18n="hero.sub">Drilling equipment, valves, PPE and pumps from verified suppliers.</p>
+      <div class="hero-actions">
+        <a class="btn-demo" href="#catalog" data-i18n="hero.cta">Browse catalog</a>
+        <a class="btn-demo secondary" href="rfq-create.html" data-i18n="hero.rfq">Create RFQ</a>
+      </div>
+    </div>
+  </section>
 
   <div class="layout">
     <aside class="sidebar" id="sidebar">
@@ -138,16 +130,6 @@
 
     <main>
       <button type="button" class="mobile-filter-btn" id="mobileFilterBtn">☰ Filters</button>
-
-      <section class="hero-demo">
-        <h1 data-i18n="hero.title">Oil & Gas Procurement Marketplace</h1>
-        <p data-i18n="hero.sub">B2B platform for drilling, pipeline, PPE, pumps and field equipment — multi-vendor catalog, RFQ and order flow.</p>
-        <div class="hero-actions">
-          <a class="btn-demo" href="#catalog" data-i18n="hero.cta">Browse Catalog</a>
-          <a class="btn-demo secondary" href="request-demo.html">Request Private Demo</a>
-          <a class="btn-demo secondary" href="rfq-create.html">Create RFQ</a>
-        </div>
-      </section>
 
       <div class="products-header" id="catalog">
         <h2>
@@ -216,11 +198,11 @@
 
     function productCard(p) {
       const shop = p.shop?.name || p.shopName || 'Supplier';
-      const img = p.imageUrl || '/assets/img/products/drill-bit.svg';
+      const img = (typeof catalogPhoto === 'function' ? catalogPhoto(p.imageUrl) : p.imageUrl) || '/assets/img/photos/industrial.jpg';
       return `
         <article class="product-card">
           <a class="product-image" href="product.html?id=${encodeURIComponent(p.id)}">
-            <img src="${img}" alt="" loading="lazy" />
+            <img src="${img}" alt="" loading="lazy" onerror="this.onerror=null;this.src='/assets/img/photos/industrial.jpg'" />
           </a>
           <div class="product-body">
             <a href="product.html?id=${encodeURIComponent(p.id)}"><h3>${escapeHtml(p.name)}</h3></a>
@@ -304,6 +286,16 @@
     document.getElementById('searchInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') applyFilters();
     });
+    const headerSearchForm = document.getElementById('headerSearchForm');
+    if (headerSearchForm) {
+      headerSearchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const q = document.getElementById('headerSearch').value || '';
+        document.getElementById('searchInput').value = q;
+        applyFilters();
+        document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' });
+      });
+    }
 
     document.getElementById('productsGrid').addEventListener('click', async (e) => {
       const btn = e.target.closest('.btn-add');
