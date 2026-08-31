@@ -41,8 +41,17 @@ export default function ProductPage({
         return await api.product(id)
       } catch {
         const fb = findFallbackProduct(id)
-        if (fb) return fb
-        throw new Error("not found")
+        if (!fb) throw new Error("not found")
+        return {
+          ...fb,
+          description: fb.name,
+          availableStock: fb.stock,
+          stocks: [] as Array<{
+            warehouseId: string
+            quantity: number
+            reserved: number
+          }>,
+        }
       }
     },
   })
@@ -103,7 +112,8 @@ export default function ProductPage({
   const available =
     product.availableStock ??
     product.stocks?.reduce(
-      (sum, s) => sum + Math.max(0, (s.quantity || 0) - (s.reserved || 0)),
+      (sum: number, s: { quantity?: number; reserved?: number }) =>
+        sum + Math.max(0, (s.quantity || 0) - (s.reserved || 0)),
       0,
     ) ??
     product.stock
