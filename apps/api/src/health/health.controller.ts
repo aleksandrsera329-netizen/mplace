@@ -165,8 +165,18 @@ export class HealthController implements OnModuleDestroy {
     let stripe: 'configured' | 'missing' = 'missing';
 
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
-      database = 'up';
+      let lastErr: unknown;
+      for (let i = 1; i <= 3; i++) {
+        try {
+          await this.prisma.$queryRaw`SELECT 1`;
+          lastErr = null;
+          break;
+        } catch (e) {
+          lastErr = e;
+          if (i < 3) await new Promise((r) => setTimeout(r, 400 * i));
+        }
+      }
+      database = lastErr ? 'down' : 'up';
     } catch {
       database = 'down';
     }

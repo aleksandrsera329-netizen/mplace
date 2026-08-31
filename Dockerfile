@@ -37,6 +37,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV SERVE_FRONTEND=false
 ENV INTERNAL_API_URL=http://127.0.0.1:3001/api
 ENV NEXT_PUBLIC_API_URL=/api
+ENV NODE_OPTIONS=--dns-result-order=ipv4first
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends curl openssl ca-certificates \

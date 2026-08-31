@@ -11,9 +11,10 @@ import { api } from "@/lib/api"
 import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/i18n/store"
+import { useTranslations } from "@/i18n/store"
 import { useMoney } from "@/lib/money"
 import { categoryLabel, productLabel, productDescription } from "@/lib/format"
+import { findFallbackProduct } from "@/lib/fallback-catalog"
 
 export default function ProductPage({
   params,
@@ -24,7 +25,7 @@ export default function ProductPage({
   const router = useRouter()
   const addItem = useCartStore((s) => s.addItem)
   const { isAuthenticated, accessToken } = useAuthStore()
-  const { t } = useI18n()
+  const { t } = useTranslations()
   const { format } = useMoney()
   const qc = useQueryClient()
   const loggedIn = isAuthenticated() || !!accessToken
@@ -35,7 +36,15 @@ export default function ProductPage({
     error,
   } = useQuery({
     queryKey: ["product", id],
-    queryFn: () => api.product(id),
+    queryFn: async () => {
+      try {
+        return await api.product(id)
+      } catch {
+        const fb = findFallbackProduct(id)
+        if (fb) return fb
+        throw new Error("not found")
+      }
+    },
   })
 
   const { data: wishlist } = useQuery({

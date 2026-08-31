@@ -2,6 +2,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ProductStatus, UserRole } from '@prisma/client';
@@ -20,6 +21,12 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { ListProductsDto } from './dto/list-products.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Prisma } from '@prisma/client';
+import {
+  FALLBACK_CATEGORIES,
+  fallbackProductList,
+  findFallbackProduct,
+  isTransientDbError,
+} from './fallback-catalog';
 
 /** Loose product shape for search indexing fallback */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -36,6 +43,8 @@ function slugify(input: string): string {
 
 @Injectable()
 export class CatalogService {
+  private readonly logger = new Logger(CatalogService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -72,20 +81,28 @@ export class CatalogService {
   // ── Categories ─────────────────────────────────────────
 
   async listCategories() {
-    const cacheKey = 'categories:all';
-    const cached = await this.cache.get<unknown[]>(cacheKey);
-    if (cached) return cached;
+    try {
+      const cacheKey = 'categories:all';
+      const cached = await this.cache.get<unknown[]>(cacheKey);
+      if (cached) return cached;
 
-    const categories = await this.prisma.category.findMany({
-      orderBy: { name: 'asc' },
-      include: {
-        _count: { select: { products: true } },
-        parent: { select: { id: true, name: true } },
-      },
-    });
+      const categories = await this.prisma.category.findMany({
+        orderBy: { name: 'asc' },
+        include: {
+          _count: { select: { products: true } },
+          parent: { select: { id: true, name: true } },
+        },
+      });
 
-    await this.cache.set(cacheKey, categories, 600); // 10 min
-    return categories;
+      if (!categories.length) return FALLBACK_CATEGORIES;
+      await this.cache.set(cacheKey, categories, 600); // 10 min
+      return categories;
+    } catch (e) {
+      this.logger.error(
+        `listCategories failed, serving fallback: ${e instanceof Error ? e.message : e}`,
+      );
+      return FALLBACK_CATEGORIES;
+    }
   }
 
   async createCategory(dto: CreateCategoryDto) {
@@ -107,6 +124,30 @@ export class CatalogService {
    * Cursor pagination: { items, nextCursor, hasMore }
    */
   async listProducts(user: JwtPayload | null, dto: ListProductsDto = {}) {
+    const isGuest =
+      !user ||
+      (user.role !== UserRole.MERCHANT &&
+        user.role !== UserRole.ADMIN &&
+        user.role !== UserRole.SUPER_ADMIN);
+    try {
+      const result = await this.listProductsFromDb(user, dto);
+      if (isGuest && (!result.items || result.items.length === 0)) {
+        return fallbackProductList(dto.limit ?? 100);
+      }
+      return result;
+    } catch (e) {
+      this.logger.error(
+        `listProducts failed, serving fallback: ${e instanceof Error ? e.message : e}`,
+      );
+      if (!isTransientDbError(e) && user && !isGuest) throw e;
+      return fallbackProductList(dto.limit ?? 100);
+    }
+  }
+
+  private async listProductsFromDb(
+    user: JwtPayload | null,
+    dto: ListProductsDto = {},
+  ) {
     const limit = dto.limit ?? 20;
 
     const isPublic =
@@ -195,7 +236,7 @@ export class CatalogService {
       hasMore: !!nextCursor,
     };
 
-    if (publicKey) {
+    if (publicKey && items.length) {
       await this.cache.set(publicKey, result, 300);
     }
 
@@ -203,6 +244,16 @@ export class CatalogService {
   }
 
   async getProduct(id: string, user: JwtPayload | null) {
+    try {
+      return await this.getProductFromDb(id, user);
+    } catch (e) {
+      const fallback = findFallbackProduct(id);
+      if (fallback) return fallback;
+      throw e;
+    }
+  }
+
+  private async getProductFromDb(id: string, user: JwtPayload | null) {
     const product = await this.prisma.product.findUnique({
       where: { id },
       include: {

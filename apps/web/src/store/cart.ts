@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { api, type CartItem } from "@/lib/api"
 import { toast } from "@/components/ui/toast"
 import { translate, useI18n } from "@/i18n/store"
+import { findFallbackProduct } from "@/lib/fallback-catalog"
 
 function t(key: string) {
   return translate(useI18n.getState().locale, key)
@@ -54,14 +55,15 @@ export const useCartStore = create<CartState>((set, get) => ({
     try {
       set({ isLoading: true })
       const cart = await api.cart()
-      set({
-        items: cart.items || [],
-        itemCount: cart.itemCount || cart.items?.length || 0,
-        subtotalCents: cart.subtotalCents || 0,
-      })
+      if (cart.items?.length) {
+        set({
+          items: cart.items || [],
+          itemCount: cart.itemCount || cart.items?.length || 0,
+          subtotalCents: cart.subtotalCents || 0,
+        })
+      }
     } catch (e) {
       console.warn("Cart refresh error", e)
-      set({ items: [], itemCount: 0, subtotalCents: 0 })
     } finally {
       set({ isLoading: false })
     }
@@ -85,12 +87,46 @@ export const useCartStore = create<CartState>((set, get) => ({
       await get().refresh()
       get().open()
     } catch (e) {
-      console.error("Add to cart error", e)
-      toast({
-        title: t("common.error"),
-        description: cartErrorMessage(e),
-        type: "error",
+      const fb = findFallbackProduct(productId)
+      if (!fb) {
+        console.error("Add to cart error", e)
+        toast({
+          title: t("common.error"),
+          description: cartErrorMessage(e),
+          type: "error",
+        })
+        return
+      }
+      const items = get().items.map((i) => ({ ...i }))
+      const line = lineForProduct(items, fb.id)
+      if (line) line.quantity += quantity
+      else {
+        items.push({
+          id: `guest-${fb.id}`,
+          productId: fb.id,
+          quantity,
+          priceCents: fb.priceCents,
+          product: {
+            id: fb.id,
+            name: fb.name,
+            slug: fb.slug,
+            sku: fb.sku,
+            priceCents: fb.priceCents,
+            currency: fb.currency,
+            imageUrl: fb.imageUrl,
+            stock: fb.stock,
+          },
+        })
+      }
+      set({
+        items,
+        itemCount: items.reduce((s, i) => s + i.quantity, 0),
+        subtotalCents: items.reduce(
+          (s, i) => s + (i.product?.priceCents || i.priceCents || 0) * i.quantity,
+          0,
+        ),
       })
+      get().open()
     }
   },
 

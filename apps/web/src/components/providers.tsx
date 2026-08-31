@@ -5,7 +5,8 @@ import { useEffect, useState } from "react"
 import { CartDrawer } from "@/components/cart-drawer"
 import { Toaster } from "@/components/ui/toast"
 import { useTenantStore } from "@/store/tenant"
-import { useI18n } from "@/i18n/store"
+import { applyDocumentLocale, useI18n } from "@/i18n/store"
+import { useCurrencyStore } from "@/store/currency"
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -25,10 +26,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
     void loadTenant()
   }, [loadTenant])
 
-  // Apply persisted locale + RTL on mount
   useEffect(() => {
-    const { locale, setLocale } = useI18n.getState()
-    setLocale(locale)
+    let cancelled = false
+    void (async () => {
+      await Promise.all([
+        useI18n.persist.rehydrate(),
+        useCurrencyStore.persist.rehydrate(),
+      ])
+      if (cancelled) return
+      applyDocumentLocale(useI18n.getState().locale)
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (

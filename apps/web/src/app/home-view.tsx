@@ -7,6 +7,7 @@ import { CatalogSidebar } from "@/components/catalog-sidebar"
 import { ProductCard } from "@/components/product-card"
 import { useTranslations } from "@/i18n/store"
 import type { CatalogListItem, CatalogProduct } from "@/lib/server-catalog"
+import { FALLBACK_CATALOG } from "@/lib/fallback-catalog"
 
 export function HomeHero() {
   const { t } = useTranslations()
@@ -67,10 +68,17 @@ export function HomeCatalog({
     inStockOnly: false,
     sort: "default",
   })
-  const [productsRaw, setProductsRaw] =
-    useState<CatalogProduct[]>(initialProducts)
-  const [categories, setCategories] = useState(initialCategories)
-  const [shops, setShops] = useState(initialShops)
+  const [productsRaw, setProductsRaw] = useState<CatalogProduct[]>(
+    initialProducts.length ? initialProducts : FALLBACK_CATALOG.products,
+  )
+  const [categories, setCategories] = useState(
+    initialCategories.length
+      ? initialCategories
+      : FALLBACK_CATALOG.categories,
+  )
+  const [shops, setShops] = useState(
+    initialShops.length ? initialShops : FALLBACK_CATALOG.shops,
+  )
 
   useEffect(() => {
     setQueryFromUrl(new URLSearchParams(window.location.search).get("q") || "")
@@ -95,16 +103,18 @@ export function HomeCatalog({
           fetch(`${base}/categories`),
           fetch(`${base}/shops`),
         ])
-        const pJson = await pRes.json()
-        const cJson = await cRes.json()
-        const sJson = await sRes.json()
+        const pJson = await pRes.json().catch(() => null)
+        const cJson = await cRes.json().catch(() => null)
+        const sJson = await sRes.json().catch(() => null)
         if (cancelled) return
         const items = Array.isArray(pJson)
           ? pJson
           : Array.isArray(pJson?.items)
             ? pJson.items
             : []
-        setProductsRaw(items as CatalogProduct[])
+        setProductsRaw(
+          items.length ? (items as CatalogProduct[]) : FALLBACK_CATALOG.products,
+        )
         const asList = (data: unknown) => {
           if (Array.isArray(data)) return data as CatalogListItem[]
           if (data && typeof data === "object" && "items" in data) {
@@ -113,10 +123,16 @@ export function HomeCatalog({
           }
           return []
         }
-        setCategories(asList(cJson))
-        setShops(asList(sJson))
+        const cats = asList(cJson)
+        const shopList = asList(sJson)
+        setCategories(cats.length ? cats : FALLBACK_CATALOG.categories)
+        setShops(shopList.length ? shopList : FALLBACK_CATALOG.shops)
       } catch {
-        /* keep initial empty */
+        if (!cancelled) {
+          setProductsRaw(FALLBACK_CATALOG.products)
+          setCategories(FALLBACK_CATALOG.categories)
+          setShops(FALLBACK_CATALOG.shops)
+        }
       }
     }
     void load()

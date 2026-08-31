@@ -42,7 +42,7 @@ export function translate(
   return text
 }
 
-function applyDocumentLocale(locale: Locale) {
+export function applyDocumentLocale(locale: Locale) {
   if (typeof document === "undefined") return
   const dir = locale === "ar" ? "rtl" : "ltr"
   document.documentElement.lang = locale
@@ -67,7 +67,11 @@ export const useI18n = create<I18nState>()(
       setLocale: (locale) => {
         const dir = locale === "ar" ? "rtl" : "ltr"
         applyDocumentLocale(locale)
-        set({ locale, dir })
+        set({
+          locale,
+          dir,
+          t: (key, params) => translate(locale, key, params),
+        })
       },
       t: (key, params) => translate(get().locale, key, params),
     }),

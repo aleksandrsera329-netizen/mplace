@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { createTenantExtension } from '../common/tenant/prisma-tenant.extension';
 
@@ -15,15 +15,45 @@ export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(PrismaService.name);
   private tenantExtended = false;
 
   constructor() {
-    super();
+    super({ log: ['warn', 'error'] });
   }
 
   async onModuleInit(): Promise<void> {
-    await this.$connect();
+    await this.connectWithRetry();
     this.applyTenantExtension();
+  }
+
+  /** Neon compute sleeps; first query after idle often fails. Retry so boot still works. */
+  private async connectWithRetry(attempts = 6): Promise<void> {
+    let last: unknown;
+    for (let i = 1; i <= attempts; i++) {
+      try {
+        await this.$connect();
+        await this.$queryRaw`SELECT 1`;
+        if (i > 1) this.logger.log(`Postgres connected on attempt ${i}`);
+        return;
+      } catch (e) {
+        last = e;
+        this.logger.warn(
+          `Postgres not ready (${i}/${attempts}): ${e instanceof Error ? e.message : e}`,
+        );
+        try {
+          await this.$disconnect();
+        } catch {
+          /* ignore */
+        }
+        await new Promise((r) => setTimeout(r, Math.min(8000, 400 * i)));
+      }
+    }
+    this.logger.error(
+      `Postgres still unreachable after ${attempts} attempts — public catalog will use fallback. ${
+        last instanceof Error ? last.message : last
+      }`,
+    );
   }
 
   async onModuleDestroy(): Promise<void> {

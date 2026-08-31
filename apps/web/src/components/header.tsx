@@ -20,7 +20,7 @@ import { NotificationBell } from "@/components/notification-bell"
 import { useCartStore } from "@/store/cart"
 import { useAuthStore } from "@/store/auth"
 import { useTenantStore } from "@/store/tenant"
-import { useI18n, useTranslations } from "@/i18n/store"
+import { useTranslations } from "@/i18n/store"
 import { homePathForRole } from "@/lib/role-routes"
 import {
   useCurrencyStore,
@@ -52,8 +52,6 @@ export function Header() {
 
   useEffect(() => {
     setMounted(true)
-    void useCurrencyStore.persist.rehydrate()
-    void useI18n.persist.rehydrate()
   }, [])
 
   useEffect(() => {
@@ -76,7 +74,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-2 px-4 py-2 sm:px-6">
         <Link
           href="/"
           className="flex shrink-0 items-center gap-2.5 text-xl font-extrabold tracking-tight"

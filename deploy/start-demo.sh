@@ -2,14 +2,59 @@
 # Render single service: Nest API + Next.js (same UI as local :3002) + proxy.
 set -eu
 
+# Neon from Render often fails on AAAA; force IPv4.
+export NODE_OPTIONS="${NODE_OPTIONS:+$NODE_OPTIONS }--dns-result-order=ipv4first"
+
+if [ -n "${DATABASE_URL:-}" ]; then
+  url="$DATABASE_URL"
+  case "$url" in
+    *\?*) sep='&' ;;
+    *) sep='?' ;;
+  esac
+  case "$url" in
+    *sslmode=*) ;;
+    *) url="${url}${sep}sslmode=require"; sep='&' ;;
+  esac
+  case "$url" in
+    *connect_timeout=*) ;;
+    *) url="${url}${sep}connect_timeout=15"; sep='&' ;;
+  esac
+  case "$url" in
+    *pooler*)
+      case "$url" in
+        *pgbouncer=*) ;;
+        *) url="${url}${sep}pgbouncer=true&connection_limit=1" ;;
+      esac
+      ;;
+  esac
+  export DATABASE_URL="$url"
+fi
+
 cd /app/apps/api
 
 echo "[entrypoint] prisma migrate deploy..."
-npx prisma migrate deploy
+migrate_ok=0
+for i in 1 2 3 4 5 6; do
+  if npx prisma migrate deploy; then
+    migrate_ok=1
+    break
+  fi
+  echo "[entrypoint] migrate retry $i"
+  sleep $((i * 3))
+done
+if [ "$migrate_ok" != "1" ]; then
+  echo "[entrypoint] migrate failed — API will serve fallback catalog"
+fi
 
 if [ "${SEED_ON_BOOT:-false}" = "true" ]; then
   echo "[entrypoint] SEED_ON_BOOT=true — prisma db seed..."
   npx prisma db seed || echo "[entrypoint] seed failed (non-fatal)"
+elif [ "$migrate_ok" = "1" ] && [ -f ./prisma/seed.js ]; then
+  count="$(node -e "const {PrismaClient}=require('@prisma/client'); const p=new PrismaClient(); p.product.count().then(n=>{console.log(n); return p.\$disconnect();}).catch(()=>{console.log(-1); process.exit(0);})" || echo -1)"
+  if [ "$count" = "0" ]; then
+    echo "[entrypoint] catalog empty — seeding..."
+    node ./prisma/seed.js || echo "[entrypoint] seed failed (non-fatal)"
+  fi
 fi
 
 if [ "${PATCH_PRODUCT_PHOTOS:-true}" = "true" ] && [ -f ./scripts/set-product-photos.js ]; then

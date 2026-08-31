@@ -1,30 +1,53 @@
 import {
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { ShopStatus, UserRole } from '@prisma/client';
 import { JwtPayload } from '../auth/jwt-payload.interface';
 import { PrismaService } from '../prisma/prisma.service';
+import { FALLBACK_SHOPS } from '../catalog/fallback-catalog';
 
 @Injectable()
 export class ShopsService {
+  private readonly logger = new Logger(ShopsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
-  list(user: JwtPayload | null) {
-    const where =
-      user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN
-        ? {}
-        : { status: ShopStatus.ACTIVE };
+  async list(user: JwtPayload | null) {
+    try {
+      const where =
+        user?.role === UserRole.ADMIN || user?.role === UserRole.SUPER_ADMIN
+          ? {}
+          : { status: ShopStatus.ACTIVE };
 
-    return this.prisma.shop.findMany({
-      where,
-      orderBy: { name: 'asc' },
-      include: {
-        owner: { select: { id: true, name: true, email: true } },
-        _count: { select: { products: true, orders: true } },
-      },
-    });
+      const shops = await this.prisma.shop.findMany({
+        where,
+        orderBy: { name: 'asc' },
+        include: {
+          owner: { select: { id: true, name: true, email: true } },
+          _count: { select: { products: true, orders: true } },
+        },
+      });
+      if (!shops.length) {
+        return FALLBACK_SHOPS.map((s) => ({
+          ...s,
+          owner: { id: s.id, name: s.name, email: "" },
+          _count: { products: 0, orders: 0 },
+        }));
+      }
+      return shops;
+    } catch (e) {
+      this.logger.error(
+        `list shops failed, serving fallback: ${e instanceof Error ? e.message : e}`,
+      );
+      return FALLBACK_SHOPS.map((s) => ({
+        ...s,
+        owner: { id: s.id, name: s.name, email: "" },
+        _count: { products: 0, orders: 0 },
+      }));
+    }
   }
 
   async get(id: string) {

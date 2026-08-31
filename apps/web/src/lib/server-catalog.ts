@@ -1,5 +1,7 @@
 /** Server-side catalog load (Next → Nest on Render: INTERNAL_API_URL). */
 
+import { FALLBACK_CATALOG } from "@/lib/fallback-catalog"
+
 export type CatalogProduct = {
   id: string
   name: string
@@ -56,13 +58,17 @@ export async function loadCatalog() {
       : Array.isArray((pJson as { items?: unknown }).items)
         ? (pJson as { items: CatalogProduct[] }).items
         : []
+    const products = items as CatalogProduct[]
+    const categories = asList(cJson)
+    const shops = asList(sJson)
+    if (!products.length) return FALLBACK_CATALOG
     return {
-      products: items as CatalogProduct[],
-      categories: asList(cJson),
-      shops: asList(sJson),
+      products,
+      categories: categories.length ? categories : FALLBACK_CATALOG.categories,
+      shops: shops.length ? shops : FALLBACK_CATALOG.shops,
     }
   } catch (e) {
     console.error("loadCatalog failed", e)
-    return { products: [] as CatalogProduct[], categories: [], shops: [] }
+    return FALLBACK_CATALOG
   }
 }
